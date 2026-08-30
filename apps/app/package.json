@@ -2,17 +2,19 @@
   "name": "quickdraw-app",
   "private": true,
   "version": "0.0.0",
-  "description": "app.tryquickdraw.com \u2014 the hosted Quickdraw whiteboard.",
+  "description": "app.tryquickdraw.com — the hosted Quickdraw whiteboard.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@quickdrawjs/core": "^0.2.0"
   },
   "devDependencies": {
+    "typescript": "^5.8.0",
     "vite": "^6.3.0"
   }
 }
