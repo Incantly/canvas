@@ -13,8 +13,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "npm run build --workspace=@quickdrawjs/react-native",
+    "build:packages": "npm run build --workspace=@quickdrawjs/core && npm run build --workspace=@quickdrawjs/react && npm run build --workspace=@quickdrawjs/react-native",
     "dev": "npm run dev --workspace=quickdraw-react-demo",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck:packages": "npm run typecheck --workspace=@quickdrawjs/core && npm run typecheck --workspace=@quickdrawjs/react && npm run typecheck --workspace=@quickdrawjs/react-native",
     "star-history": "node scripts/star-history.mjs",
     "publish:all": "npm publish --workspace=@quickdrawjs/core --access public && npm publish --workspace=@quickdrawjs/react --access public && npm publish --workspace=@quickdrawjs/react-native --access public"
   },

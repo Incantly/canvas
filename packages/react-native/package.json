@@ -3,26 +3,25 @@
   "version": "0.2.0",
   "description": "React Native component for Quickdraw — the MIT-licensed infinite-canvas whiteboard SDK (WebView-based).",
   "type": "module",
-  "main": "./src/index.js",
-  "module": "./src/index.js",
-  "types": "./types/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./types/index.d.ts",
-      "default": "./src/index.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
   "files": [
-    "src",
-    "types",
+    "dist",
     "scripts",
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/build-html.mjs",
-    "prepack": "node scripts/build-html.mjs",
-    "prepare": "node scripts/build-html.mjs"
+    "build": "node scripts/build-html.mjs && tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "sideEffects": false,
   "keywords": [

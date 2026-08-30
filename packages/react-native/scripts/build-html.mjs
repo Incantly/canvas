@@ -11,14 +11,18 @@ const here = dirname(fileURLToPath(import.meta.url))
 const pkg = join(here, '..')
 
 const result = await build({
-  entryPoints: [join(pkg, 'src/webview-entry.js')],
+  entryPoints: [join(pkg, 'src/webview-entry.ts')],
   bundle: true,
   write: false,
   format: 'iife',
   target: ['es2020'],
   minify: true,
   outdir: 'out',
-  loader: { '.css': 'css' },
+  loader: { '.css': 'css', '.ts': 'ts' },
+  alias: {
+    '@quickdrawjs/core': join(pkg, '../core/dist/index.js'),
+    '@quickdrawjs/core/quickdraw.css': join(pkg, '../core/src/quickdraw.css'),
+  },
 })
 
 let js = ''

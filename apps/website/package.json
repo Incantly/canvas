@@ -2,16 +2,21 @@
   "name": "quickdraw-website",
   "private": true,
   "version": "0.0.0",
-  "description": "tryquickdraw.com \u2014 the Quickdraw marketing site and blog.",
+  "description": "tryquickdraw.com — the Quickdraw marketing site and blog.",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.3.0",
     "@quickdrawjs/core": "^0.2.0",
     "astro": "^5.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.8.0"
   }
 }
