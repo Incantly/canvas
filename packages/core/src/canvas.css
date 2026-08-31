@@ -630,8 +630,23 @@
 
 .ic-page-doc:empty::before {
   content: attr(data-placeholder);
+  color: rgba(29, 29, 29, 0.38);
   color: color-mix(in srgb, var(--ic-doc-fg, #1d1d1d) 38%, transparent);
   pointer-events: none;
+}
+
+.ic-page-doc img,
+.ic-page-doc .ic-rt-image-block img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  margin: 0.35em 0;
+}
+
+.ic-page-doc .ic-rt-image-block {
+  margin: 0 0 0.35em;
+  user-select: none;
 }
 
 .ic-page-doc .ic-rt-block {
@@ -749,4 +764,38 @@
 .ic-slash-item:hover,
 .ic-slash-item-active {
   background: var(--ic-hover);
+}
+
+.ic-mobile-format-bar {
+  position: fixed;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--ic-pop-bg);
+  border-top: 1px solid var(--ic-border);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.ic-mobile-format-bar button {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ic-ink-strong);
+  font: 600 14px/1.2 system-ui, sans-serif;
+  padding: 10px 6px;
+  cursor: pointer;
+}
+
+.ic-mobile-format-bar button:active {
+  background: var(--ic-hover);
+}
+
+.ic-document-mode.ic-root {
+  padding-top: env(safe-area-inset-top, 0px);
 }

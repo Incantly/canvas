@@ -27,8 +27,8 @@ export type {
   TextShapeProps, NoteShapeProps, ImageShapeProps,
   PageDocumentRecord,
 } from './types/models.js'
-export type { BlockType, InlineSpan, TextBlock, DrawingBlock, DrawingStroke, DocumentBlock, RichTextLink } from './rich-text/types.js'
-export { isDrawingBlock, isTextBlock } from './rich-text/types.js'
+export type { BlockType, InlineSpan, TextBlock, DrawingBlock, DrawingStroke, ImageBlock, DocumentBlock, RichTextLink } from './rich-text/types.js'
+export { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
 export {
   PAGE_DOC_MARGIN_X,
   PAGE_DOC_MARGIN_Y,

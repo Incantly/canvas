@@ -7,9 +7,10 @@ import type {
   DocumentBlock,
   DrawingBlock,
   DrawingStroke,
+  ImageBlock,
   TextBlock,
 } from './rich-text/types.js'
-import { isDrawingBlock, isTextBlock } from './rich-text/types.js'
+import { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
 import { emptyParagraph, validateBlocks } from './rich-text/document.js'
 import { layoutRichText, drawRichTextLayout } from './rich-text/layout.js'
 import { blocksToHtml, htmlToBlocks } from './rich-text/dom.js'
@@ -20,6 +21,35 @@ export const DRAWING_BLOCK_GAP = 10
 export const DRAWING_BLOCK_PAD = 12
 /** Breathing room between the last text line and the ink-zone divider. */
 export const DRAWING_BLOCK_TOP_GAP = 28
+const IMAGE_BLOCK_MARGIN = 8
+
+function escapeHtmlAttr(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+}
+
+function normalizeImageBlock(raw: unknown): ImageBlock | null {
+  if (!raw || typeof raw !== 'object') return null
+  const b = raw as Record<string, unknown>
+  if (b.type !== 'image') return null
+  const src = typeof b.src === 'string' ? b.src.trim() : ''
+  if (!src) return null
+  const alt = typeof b.alt === 'string' ? b.alt : undefined
+  const width = typeof b.width === 'number' && b.width > 0 ? b.width : undefined
+  const height = typeof b.height === 'number' && b.height > 0 ? b.height : undefined
+  return { type: 'image', src, alt, width, height }
+}
+
+export function imageBlockHeight(block: ImageBlock, contentW: number): number {
+  const maxW = Math.max(1, contentW)
+  if (block.width && block.height && block.width > 0) {
+    const scale = Math.min(1, maxW / block.width)
+    return block.height * scale + IMAGE_BLOCK_MARGIN
+  }
+  return maxW * 0.5625 + IMAGE_BLOCK_MARGIN
+}
 
 export interface LayoutBlockEntry {
   index: number
@@ -94,6 +124,11 @@ export function validateDocumentBlocks(raw: unknown): DocumentBlock[] {
       if (db) blocks.push(db)
       continue
     }
+    if (rec.type === 'image') {
+      const ib = normalizeImageBlock(rec)
+      if (ib) blocks.push(ib)
+      continue
+    }
     const textOnly = validateBlocks([item])
     if (textOnly.length) blocks.push(textOnly[0]!)
   }
@@ -131,6 +166,10 @@ function computeLayout(
         align: 'left',
       })
       const h = Math.max(layout.h, PAGE_DOC_FONT_SIZE * 1.45)
+      entries.push({ index, block, x: 0, y, w: contentW, h })
+      y += h + 4
+    } else if (isImageBlock(block)) {
+      const h = imageBlockHeight(block, contentW)
       entries.push({ index, block, x: 0, y, w: contentW, h })
       y += h + 4
     } else {
@@ -175,9 +214,9 @@ export type DrawingTarget =
 /** One ink region at the end of the body — Apple Notes style. */
 export function consolidateDocumentBlocks(blocks: DocumentBlock[]): DocumentBlock[] {
   const validated = validateDocumentBlocks(blocks)
-  const texts = validated.filter(isTextBlock)
+  const body = validated.filter((b) => !isDrawingBlock(b))
   const drawings = validated.filter(isDrawingBlock)
-  const base = texts.length ? texts : [emptyParagraph()]
+  const base = body.length ? body : [emptyParagraph()]
   if (!drawings.length) return base
   const merged: DrawingBlock = {
     type: 'drawing',
@@ -418,6 +457,38 @@ export function drawDrawingBlockRegion(
   }
 }
 
+const _imageCache = new Map<string, HTMLImageElement>()
+
+function cachedImage(src: string): HTMLImageElement {
+  let img = _imageCache.get(src)
+  if (!img) {
+    img = new Image()
+    img.src = src
+    _imageCache.set(src, img)
+  }
+  return img
+}
+
+function drawImageBlockRegion(
+  ctx: CanvasRenderingContext2D,
+  block: ImageBlock,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const img = cachedImage(block.src)
+  const innerH = h - IMAGE_BLOCK_MARGIN
+  if (img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, x, y, w, innerH)
+    return
+  }
+  ctx.save()
+  ctx.fillStyle = 'rgba(120, 120, 120, 0.12)'
+  ctx.fillRect(x, y, w, innerH)
+  ctx.restore()
+}
+
 export function drawPageDocumentBlocks(
   ctx: CanvasRenderingContext2D,
   page: PageRecord,
@@ -456,6 +527,9 @@ export function drawPageDocumentBlocks(
       ctx.translate(0, entry.y)
       drawRichTextLayout(ctx, tl)
       ctx.restore()
+    } else if (isImageBlock(entry.block)) {
+      if (opts?.drawingOnly) continue
+      drawImageBlockRegion(ctx, entry.block, 0, entry.y, entry.w, entry.h)
     } else if (!opts?.textOnly && !opts?.skipDrawingIndices?.has(entry.index)) {
       drawDrawingBlockRegion(
         ctx,
@@ -480,6 +554,18 @@ export function documentBlockToDomHtml(block: DocumentBlock, index: number): str
   if (isDrawingBlock(block)) {
     return `<div class="ic-drawing-slot" data-doc-index="${index}" contenteditable="false" aria-label="Drawing area"></div>`
   }
+  if (isImageBlock(block)) {
+    const alt = block.alt ? ` alt="${escapeHtmlAttr(block.alt)}"` : ''
+    const dims =
+      block.width && block.height
+        ? ` width="${block.width}" height="${block.height}"`
+        : ''
+    return (
+      `<div class="ic-rt-block ic-rt-image-block" data-block="image" data-doc-index="${index}" contenteditable="false">` +
+      `<img src="${escapeHtmlAttr(block.src)}"${alt}${dims} draggable="false" />` +
+      `</div>`
+    )
+  }
   const html = blocksToHtml([block])
   return html.replace(/^<\w+\s/, (open) => `${open}data-doc-index="${index}" `)
 }
@@ -496,6 +582,15 @@ export function parseSingleBlockFromDom(
     const idx = Number(child.dataset.docIndex)
     const prev = existing[idx]
     return prev && isDrawingBlock(prev) ? prev : emptyDrawingBlock()
+  }
+  if (child.dataset.block === 'image' || child.classList.contains('ic-rt-image-block')) {
+    const img = child.querySelector('img')
+    const src = img?.getAttribute('src') ?? ''
+    if (!src) return null
+    const alt = img?.getAttribute('alt') ?? undefined
+    const width = img?.width || undefined
+    const height = img?.height || undefined
+    return { type: 'image', src, alt, width: width || undefined, height: height || undefined }
   }
   if (child.dataset.block) {
     const tmp = document.createElement('div')
@@ -516,6 +611,14 @@ export function parseDocumentBlocksFromDom(
       const idx = Number(child.dataset.docIndex)
       const prev = existing[idx]
       out.push(prev && isDrawingBlock(prev) ? prev : emptyDrawingBlock())
+      continue
+    }
+    if (
+      child instanceof HTMLElement &&
+      (child.dataset.block === 'image' || child.classList.contains('ic-rt-image-block'))
+    ) {
+      const parsed = parseSingleBlockFromDom(child, existing)
+      if (parsed) out.push(parsed)
       continue
     }
     if (child instanceof HTMLElement && child.dataset.block) {

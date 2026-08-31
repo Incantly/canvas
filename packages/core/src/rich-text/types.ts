@@ -51,14 +51,27 @@ export interface DrawingBlock {
   strokes: DrawingStroke[]
 }
 
-export type DocumentBlock = TextBlock | DrawingBlock
+/** Inline image block in the notes document flow. */
+export interface ImageBlock {
+  type: 'image'
+  src: string
+  alt?: string
+  width?: number
+  height?: number
+}
+
+export type DocumentBlock = TextBlock | DrawingBlock | ImageBlock
 
 export function isDrawingBlock(b: DocumentBlock): b is DrawingBlock {
   return b.type === 'drawing'
 }
 
+export function isImageBlock(b: DocumentBlock): b is ImageBlock {
+  return b.type === 'image'
+}
+
 export function isTextBlock(b: DocumentBlock): b is TextBlock {
-  return b.type !== 'drawing'
+  return b.type !== 'drawing' && b.type !== 'image'
 }
 
 export interface RichTextDocument {

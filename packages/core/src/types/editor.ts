@@ -23,6 +23,12 @@ export interface EditorOptions {
   documentMode?: boolean
   /** Seamless notes canvas color (documentMode). Falls back to theme default when omitted. */
   documentBackground?: string | null
+  /** Touch-first UI (mobile formatting bar). Defaults to ontouchstart detection. */
+  touchUi?: boolean
+  /** Native link prompt (RN WebView); falls back to window.prompt on web. */
+  promptLink?: () => Promise<string | null>
+  /** Clipboard read for Cmd+V in non-secure contexts; falls back to navigator.clipboard. */
+  readClipboard?: () => Promise<string>
 }
 
 export type EditorEvent =
@@ -273,5 +279,8 @@ export interface CreateCanvasOptions extends EditorOptions {
   hidePagesBar?: boolean
   /** Seamless notes canvas color (documentMode). */
   documentBackground?: string | null
+  touchUi?: boolean
+  promptLink?: () => Promise<string | null>
+  readClipboard?: () => Promise<string>
 }
 export type { EditorListenerMap }

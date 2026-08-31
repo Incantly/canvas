@@ -14,6 +14,43 @@ import {
 import { themeOf } from '../src/palette.js'
 
 describe('page document drawing blocks', () => {
+  it('validateDocumentBlocks accepts image blocks', () => {
+    const blocks = validateDocumentBlocks([
+      { type: 'paragraph', content: [{ text: 'Hello' }] },
+      { type: 'image', src: 'data:image/png;base64,abc', width: 400, height: 200 },
+    ])
+    expect(blocks).toHaveLength(2)
+    expect(blocks[1]?.type).toBe('image')
+  })
+
+  it('validateDocumentBlocks rejects image blocks with empty src', () => {
+    const blocks = validateDocumentBlocks([
+      { type: 'paragraph', content: [{ text: 'Before' }] },
+      { type: 'image', src: '' },
+      { type: 'image', src: '   ' },
+      { type: 'image' },
+      { type: 'paragraph', content: [{ text: 'After' }] },
+    ])
+    expect(blocks).toHaveLength(2)
+    expect(blocks.every((b) => b.type !== 'image')).toBe(true)
+    expect(blocks[0]?.type).toBe('paragraph')
+    expect(blocks[1]?.type).toBe('paragraph')
+  })
+
+  it('layout includes image block height', () => {
+    const theme = themeOf('light')
+    const layout = layoutPageDocument(
+      validateDocumentBlocks([
+        { type: 'paragraph', content: [{ text: 'Caption' }] },
+        { type: 'image', src: 'data:image/png;base64,abc', width: 400, height: 200 },
+      ]),
+      400,
+      theme,
+    )
+    expect(layout.entries).toHaveLength(2)
+    expect(layout.entries[1]!.h).toBeGreaterThan(0)
+  })
+
   it('validateDocumentBlocks accepts drawing blocks', () => {
     const blocks = validateDocumentBlocks([
       { type: 'paragraph', content: [{ text: 'Hello' }] },
@@ -101,6 +138,22 @@ describe('page document drawing blocks', () => {
     if (merged[merged.length - 1]?.type === 'drawing') {
       expect(merged[merged.length - 1].strokes.length).toBe(2)
     }
+  })
+
+  it('consolidateDocumentBlocks preserves images between text and drawing', () => {
+    const merged = consolidateDocumentBlocks(
+      validateDocumentBlocks([
+        { type: 'paragraph', content: [{ text: 'Intro' }] },
+        { type: 'image', src: 'data:image/png;base64,abc', width: 320, height: 180 },
+        { type: 'paragraph', content: [{ text: 'Caption' }] },
+        { type: 'drawing', height: 100, strokes: [{ pts: [0, 0, 0.5], color: 'black', size: 'm', kind: 'draw' }] },
+      ]),
+    )
+    expect(merged.map((b) => b.type)).toEqual(['paragraph', 'image', 'paragraph', 'drawing'])
+    if (merged[1]?.type === 'image') {
+      expect(merged[1].src).toContain('data:image/png')
+    }
+    expect(merged[merged.length - 1]?.type).toBe('drawing')
   })
 
   it('stroke bounds grow drawing block height', () => {

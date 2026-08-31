@@ -19,8 +19,8 @@ import {
   DRAWING_BLOCK_TOP_GAP,
 } from './page-document-blocks.js'
 import { drawPageDocumentBlocks } from './page-document-blocks.js'
-import type { DocumentBlock } from './rich-text/types.js'
-import { isDrawingBlock, isTextBlock } from './rich-text/types.js'
+import type { DocumentBlock, ImageBlock } from './rich-text/types.js'
+import { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
 
 export interface PageDocumentHost {
   readonly readonly: boolean
@@ -30,6 +30,9 @@ export interface PageDocumentHost {
   store: Store
   theme: Theme
   documentMode: boolean
+  touchUi?: boolean
+  promptLink?: () => Promise<string | null>
+  readClipboard?: () => Promise<string>
   currentPage(): PageRecord | null
   pageToScreen(x: number, y: number): { x: number; y: number }
   requestRender(): void
@@ -59,7 +62,9 @@ export class PageDocumentUI {
   wrap: HTMLDivElement
   el: HTMLDivElement
   slashMenu: HTMLDivElement
+  formatBar: HTMLDivElement
   focused = false
+  private touchUi = false
   private slashFilter = ''
   private slashIndex = 0
   private slashBlock: HTMLElement | null = null
@@ -82,8 +87,22 @@ export class PageDocumentUI {
     this.slashMenu = document.createElement('div')
     this.slashMenu.className = 'ic-slash-menu'
     this.slashMenu.hidden = true
+    this.formatBar = document.createElement('div')
+    this.formatBar.className = 'ic-mobile-format-bar'
+    this.formatBar.hidden = true
+    this.formatBar.innerHTML =
+      `<button type="button" data-fmt="bold" aria-label="Bold">B</button>` +
+      `<button type="button" data-fmt="italic" aria-label="Italic">I</button>` +
+      `<button type="button" data-fmt="underline" aria-label="Underline">U</button>` +
+      `<button type="button" data-fmt="link" aria-label="Link">Link</button>` +
+      `<button type="button" data-fmt="undo" aria-label="Undo">Undo</button>` +
+      `<button type="button" data-fmt="redo" aria-label="Redo">Redo</button>`
     host.container.appendChild(this.wrap)
     host.container.appendChild(this.slashMenu)
+    host.container.appendChild(this.formatBar)
+    this.touchUi =
+      host.touchUi ??
+      (typeof window !== 'undefined' && 'ontouchstart' in window)
     this.bind()
     this.syncFromStore()
   }
@@ -108,24 +127,37 @@ export class PageDocumentUI {
     this.el.addEventListener('focus', () => {
       this.focused = true
       this.wrap.classList.add('ic-page-doc-focused')
+      this.updateFormatBarVisibility()
       this.host.emitEdit()
     })
     this.el.addEventListener('blur', () => {
       this.hideSlashMenu()
       this.focused = false
       this.wrap.classList.remove('ic-page-doc-focused')
+      this.formatBar.hidden = true
       this.flushSyncToStore()
       this.host.emitEdit()
     })
     this.el.addEventListener('pointerdown', (e) => this.onPointerDown(e))
     this.el.addEventListener('mousedown', (e) => this.onPointerDown(e))
-    this.el.addEventListener('paste', (e) => this.onPaste(e))
+    this.el.addEventListener('paste', (e) => void this.onPaste(e))
+    this.formatBar.addEventListener('mousedown', (e) => e.preventDefault())
+    this.formatBar.addEventListener('click', (e) => void this.onFormatBarClick(e))
     this.slashMenu.addEventListener('mousedown', (e) => {
       e.preventDefault()
       const btn = (e.target as HTMLElement).closest('[data-slash-id]') as HTMLElement | null
       if (btn?.dataset.slashId) this.applySlashCommand(btn.dataset.slashId as BlockType | 'divider')
     })
     document.addEventListener('selectionchange', this.onSelectionChange)
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this._onViewportResize)
+      window.visualViewport.addEventListener('scroll', this._onViewportResize)
+    }
+  }
+
+  private _onViewportResize = (): void => {
+    this.layoutFormatBar()
+    if (!this.slashMenu.hidden) this.positionSlashMenu()
   }
 
   private onPointerDown(e: Event): void {
@@ -165,8 +197,13 @@ export class PageDocumentUI {
     if (this._syncRaf !== null) cancelAnimationFrame(this._syncRaf)
     if (this._hintTimer) clearTimeout(this._hintTimer)
     document.removeEventListener('selectionchange', this.onSelectionChange)
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this._onViewportResize)
+      window.visualViewport.removeEventListener('scroll', this._onViewportResize)
+    }
     this.wrap.remove()
     this.slashMenu.remove()
+    this.formatBar.remove()
   }
 
   /** Re-sync DOM from store after tab/panel return. */
@@ -175,8 +212,21 @@ export class PageDocumentUI {
     this.syncFromStore()
   }
 
-  private onPaste(e: ClipboardEvent): void {
-    if (!this.host.documentMode) return
+  private async onPaste(e: ClipboardEvent): Promise<void> {
+    if (!this.host.documentMode || this.host.readonly) return
+    const items = e.clipboardData?.items
+    if (items) {
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          const file = item.getAsFile()
+          if (!file) return
+          const src = await this._fileToDataUrl(file)
+          if (src) void this.insertImageBlock(src)
+          return
+        }
+      }
+    }
     const text = e.clipboardData?.getData('text/plain') ?? ''
     if (!text) return
     try {
@@ -186,8 +236,43 @@ export class PageDocumentUI {
         return
       }
     } catch {
-      /* plain text */
+      /* plain text — let contentEditable handle it */
     }
+  }
+
+  private _fileToDataUrl(file: Blob): Promise<string | null> {
+    return new Promise((resolve) => {
+      const fr = new FileReader()
+      fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : null)
+      fr.onerror = () => resolve(null)
+      fr.readAsDataURL(file)
+    })
+  }
+
+  async insertImageBlock(src: string, width?: number, height?: number): Promise<void> {
+    if (!src || this.host.readonly) return
+    if (!width || !height) {
+      const dims = await this._imageDimensions(src)
+      width = dims.width
+      height = dims.height
+    }
+    const caretIdx = this._caretBlockIndex()
+    const blocks = this.blocks().slice()
+    const insertAt = caretIdx !== null ? caretIdx + 1 : blocks.length
+    const imageBlock: ImageBlock = { type: 'image', src, width, height }
+    blocks.splice(insertAt, 0, imageBlock)
+    this.host.store.setNotebookDocument(blocks)
+    this.syncFromStore()
+    this.host.requestRender()
+  }
+
+  private _imageDimensions(src: string): Promise<{ width?: number; height?: number }> {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+      img.onerror = () => resolve({})
+      img.src = src
+    })
   }
 
   pasteText(text: string): void {
@@ -300,7 +385,7 @@ export class PageDocumentUI {
       const child = this.el.children[caretIdx]
       if (child instanceof HTMLElement) {
         const parsed = parseSingleBlockFromDom(child, existing)
-        if (parsed && !isDrawingBlock(parsed)) {
+        if (parsed && !isDrawingBlock(parsed) && !isImageBlock(parsed)) {
           const patched = existing.slice()
           patched[caretIdx] = applyMarkdownToBlock(parsed)
           this.host.store.setNotebookDocument(patched)
@@ -312,7 +397,7 @@ export class PageDocumentUI {
       }
     }
     const blocks = parseDocumentBlocksFromDom(this.el, existing).map((b) =>
-      isDrawingBlock(b) ? b : applyMarkdownToBlock(b),
+      isDrawingBlock(b) || isImageBlock(b) ? b : applyMarkdownToBlock(b),
     )
     this.host.store.setNotebookDocument(blocks)
     this._renderedBlocks = this.blocks()
@@ -342,7 +427,7 @@ export class PageDocumentUI {
     const blocks = this.blocks()
     const lastTextIdx = (() => {
       for (let i = blocks.length - 1; i >= 0; i--) {
-        if (!isDrawingBlock(blocks[i]!)) return i
+        if (isTextBlock(blocks[i]!)) return i
       }
       return -1
     })()
@@ -368,7 +453,7 @@ export class PageDocumentUI {
 
   focusAtEnd(): void {
     for (let i = this.blocks().length - 1; i >= 0; i--) {
-      if (!isDrawingBlock(this.blocks()[i]!)) {
+      if (!isDrawingBlock(this.blocks()[i]!) && !isImageBlock(this.blocks()[i]!)) {
         this.focusTextBlock(i, true)
         return
       }
@@ -435,7 +520,7 @@ export class PageDocumentUI {
   private lastTextBlockIndex(before = this.blocks().length): number {
     const blocks = this.blocks()
     for (let i = Math.min(before, blocks.length) - 1; i >= 0; i--) {
-      if (!isDrawingBlock(blocks[i]!)) return i
+      if (isTextBlock(blocks[i]!)) return i
     }
     return 0
   }
@@ -500,11 +585,7 @@ export class PageDocumentUI {
       this.syncToStore()
     } else if (meta && e.key === 'k') {
       e.preventDefault()
-      const url = window.prompt('Link URL', 'https://')
-      if (url) {
-        document.execCommand('createLink', false, url)
-        this.syncToStore()
-      }
+      void this.applyLink()
     } else if (this.slashMenu.hidden === false) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
@@ -589,13 +670,88 @@ export class PageDocumentUI {
   private showSlashMenu(): void {
     this.renderSlashMenu()
     this.slashMenu.hidden = false
+    this.positionSlashMenu()
+  }
+
+  private positionSlashMenu(): void {
     const sel = window.getSelection()
     if (!sel?.rangeCount) return
     const range = sel.getRangeAt(0)
     const rect = range.getBoundingClientRect()
     const cr = this.host.container.getBoundingClientRect()
+    const menuH = this.slashMenu.offsetHeight || 200
+    const viewportH = window.visualViewport?.height ?? window.innerHeight
+    const topBelow = rect.bottom - cr.top + 6
+    const maxTop = viewportH - cr.top - menuH - 8
     this.slashMenu.style.left = `${rect.left - cr.left}px`
-    this.slashMenu.style.top = `${rect.bottom - cr.top + 6}px`
+    this.slashMenu.style.top = `${Math.min(topBelow, maxTop)}px`
+  }
+
+  private updateFormatBarVisibility(): void {
+    if (!this.touchUi || this.host.readonly) {
+      this.formatBar.hidden = true
+      return
+    }
+    this.formatBar.hidden = false
+    this.layoutFormatBar()
+  }
+
+  private layoutFormatBar(): void {
+    if (this.formatBar.hidden) return
+    const cr = this.host.container.getBoundingClientRect()
+    const viewportH = window.visualViewport?.height ?? window.innerHeight
+    const barH = this.formatBar.offsetHeight || 44
+    const bottomInset = Math.max(0, window.innerHeight - viewportH)
+    this.formatBar.style.left = `${cr.left}px`
+    this.formatBar.style.width = `${cr.width}px`
+    this.formatBar.style.bottom = `${bottomInset}px`
+    this.formatBar.style.top = 'auto'
+  }
+
+  private async onFormatBarClick(e: Event): Promise<void> {
+    const btn = (e.target as HTMLElement).closest('[data-fmt]') as HTMLElement | null
+    if (!btn?.dataset.fmt) return
+    this.el.focus({ preventScroll: true })
+    switch (btn.dataset.fmt) {
+      case 'bold':
+        document.execCommand('bold')
+        this.syncToStore()
+        break
+      case 'italic':
+        document.execCommand('italic')
+        this.syncToStore()
+        break
+      case 'underline':
+        document.execCommand('underline')
+        this.syncToStore()
+        break
+      case 'link':
+        await this.applyLink()
+        break
+      case 'undo':
+        this.host.store.undo()
+        this.syncFromStore()
+        this.host.requestRender()
+        break
+      case 'redo':
+        this.host.store.redo()
+        this.syncFromStore()
+        this.host.requestRender()
+        break
+    }
+  }
+
+  private async applyLink(): Promise<void> {
+    let url: string | null = null
+    if (this.host.promptLink) {
+      url = await this.host.promptLink()
+    } else if (typeof window.prompt === 'function') {
+      url = window.prompt('Link URL', 'https://')
+    }
+    if (url) {
+      document.execCommand('createLink', false, url)
+      this.syncToStore()
+    }
   }
 
   private renderSlashMenu(): void {

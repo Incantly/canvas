@@ -6,6 +6,7 @@ import {
   useRef,
   type ForwardedRef,
 } from 'react'
+import { Alert, Platform } from 'react-native'
 import type { WebView as WebViewType } from 'react-native-webview'
 import { WebView } from 'react-native-webview'
 import { BOARD_HTML } from './board-html.generated.js'
@@ -13,7 +14,7 @@ import { createBridge, encodeDispatch } from './bridge.js'
 
 export { BOARD_HTML } from './board-html.generated.js'
 export { createBridge, encodeDispatch } from './bridge.js'
-export type { CanvasProps, CanvasRef } from './types/index.js'
+export type { CanvasProps, CanvasRef, SafeAreaInsets } from './types/index.js'
 
 import type { CanvasProps, CanvasRef } from './types/index.js'
 
@@ -40,13 +41,24 @@ export const Canvas = forwardRef(function Canvas(
     watermark = true,
     snapshot,
     styles,
+    documentMode = false,
+    documentBackground,
+    uiTools,
+    uiIcons,
+    hidePagesBar,
+    touchUi = true,
+    safeAreaInsets,
     onReady,
     onChange,
     onSelectionChange,
     onThemeChange,
     onGridChange,
+    onEdit,
+    onKeyboard,
     onSave,
     onError,
+    onPromptLink,
+    onReadClipboard,
     style,
     webviewProps,
   } = props
@@ -74,14 +86,47 @@ export const Canvas = forwardRef(function Canvas(
     onSelectionChange?: (ids: string[]) => void
     onThemeChange?: (theme: any) => void
     onGridChange?: (grid: any) => void
+    onEdit?: () => void
+    onKeyboard?: (height: number) => void
     onSave?: (dataUrl: string, background: boolean) => void
     onError?: (message: string) => void
+    onPromptLink?: (respond: (url: string | null) => void) => void
+    onReadClipboard?: (respond: (text: string) => void) => void
   }>({})
-  cbRef.current = { onReady, onChange, onSelectionChange, onThemeChange, onGridChange, onSave, onError }
+  cbRef.current = {
+    onReady,
+    onChange,
+    onSelectionChange,
+    onThemeChange,
+    onGridChange,
+    onEdit,
+    onKeyboard,
+    onSave,
+    onError,
+    onPromptLink,
+    onReadClipboard,
+  }
 
   const initRef = useRef<any>(null)
   if (!initRef.current) {
-    initRef.current = { theme, grid, readonly, hideUi, themeToggle, gridControl, watermark, snapshot, styles }
+    initRef.current = {
+      theme,
+      grid,
+      readonly,
+      hideUi,
+      themeToggle,
+      gridControl,
+      watermark,
+      snapshot,
+      styles,
+      documentMode,
+      documentBackground,
+      uiTools,
+      uiIcons,
+      hidePagesBar,
+      touchUi,
+      safeAreaInsets,
+    }
   }
 
   const onMessage = (e: any): void => {
@@ -115,6 +160,34 @@ export const Canvas = forwardRef(function Canvas(
       case 'grid':
         cbRef.current.onGridChange?.(m.grid)
         break
+      case 'edit':
+        cbRef.current.onEdit?.()
+        break
+      case 'keyboard':
+        cbRef.current.onKeyboard?.(typeof m.height === 'number' ? m.height : 0)
+        break
+      case 'promptLink':
+        if (cbRef.current.onPromptLink) {
+          cbRef.current.onPromptLink((url) =>
+            st.bridge.post({ type: 'promptLinkResult', url }),
+          )
+        } else if (Platform.OS === 'ios') {
+          Alert.prompt('Link URL', undefined, (url) =>
+            st.bridge.post({ type: 'promptLinkResult', url: url || null }),
+          )
+        } else {
+          st.bridge.post({ type: 'promptLinkResult', url: null })
+        }
+        break
+      case 'readClipboard':
+        if (cbRef.current.onReadClipboard) {
+          cbRef.current.onReadClipboard((text) =>
+            st.bridge.post({ type: 'clipboardResult', id: m.id, text }),
+          )
+        } else {
+          st.bridge.post({ type: 'clipboardResult', id: m.id, text: '' })
+        }
+        break
       case 'save':
         cbRef.current.onSave?.(m.dataUrl, m.background)
         break
@@ -139,6 +212,11 @@ export const Canvas = forwardRef(function Canvas(
   useEffect(() => {
     st.bridge.post({ type: 'setReadonly', readonly })
   }, [readonly])
+  useEffect(() => {
+    if (documentBackground !== undefined) {
+      st.bridge.post({ type: 'setDocumentBackground', color: documentBackground })
+    }
+  }, [documentBackground])
   useEffect(() => () => st.bridge.dispose(), [])
 
   useImperativeHandle(
@@ -155,6 +233,17 @@ export const Canvas = forwardRef(function Canvas(
       redo: () => st.bridge.post({ type: 'redo' }),
       clear: () => st.bridge.post({ type: 'clear' }),
       fitContent: (animate) => st.bridge.post({ type: 'fitContent', animate }),
+      focusPageDocument: () => st.bridge.post({ type: 'focusPageDocument' }),
+      refreshPageDocument: () => st.bridge.post({ type: 'refreshPageDocument' }),
+      setPage: (pageId, opts) =>
+        st.bridge.post({
+          type: 'setPage',
+          pageId,
+          fit: opts?.fit,
+          animate: opts?.animate,
+        }),
+      addPage: (opts) => st.bridge.post({ type: 'addPage', opts }),
+      removePage: (pageId) => st.bridge.post({ type: 'removePage', pageId }),
       getSnapshot: () => st.bridge.request({ type: 'getSnapshot' }),
       exportPng: (opts) => st.bridge.request({ type: 'exportPng', opts }),
     }),
@@ -171,7 +260,7 @@ export const Canvas = forwardRef(function Canvas(
     bounces: false,
     overScrollMode: 'never',
     setSupportMultipleWindows: false,
-    hideKeyboardAccessoryView: true,
+    hideKeyboardAccessoryView: false,
     style: [{ flex: 1, backgroundColor: 'transparent' }, style],
     ...webviewProps,
   })

@@ -273,6 +273,9 @@ interface EditorCtorOpts {
   geoKind?: GeoId;
   documentMode?: boolean;
   documentBackground?: string | null;
+  touchUi?: boolean;
+  promptLink?: () => Promise<string | null>;
+  readClipboard?: () => Promise<string>;
 }
 
 export class Editor {
@@ -288,6 +291,9 @@ export class Editor {
   geoKind: GeoId;
   documentMode: boolean;
   private _documentBackground: string | null = null;
+  private _touchUi?: boolean;
+  private _promptLink?: () => Promise<string | null>;
+  private _readClipboard?: () => Promise<string>;
   tool: ToolId;
   selection: Set<string>;
   currentPageId: string;
@@ -356,6 +362,9 @@ export class Editor {
       geoKind,
       documentMode = false,
       documentBackground = null,
+      touchUi,
+      promptLink,
+      readClipboard,
     }: EditorCtorOpts = {} as EditorCtorOpts,
   ) {
     this.container = container;
@@ -368,6 +377,9 @@ export class Editor {
     this.styles = { ...DEFAULT_STYLES, ...(styles || {}) };
     this.geoKind = geoKind || "rectangle";
     this.documentMode = !!documentMode;
+    this._touchUi = touchUi;
+    this._promptLink = promptLink;
+    this._readClipboard = readClipboard;
     this.tool = this.documentMode ? "select" : "draw";
     if (this.documentMode) container.classList.add("ic-document-mode");
     if (documentBackground != null) {
@@ -428,6 +440,11 @@ export class Editor {
       get documentMode() {
         return self.documentMode;
       },
+      get touchUi() {
+        return self._touchUi;
+      },
+      promptLink: self._promptLink,
+      readClipboard: self._readClipboard,
       currentPage: () => self.currentPage(),
       pageToScreen: (x: number, y: number) => self.pageToScreen(x, y),
       requestRender: () => self.requestRender(),
@@ -1931,25 +1948,34 @@ export class Editor {
   }
 
   async _pasteDocumentText(): Promise<void> {
+    let text = "";
     try {
-      const text = await navigator.clipboard.readText();
-      if (!text) return;
-      try {
-        const data = JSON.parse(text);
-        if (
-          data &&
-          (data.incantly || data.quickdraw) &&
-          Array.isArray(data.shapes)
-        )
-          return;
-      } catch {
-        /* plain text */
-      }
-      this._focusPageDocument();
-      this.pageDocUI.pasteText(text);
+      text = await navigator.clipboard.readText();
     } catch {
-      /* clipboard denied */
+      if (this._readClipboard) {
+        try {
+          text = await this._readClipboard();
+        } catch {
+          return;
+        }
+      } else {
+        return;
+      }
     }
+    if (!text) return;
+    try {
+      const data = JSON.parse(text);
+      if (
+        data &&
+        (data.incantly || data.quickdraw) &&
+        Array.isArray(data.shapes)
+      )
+        return;
+    } catch {
+      /* plain text */
+    }
+    this._focusPageDocument();
+    this.pageDocUI.pasteText(text);
   }
 
   _localPagePoint(p: XY): { page: PageRecord; lx: number; ly: number } | null {
