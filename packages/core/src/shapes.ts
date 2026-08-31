@@ -20,6 +20,7 @@ import {
   FONTS,
   HIGHLIGHT_ALPHA,
   HIGHLIGHT_SCALE,
+  themeOf,
 } from './palette.js'
 import {
   ptsBounds,
@@ -39,9 +40,15 @@ import {
   boundsContain,
 } from './geometry.js'
 import { strokeOutline } from './freehand.js'
+import {
+  getShapeBlocks,
+  layoutRichText,
+  drawRichTextLayout,
+  type RichTextLayout,
+} from './rich-text/index.js'
 
 export const NOTE_W = 200
-const NOTE_PAD = 20
+export const NOTE_PAD = 20
 const LABEL_PAD = 12
 
 const SEMI: Record<'light' | 'dark', string> = {
@@ -136,7 +143,7 @@ const measurer = (): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2
       typeof OffscreenCanvas !== 'undefined'
         ? new OffscreenCanvas(1, 1)
         : document.createElement('canvas')
-    ).getContext('2d')
+    ).getContext('2d') as CanvasRenderingContext2D | null
   return measureCtx
 }
 
@@ -183,39 +190,47 @@ function wrapLines(text: string, font: string, fontSize: number, maxW: number): 
   return out
 }
 
-interface TextLayout {
-  lines: WrapLine[]
-  fontSize: number
-  font: string
-  lh: number
-  w: number
-  h: number
-}
+interface TextLayout extends RichTextLayout {}
 
 export function textLayout(shape: ShapeRecord): TextLayout {
   const p = asProps(shape.props)
   const hit = layoutCache.get(p)
   if (hit) return hit as TextLayout
   const fontSize = FONT_SIZES[p.size as SizeId] * (p.scale || 1)
-  const font = FONTS[(p.font || 'draw') as FontId]
-  const lh = fontSize * 1.32
   const maxW = p.autosize === false && p.w ? p.w : 0
-  const lines = wrapLines(p.text, font, fontSize, maxW)
-  const w = maxW || Math.max(8, ...lines.map((l) => l.w)) + 2
-  const l: TextLayout = {
-    lines,
-    fontSize,
-    font,
-    lh,
-    w,
-    h: Math.max(lh, lines.length * lh),
-  }
+  const blocks = getShapeBlocks(p)
+  const l = layoutRichText({
+    blocks,
+    maxW,
+    defaultFont: (p.font || 'sans') as FontId,
+    baseFontSize: fontSize,
+    defaultColor: (p.color || 'black') as ColorId,
+    theme: themeOf('light'),
+    align: p.align === 'center' ? 'center' : p.align === 'right' ? 'right' : 'left',
+  })
   layoutCache.set(p, l)
   return l
 }
 
+/** Theme-aware layout for rendering. */
+export function textLayoutThemed(shape: ShapeRecord, theme: Theme): TextLayout {
+  const p = asProps(shape.props)
+  const fontSize = FONT_SIZES[p.size as SizeId] * (p.scale || 1)
+  const maxW = p.autosize === false && p.w ? p.w : 0
+  const blocks = getShapeBlocks(p)
+  return layoutRichText({
+    blocks,
+    maxW,
+    defaultFont: (p.font || 'sans') as FontId,
+    baseFontSize: fontSize,
+    defaultColor: (p.color || 'black') as ColorId,
+    theme,
+    align: p.align === 'center' ? 'center' : p.align === 'right' ? 'right' : 'left',
+  })
+}
+
 interface NoteLayout {
-  lines: WrapLine[]
+  layout: RichTextLayout
   fontSize: number
   font: string
   lh: number
@@ -230,10 +245,19 @@ export function noteLayout(shape: ShapeRecord): NoteLayout {
   const fontSize = NOTE_FONT_SIZES[p.size as SizeId]
   const font = FONTS[(p.font || 'draw') as FontId]
   const lh = fontSize * 1.35
-  const lines = wrapLines(p.text, font, fontSize, NOTE_W - NOTE_PAD * 2)
-  const textH = lines.length * lh
+  const blocks = getShapeBlocks(p)
+  const layout = layoutRichText({
+    blocks,
+    maxW: NOTE_W - NOTE_PAD * 2,
+    defaultFont: (p.font || 'draw') as FontId,
+    baseFontSize: fontSize,
+    defaultColor: 'black',
+    theme: themeOf('light'),
+    align: 'left',
+  })
+  const textH = layout.h
   const l: NoteLayout = {
-    lines,
+    layout,
     fontSize,
     font,
     lh,
@@ -541,19 +565,9 @@ export function drawShape(
       break
     }
     case 'text': {
-      const l = textLayout(shape)
-      ctx.font = `500 ${l.fontSize}px ${l.font}`
-      ctx.fillStyle = col.stroke
-      ctx.textBaseline = 'alphabetic'
-      const align: string = p.align || 'start'
-      ctx.textAlign = align === 'middle' ? 'center' : align === 'end' ? 'right' : 'left'
-      const ax = align === 'middle' ? l.w / 2 : align === 'end' ? l.w : 0
-      let y = lineBaseline(l.font, l.fontSize, l.lh)
+      const l = textLayoutThemed(shape, theme)
       if (opts.hideText !== 'text') {
-        for (const line of l.lines) {
-          ctx.fillText(line.text, ax, y)
-          y += l.lh
-        }
+        drawRichTextLayout(ctx, l)
       }
       break
     }
@@ -571,17 +585,23 @@ export function drawShape(
       ctx.shadowColor = 'transparent'
       ctx.shadowBlur = 0
       ctx.shadowOffsetY = 0
-      ctx.font = `500 ${l.fontSize}px ${l.font}`
-      ctx.fillStyle = theme.noteText
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'alphabetic'
-      const bl = lineBaseline(l.font, l.fontSize, l.lh)
-      let y = Math.max(NOTE_PAD, l.boxH / 2 - l.textH / 2) + bl
       if (opts.hideText !== 'text') {
-        for (const line of l.lines) {
-          ctx.fillText(line.text, NOTE_W / 2, y)
-          y += l.lh
+        const noteLayoutThemed = layoutRichText({
+          blocks: getShapeBlocks(p),
+          maxW: NOTE_W - NOTE_PAD * 2,
+          defaultFont: (p.font || 'draw') as FontId,
+          baseFontSize: l.fontSize,
+          defaultColor: 'black',
+          theme,
+          align: 'left',
+        })
+        ctx.save()
+        ctx.translate(NOTE_PAD, Math.max(NOTE_PAD, l.boxH / 2 - l.textH / 2))
+        for (const run of noteLayoutThemed.runs) {
+          run.color = theme.noteText
         }
+        drawRichTextLayout(ctx, noteLayoutThemed)
+        ctx.restore()
       }
       break
     }

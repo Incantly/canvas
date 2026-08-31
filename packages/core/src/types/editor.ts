@@ -19,6 +19,16 @@ export interface EditorOptions {
   camera?: Camera
   styles?: Partial<Styles>
   geoKind?: GeoId
+  /** Apple Notes / OpenNote style: page body is the primary surface; pen only when draw tool active. */
+  documentMode?: boolean
+  /** Seamless notes canvas color (documentMode). Falls back to theme default when omitted. */
+  documentBackground?: string | null
+  /** Touch-first UI (mobile formatting bar). Defaults to ontouchstart detection. */
+  touchUi?: boolean
+  /** Native link prompt (RN WebView); falls back to window.prompt on web. */
+  promptLink?: () => Promise<string | null>
+  /** Clipboard read for Cmd+V in non-secure contexts; falls back to navigator.clipboard. */
+  readClipboard?: () => Promise<string>
 }
 
 export type EditorEvent =
@@ -152,7 +162,11 @@ export interface Editor {
     animate?: number
     ease?: number
   }): void
+  fitDocumentView(opts?: { animate?: number }): void
   followBounds(b: import('./base.js').Bounds, opts?: { animate?: number; ease?: number }): void
+
+  documentBackgroundColor(): string
+  setDocumentBackground(color: string | null): void
 
   pages(): PageRecord[]
   currentPage(): PageRecord | null
@@ -168,6 +182,8 @@ export interface Editor {
   adjustPageGap(delta: number): void
 
   setTool(tool: ToolId): void
+  focusPageDocument(): void
+  refreshPageDocument(): void
   setGeoKind(kind: GeoId): void
   setTheme(id: ThemeId | string): void
   setGrid(id: GridId): void
@@ -220,7 +236,13 @@ export interface Editor {
 
 export interface BoardUI {
   setHidden(hidden: boolean): void
-  setOptions(opts: { themeToggle?: boolean; gridControl?: boolean }): void
+  setOptions(opts: {
+    themeToggle?: boolean
+    gridControl?: boolean
+    tools?: ToolId[]
+    icons?: Partial<Record<string, string>>
+    hidePagesBar?: boolean
+  }): void
   destroy(): void
 }
 
@@ -229,6 +251,12 @@ export interface BuildUIOptions {
   onSave?: (blob: Blob, background: boolean) => void
   themeToggle?: boolean
   gridControl?: boolean
+  /** Primary dock tools (default: notes preset in documentMode, full dock otherwise). */
+  tools?: ToolId[]
+  /** Custom SVG inner HTML per tool or chrome icon key. */
+  icons?: Partial<Record<string, string>>
+  /** Hide page navigation bar (default true in documentMode). */
+  hidePagesBar?: boolean
 }
 
 export interface CanvasInstance {
@@ -243,5 +271,16 @@ export interface CreateCanvasOptions extends EditorOptions {
   themeToggle?: boolean
   gridControl?: boolean
   watermark?: boolean
+  /** Primary dock tools (see BuildUIOptions.tools). */
+  uiTools?: ToolId[]
+  /** Custom dock icons (see BuildUIOptions.icons). */
+  uiIcons?: Partial<Record<string, string>>
+  /** Hide page bar in notes mode (default true when documentMode). */
+  hidePagesBar?: boolean
+  /** Seamless notes canvas color (documentMode). */
+  documentBackground?: string | null
+  touchUi?: boolean
+  promptLink?: () => Promise<string | null>
+  readClipboard?: () => Promise<string>
 }
 export type { EditorListenerMap }

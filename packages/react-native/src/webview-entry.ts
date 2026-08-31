@@ -30,11 +30,39 @@ const blobToDataUrl = (blob: Blob): Promise<string | null> =>
 const host = document.getElementById('board') as HTMLElement
 let board: CanvasInstance | null = null
 let hideUi = false
+let pendingLink: ((url: string | null) => void) | null = null
+const pendingClipboard = new Map<string, (text: string) => void>()
+
+const applySafeAreaInsets = (insets?: {
+  top?: number
+  right?: number
+  bottom?: number
+  left?: number
+}): void => {
+  if (!insets) return
+  const root = document.documentElement
+  if (typeof insets.top === 'number') root.style.setProperty('--ic-safe-top', `${insets.top}px`)
+  if (typeof insets.right === 'number') root.style.setProperty('--ic-safe-right', `${insets.right}px`)
+  if (typeof insets.bottom === 'number') root.style.setProperty('--ic-safe-bottom', `${insets.bottom}px`)
+  if (typeof insets.left === 'number') root.style.setProperty('--ic-safe-left', `${insets.left}px`)
+}
+
+const bindKeyboardReporter = (): void => {
+  const report = (): void => {
+    const viewportH = window.visualViewport?.height ?? window.innerHeight
+    const keyboardH = Math.max(0, window.innerHeight - viewportH)
+    post({ type: 'keyboard', height: keyboardH })
+  }
+  window.visualViewport?.addEventListener('resize', report)
+  window.visualViewport?.addEventListener('scroll', report)
+  report()
+}
 
 const handlers: Record<string, (m: any) => any> = {
   init(m: any) {
     if (board) board.destroy()
     hideUi = !!m.hideUi
+    applySafeAreaInsets(m.safeAreaInsets)
     board = createCanvas({
       container: host,
       theme: m.theme || 'light',
@@ -45,6 +73,26 @@ const handlers: Record<string, (m: any) => any> = {
       gridControl: m.gridControl !== false,
       watermark: m.watermark !== false,
       styles: m.styles || undefined,
+      documentMode: !!m.documentMode,
+      documentBackground: m.documentBackground ?? undefined,
+      uiTools: m.uiTools,
+      uiIcons: m.uiIcons,
+      hidePagesBar: m.hidePagesBar,
+      touchUi: m.touchUi !== false,
+      promptLink: () =>
+        new Promise((resolve) => {
+          pendingLink = resolve
+          post({ type: 'promptLink' })
+        }),
+      readClipboard: () =>
+        new Promise((resolve, reject) => {
+          const id = 'clip' + Date.now()
+          pendingClipboard.set(id, resolve)
+          post({ type: 'readClipboard', id })
+          setTimeout(() => {
+            if (pendingClipboard.delete(id)) reject(new Error('clipboard timeout'))
+          }, 10000)
+        }),
       onSave: async (blob: Blob, background: boolean) => {
         post({ type: 'save', dataUrl: await blobToDataUrl(blob), background })
       },
@@ -55,21 +103,41 @@ const handlers: Record<string, (m: any) => any> = {
     }
     board.editor.store.listen((diff: any, source: any) => post({ type: 'change', diff, source }))
     board.editor.on('selection', () => post({ type: 'selection', ids: [...board!.editor.selection] }))
-    board.editor.on('page', () => post({ type: 'page', pageId: board!.editor.currentPageId, pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })) }))
+    board.editor.on('page', () =>
+      post({
+        type: 'page',
+        pageId: board!.editor.currentPageId,
+        pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })),
+      }),
+    )
     board.editor.on('pagelayout', () => post({ type: 'pagelayout', layout: board!.editor.pageLayout() }))
     board.editor.on('pagegap', () => post({ type: 'pagegap', gap: board!.editor.pageGap() }))
+    board.editor.on('edit', () => post({ type: 'edit' }))
     board.editor.on('theme', () => {
       host.dataset.icTheme = board!.editor.theme.id
       post({ type: 'theme', theme: board!.editor.theme.id })
     })
     board.editor.on('grid', () => post({ type: 'grid', grid: board!.editor.grid }))
+    bindKeyboardReporter()
     post({ type: 'mounted' })
+  },
+  promptLinkResult(m: any) {
+    pendingLink?.(typeof m.url === 'string' ? m.url : null)
+    pendingLink = null
+  },
+  clipboardResult(m: any) {
+    const fn = pendingClipboard.get(m.id)
+    if (!fn) return
+    pendingClipboard.delete(m.id)
+    fn(typeof m.text === 'string' ? m.text : '')
   },
   loadSnapshot(m: any) {
     board!.editor.store.loadSnapshot(m.snapshot, 'remote')
     if (m.fit !== false) board!.editor.fitPage({ animate: m.animate || 0 })
   },
-  applyDiff(m: any) { board!.editor.store.applyDiff(m.diff, 'remote') },
+  applyDiff(m: any) {
+    board!.editor.store.applyDiff(m.diff, 'remote')
+  },
   setTheme(m: any) {
     board!.editor.setTheme(m.theme)
     host.dataset.icTheme = board!.editor.theme.id
@@ -78,17 +146,46 @@ const handlers: Record<string, (m: any) => any> = {
     board!.editor.setReadonly(!!m.readonly)
     board!.ui.setHidden(!!m.readonly || hideUi)
   },
-  setGrid(m: any) { board!.editor.setGrid(m.grid) },
-  setTool(m: any) { board!.editor.setTool(m.tool) },
-  setStyle(m: any) { board!.editor.setStyle(m.key, m.value) },
-  undo() { board!.editor.store.undo() },
-  redo() { board!.editor.store.redo() },
-  clear() { board!.editor.clearBoard() },
-  fitContent(m: any) { board!.editor.fitPage({ animate: m.animate || 0 }) },
-  setPage(m: any) { board!.editor.setPage(m.pageId, { fit: m.fit !== false, animate: m.animate || 0 }) },
+  setGrid(m: any) {
+    board!.editor.setGrid(m.grid)
+  },
+  setTool(m: any) {
+    board!.editor.setTool(m.tool)
+  },
+  setStyle(m: any) {
+    board!.editor.setStyle(m.key, m.value)
+  },
+  setDocumentBackground(m: any) {
+    board!.editor.setDocumentBackground(m.color ?? null)
+  },
+  focusPageDocument() {
+    board!.editor.focusPageDocument()
+  },
+  refreshPageDocument() {
+    board!.editor.refreshPageDocument()
+  },
+  undo() {
+    board!.editor.store.undo()
+  },
+  redo() {
+    board!.editor.store.redo()
+  },
+  clear() {
+    board!.editor.clearBoard()
+  },
+  fitContent(m: any) {
+    board!.editor.fitPage({ animate: m.animate || 0 })
+  },
+  setPage(m: any) {
+    board!.editor.setPage(m.pageId, { fit: m.fit !== false, animate: m.animate || 0 })
+  },
   addPage(m: any) {
     const page = board!.editor.addPage(m.opts || {})
-    post({ type: 'page', pageId: board!.editor.currentPageId, pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })) })
+    post({
+      type: 'page',
+      pageId: board!.editor.currentPageId,
+      pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })),
+    })
     return page
   },
   removePage(m: any) {
@@ -96,7 +193,11 @@ const handlers: Record<string, (m: any) => any> = {
     if (!board!.editor.removePage(id)) {
       throw new Error('Cannot remove page')
     }
-    post({ type: 'page', pageId: board!.editor.currentPageId, pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })) })
+    post({
+      type: 'page',
+      pageId: board!.editor.currentPageId,
+      pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })),
+    })
   },
   setPageLayout(m: any) {
     const layout = m.layout
@@ -113,7 +214,9 @@ const handlers: Record<string, (m: any) => any> = {
     else throw new Error('setPageGap requires gap, preset, or delta')
     post({ type: 'pagegap', gap: board!.editor.pageGap() })
   },
-  getSnapshot(m: any) { post({ type: 'snapshot', id: m.id, snapshot: board!.editor.store.getSnapshot() }) },
+  getSnapshot(m: any) {
+    post({ type: 'snapshot', id: m.id, snapshot: board!.editor.store.getSnapshot() })
+  },
   async exportPng(m: any) {
     const blob = await board!.editor.exportImage(m.opts || {})
     post({ type: 'export', id: m.id, dataUrl: blob ? await blobToDataUrl(blob) : null })

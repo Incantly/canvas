@@ -105,11 +105,13 @@ export const NOTE_FONT_SIZES: Record<SizeId, number> = { s: 16, m: 20, l: 26, xl
 export const DASH_IDS: readonly DashId[] = ['draw', 'solid', 'dashed', 'dotted']
 export const FILL_IDS: readonly FillId[] = ['none', 'semi', 'solid', 'pattern']
 
+export const FONT_IDS: readonly FontId[] = ['sans', 'serif', 'mono', 'draw']
+
 export const FONTS: Record<FontId, string> = {
-  draw: "'Segoe Print', 'Comic Sans MS', 'Chalkboard SE', cursive",
-  sans: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif",
-  serif: "'Iowan Old Style', 'New York', Palatino, Georgia, serif",
-  mono: "'SF Mono', ui-monospace, Menlo, monospace",
+  sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  serif: "'Lora', 'Iowan Old Style', Georgia, serif",
+  mono: "'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace",
+  draw: "'Caveat', 'Segoe Print', cursive",
 }
 
 export const GEO_IDS: readonly GeoId[] = [

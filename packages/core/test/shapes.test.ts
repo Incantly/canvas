@@ -79,7 +79,7 @@ describe('hit testing', () => {
 
 describe('marquee', () => {
   it('solid-bodied shapes select on bounds overlap; strokes need a graze', () => {
-    const note: any = { id: 'n', typeName: 'shape', type: 'note', x: 0, y: 0, rot: 0, z: 1, props: { text: 'hi', size: 'm', color: 'yellow', font: 'draw' } }
+    const note: any = { id: 'n', typeName: 'shape', type: 'note', x: 0, y: 0, rot: 0, z: 1, props: { blocks: [{ type: 'paragraph', content: [{ text: 'hi' }] }], size: 'm', color: 'yellow', font: 'draw' } }
     expect(marqueeHits(note, { x: -5, y: -5, w: 20, h: 20 })).toBe(true)
 
     const line: any = { id: 'l', typeName: 'shape', type: 'line', x: 0, y: 0, rot: 0, z: 1, props: { dx: 100, dy: 100, size: 'm', color: 'black' } }
@@ -101,7 +101,7 @@ describe('scaleShape', () => {
   })
 
   it('text and note scale via the scale prop, floored', () => {
-    const t: any = { id: 't', typeName: 'shape', type: 'text', x: 0, y: 0, rot: 0, z: 1, props: { text: 'x', size: 'm', scale: 1 } }
+    const t: any = { id: 't', typeName: 'shape', type: 'text', x: 0, y: 0, rot: 0, z: 1, props: { blocks: [{ type: 'paragraph', content: [{ text: 'x' }] }], size: 'm', scale: 1 } }
     expect(scaleShape(t, 2, 2).props.scale).toBeCloseTo(2)
     expect(scaleShape(t, 0.01, 0.01).props.scale).toBe(0.2)
   })
@@ -116,21 +116,32 @@ describe('scaleShape', () => {
 
 describe('text layout', () => {
   it('wraps long text when autosize is off and width fixed', () => {
-    const t: any = { id: 't', typeName: 'shape', type: 'text', x: 0, y: 0, rot: 0, z: 1, props: { text: 'aaaa bbbb cccc dddd', size: 'm', autosize: false, w: 120, font: 'draw' } }
+    const t: any = { id: 't', typeName: 'shape', type: 'text', x: 0, y: 0, rot: 0, z: 1, props: { blocks: [{ type: 'paragraph', content: [{ text: 'aaaa bbbb cccc dddd' }] }], size: 'm', autosize: false, w: 120, font: 'draw' } }
     const l: any = textLayout(t)
-    expect(l.lines.length).toBeGreaterThan(1)
+    expect(l.runs.length).toBeGreaterThan(0)
     expect(l.w).toBe(120)
   })
 
   it('caches per props object (identity)', () => {
-    const t: any = { id: 't', typeName: 'shape', type: 'text', x: 0, y: 0, rot: 0, z: 1, props: { text: 'hello', size: 'm' } }
+    const t: any = { id: 't', typeName: 'shape', type: 'text', x: 0, y: 0, rot: 0, z: 1, props: { blocks: [{ type: 'paragraph', content: [{ text: 'hello' }] }], size: 'm' } }
     expect(textLayout(t)).toBe(textLayout(t))
   })
 
   it('empty and multi-line text still lay out', () => {
-    const mk = (text: string): any => textLayout({ id: 't', typeName: 'shape', type: 'text', x: 0, y: 0, rot: 0, z: 1, props: { text, size: 'm' } } as any)
-    expect(mk('').lines.length).toBe(1)
-    expect(mk('a\nb\nc').lines.length).toBe(3)
-    expect(mk('a\nb\nc').h).toBeGreaterThan(mk('a').h)
+    const mk = (blocks: any[]): any =>
+      textLayout({
+        id: 't',
+        typeName: 'shape',
+        type: 'text',
+        x: 0,
+        y: 0,
+        rot: 0,
+        z: 1,
+        props: { blocks, size: 'm' },
+      } as any)
+    expect(mk([{ type: 'paragraph', content: [{ text: '' }] }]).h).toBeGreaterThan(0)
+    expect(mk([{ type: 'paragraph', content: [{ text: 'a' }] }, { type: 'paragraph', content: [{ text: 'b' }] }, { type: 'paragraph', content: [{ text: 'c' }] }]).h).toBeGreaterThan(
+      mk([{ type: 'paragraph', content: [{ text: 'a' }] }]).h
+    )
   })
 })

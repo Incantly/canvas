@@ -1,6 +1,6 @@
 /**
  * Reference Expo screen — copy into apps/mobile when the shell lands.
- * rn: full Canvas in WebView; draw + undo smoke test.
+ * RN document mode smoke test: notes typing + draw tool.
  */
 import { useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -14,8 +14,11 @@ export default function PlaygroundScreen() {
       <Canvas
         ref={ref}
         style={styles.canvas}
-        onMount={() => {
-          ref.current?.setTool('draw')
+        documentMode
+        hidePagesBar
+        touchUi
+        onReady={() => {
+          ref.current?.setTool('select')
         }}
       />
     </View>

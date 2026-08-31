@@ -1,5 +1,6 @@
 import type { GridId, PageGapPreset, PageLayout } from './types/base.js'
 import type { NotebookRecord, PageRecord, ShapeRecord } from './types/models.js'
+import { emptyDocument } from './rich-text/document.js'
 import { newId } from './utils/id.js'
 
 export const NOTEBOOK_ID = 'notebook:main'
@@ -28,6 +29,7 @@ export function createPage(
     height: opts.height ?? DEFAULT_PAGE_HEIGHT,
     name: opts.name ?? `Page ${index + 1}`,
     ...(opts.grid ? { grid: opts.grid } : {}),
+    document: { blocks: emptyDocument() },
   }
 }
 

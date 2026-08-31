@@ -209,6 +209,9 @@ const DOCK_NAMES: readonly ToolId[] = [
   'note',
   'image',
 ]
+
+/** Minimal dock for notes / documentMode. */
+const NOTES_DOCK_TOOLS: readonly ToolId[] = ['select', 'draw', 'highlight', 'eraser']
 const DROP_ORDER: readonly ToolId[] = [
   'hand',
   'laser',
@@ -231,9 +234,27 @@ interface Popover {
 
 type BuildUIArgs = [Editor, BuildUIOptions?]
 
-export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true, gridControl = true } = {}]: BuildUIArgs): BoardUI {
+export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
+  const {
+    hidden = false,
+    onSave,
+    themeToggle = true,
+    gridControl = true,
+    tools: toolsOpt,
+    icons: iconsOpt,
+    hidePagesBar: hidePagesBarOpt,
+  } = options
+  const isDocMode = !!(editor as { documentMode?: boolean }).documentMode
   const root = editor.container
-  const opts = { themeToggle: themeToggle !== false, gridControl: gridControl !== false }
+  const opts = {
+    themeToggle: themeToggle !== false,
+    gridControl: gridControl !== false,
+    tools: toolsOpt ?? (isDocMode ? [...NOTES_DOCK_TOOLS] : undefined),
+    icons: iconsOpt ?? {},
+    hidePagesBar: hidePagesBarOpt ?? isDocMode,
+  }
+  const iconFor = (name: string): string =>
+    opts.icons[name] || (ICONS as Record<string, string>)[name] || ''
   const ui = el<HTMLDivElement>('div', 'ic-ui')
   root.appendChild(ui)
 
@@ -294,7 +315,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   const makeBtn = (name: string, onClick: (e: Event, b: HTMLButtonElement) => void, cls: string = 'ic-tool'): HTMLButtonElement => {
     const b = el<HTMLButtonElement>('button', cls)
     b.dataset.name = name
-    b.innerHTML = (ICONS as any)[name] || ''
+    b.innerHTML = iconFor(name)
     b.title = (TIPS as any)[name] || name
     b.addEventListener('pointerdown', (e) => e.stopPropagation())
     b.addEventListener('click', (e) => {
@@ -337,6 +358,17 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   addBtn('image')
   divider()
 
+  const applyToolFilter = (): void => {
+    if (!opts.tools) return
+    const keep = new Set(opts.tools)
+    for (const [n, b] of dockBtns) {
+      if ((DOCK_NAMES as readonly string[]).includes(n)) {
+        b.style.display = keep.has(n as ToolId) ? '' : 'none'
+      }
+    }
+  }
+  applyToolFilter()
+
   const toolsBtn = makeBtn('tools', (e, b) => openPopover('tools', (p) => buildGrid(p, [...DOCK_NAMES]), b))
   dock.appendChild(toolsBtn)
 
@@ -369,6 +401,8 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   addAction('delete', () => editor.deleteSelection())
 
   const pagesBar = el<HTMLDivElement>('div', 'ic-pages')
+  if (isDocMode) pagesBar.classList.add('ic-notes-pages')
+  if (opts.hidePagesBar) pagesBar.style.display = 'none'
   ui.appendChild(pagesBar)
   const prevPageBtn = makeBtn('chevronLeft', () => {
     const pages = editor.pages()
@@ -770,7 +804,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     actBtns.get('duplicate')!.disabled = !hasSel
     actBtns.get('delete')!.disabled = !hasSel
     toolsBtn.innerHTML =
-      (ICONS as any)[editor.tool === 'geo' ? editor.geoKind : editor.tool] || ICONS.select
+      iconFor(editor.tool === 'geo' ? editor.geoKind : editor.tool) || iconFor('select')
     toolsBtn.classList.toggle('on', popover?.name === 'tools')
     const curStyles = editor.currentStyles()
     styleDot.style.background =
@@ -805,10 +839,24 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
 
   return {
     setHidden,
-    setOptions(next: { themeToggle?: boolean; gridControl?: boolean } = {}): void {
+    setOptions(next: {
+      themeToggle?: boolean
+      gridControl?: boolean
+      tools?: ToolId[]
+      icons?: Partial<Record<string, string>>
+      hidePagesBar?: boolean
+    } = {}): void {
       if ('themeToggle' in next) opts.themeToggle = next.themeToggle !== false
       if ('gridControl' in next) opts.gridControl = next.gridControl !== false
+      if ('tools' in next) opts.tools = next.tools
+      if ('icons' in next) opts.icons = { ...opts.icons, ...next.icons }
+      if ('hidePagesBar' in next) {
+        opts.hidePagesBar = !!next.hidePagesBar
+        pagesBar.style.display = opts.hidePagesBar ? 'none' : ''
+      }
+      applyToolFilter()
       if (popover?.name === 'menu') closePopover()
+      refresh()
     },
     destroy(): void {
       offs.forEach((f) => f())

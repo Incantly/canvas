@@ -30,6 +30,11 @@ export const Canvas = forwardRef(function Canvas(
     snapshot,
     camera,
     styles,
+    documentMode = false,
+    uiTools,
+    uiIcons,
+    hidePagesBar,
+    documentBackground,
     autoFit = false,
     onMount,
     onChange,
@@ -67,12 +72,17 @@ export const Canvas = forwardRef(function Canvas(
       readonly,
       camera,
       styles,
+      documentMode,
+      documentBackground: documentBackground ?? undefined,
     } as any)
     host.dataset.icTheme = editor.theme.id
     const ui = buildUI(editor, {
       hidden: hideUi || readonly,
       themeToggle,
       gridControl,
+      tools: uiTools,
+      icons: uiIcons,
+      hidePagesBar,
       onSave: (blob: Blob, background: boolean) => {
         if (cbRef.current.onSave) return cbRef.current.onSave(blob, background)
         const a = document.createElement('a')
@@ -133,6 +143,12 @@ export const Canvas = forwardRef(function Canvas(
       uiRef.current = null
     }
   }, [store])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || documentBackground === undefined) return
+    editor.setDocumentBackground(documentBackground)
+  }, [documentBackground])
 
   useEffect(() => {
     const editor = editorRef.current

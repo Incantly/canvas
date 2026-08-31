@@ -1,0 +1,32 @@
+{
+  "fonts": [
+    {
+      "id": "sans",
+      "name": "Inter",
+      "license": "SIL-OFL-1.1",
+      "cssFamily": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "googleFonts": "Inter:wght@400;500;600;700"
+    },
+    {
+      "id": "serif",
+      "name": "Lora",
+      "license": "SIL-OFL-1.1",
+      "cssFamily": "'Lora', 'Iowan Old Style', Georgia, serif",
+      "googleFonts": "Lora:wght@400;500;600"
+    },
+    {
+      "id": "mono",
+      "name": "JetBrains Mono",
+      "license": "Apache-2.0",
+      "cssFamily": "'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace",
+      "googleFonts": "JetBrains+Mono:wght@400;500"
+    },
+    {
+      "id": "draw",
+      "name": "Caveat",
+      "license": "SIL-OFL-1.1",
+      "cssFamily": "'Caveat', 'Segoe Print', cursive",
+      "googleFonts": "Caveat:wght@400;500;600"
+    }
+  ]
+}

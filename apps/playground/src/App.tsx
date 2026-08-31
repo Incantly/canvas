@@ -4,11 +4,12 @@ import type { Editor } from '@incantly/canvas'
 import { FeatureIndex } from './panels/FeatureIndex'
 import { CanvasDemoPanel } from './panels/CanvasDemoPanel'
 import { PageCanvasPanel } from './panels/PageCanvasPanel'
+import { RichTextPanel } from './panels/RichTextPanel'
 import { DebugPanel } from './components/DebugPanel'
 
 export default function App() {
   const store = useCanvasStore()
-  const [selectedPanel, setSelectedPanel] = useState('01')
+  const [selectedPanel, setSelectedPanel] = useState('03')
   const [editor, setEditor] = useState<Editor | null>(null)
 
   return (
@@ -25,6 +26,8 @@ export default function App() {
           <CanvasDemoPanel store={store} onEditorReady={setEditor} />
         ) : selectedPanel === '02' ? (
           <PageCanvasPanel store={store} onEditorReady={setEditor} />
+        ) : selectedPanel === '03' ? (
+          <RichTextPanel store={store} onEditorReady={setEditor} />
         ) : (
           <div style={styles.placeholder}>
             <p style={styles.placeholderTitle}>Coming soon</p>

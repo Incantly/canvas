@@ -32,6 +32,24 @@ import {
   DEFAULT_PAGE_GAP,
   PAGE_GAP_STEP,
 } from './pages.js'
+import { migrateTextProps, validateBlocks } from './rich-text/document.js'
+import type { TextBlock, DocumentBlock } from './rich-text/types.js'
+import { isDrawingBlock } from './rich-text/types.js'
+import type { DrawingStroke } from './rich-text/types.js'
+import {
+  getPageDocument,
+  mergeTextShapesIntoPage,
+  normalizePageRecord,
+} from './page-document.js'
+import {
+  validateDocumentBlocks,
+  textBlocksFromDocument,
+  appendStrokeToDrawingBlock,
+  extendDrawingStroke,
+  emptyDrawingBlock,
+  consolidateDocumentBlocks,
+} from './page-document-blocks.js'
+import { mergePageDocumentsIntoNotebook } from './notebook-document.js'
 
 export { newId } from './utils/id.js'
 export { isDiffEmpty, invertDiff, composeDiff } from './utils/diff.js'
@@ -55,6 +73,7 @@ export class Store {
   private _batch: Diff | null
   private _tx: TxFrame | null
   private _applyingHistory: boolean
+  private _cachedNbBlocks: DocumentBlock[] | null = null
 
   constructor() {
     this.records = new Map()
@@ -339,6 +358,8 @@ export class Store {
     for (const { id, parentId } of assignOrphanShapes(this.shapes(), pageId)) {
       this.update(id, { parentId }, source)
     }
+    this.migratePageDocuments(source)
+    this.migrateNotebookDocument(source)
     return pageId
   }
 
@@ -372,6 +393,7 @@ export class Store {
   }
 
   loadSnapshot(snap: Snapshot, source: DiffSource = 'remote'): void {
+    this._cachedNbBlocks = null
     const recs = snap?.document?.store || {}
     this.transact(() => {
       this.remove(this.ids(), source)
@@ -380,8 +402,171 @@ export class Store {
     this.undos.length = 0
     this.redos.length = 0
     this._batch = null
+    this.migrateRichText(source)
+    this.migratePageDocuments(source)
+    this.migrateNotebookDocument(source)
     this.normalizePages(source)
     this._notifyHistory()
+  }
+
+  /** Forward migration: legacy `text` string → structured `blocks`. */
+  migrateRichText(source: DiffSource = 'remote'): void {
+    for (const s of this.shapes()) {
+      if (s.type !== 'text' && s.type !== 'note') continue
+      const props = s.props as unknown as Record<string, unknown>
+      if (props.text !== undefined || props.blocks !== undefined) {
+        const migrated = migrateTextProps(props)
+        this.put({ ...s, props: migrated } as ShapeRecord, source)
+      }
+    }
+  }
+
+  /** Ensure each page has a document; merge orphaned text shapes into page body. */
+  migratePageDocuments(source: DiffSource = 'remote'): void {
+    const nb = this.notebook()
+    if (nb.document?.blocks?.length) {
+      for (const page of this.pages()) {
+        const textShapes = this.shapesOnPage(page.id).filter((s) => s.type === 'text')
+        if (textShapes.length) {
+          const merged = mergeTextShapesIntoPage(page, textShapes)
+          this.setNotebookDocument(
+            [...this.notebookDocumentBlocks(), ...merged],
+            source,
+          )
+          this.remove(textShapes.map((s) => s.id), source)
+        }
+        if (page.document) {
+          const { document: _doc, ...rest } = page
+          this.put(rest as PageRecord, source)
+        }
+      }
+      return
+    }
+    for (const page of this.pages()) {
+      const textShapes = this.shapesOnPage(page.id).filter((s) => s.type === 'text')
+      if (textShapes.length) {
+        const blocks = mergeTextShapesIntoPage(page, textShapes)
+        this.put({ ...page, document: { blocks } }, source)
+        this.remove(textShapes.map((s) => s.id), source)
+      } else if (!page.document?.blocks) {
+        this.put(normalizePageRecord(page), source)
+      } else {
+        const blocks = getPageDocument(page)
+        this.put({ ...page, document: { blocks } }, source)
+      }
+    }
+  }
+
+  /** Merge per-page documents into notebook.document (continuous notes stream). */
+  migrateNotebookDocument(source: DiffSource = 'remote'): void {
+    const nb = this.notebook()
+    if (nb.document?.blocks?.length) {
+      const blocks = validateDocumentBlocks(nb.document.blocks)
+      if (nb.document.blocks !== blocks) {
+        this.put({ ...nb, document: { blocks } }, source)
+      }
+      return
+    }
+    const pages = this.pages()
+    const blocks = consolidateDocumentBlocks(mergePageDocumentsIntoNotebook(pages))
+    this.put({ ...nb, document: { blocks } }, source)
+    for (const page of pages) {
+      if (page.document) {
+        const { document: _doc, ...rest } = page
+        this.put(rest as PageRecord, source)
+      }
+    }
+  }
+
+  notebookDocumentBlocks(): DocumentBlock[] {
+    if (this._cachedNbBlocks) return this._cachedNbBlocks
+    const nb = this.notebook()
+    let blocks: DocumentBlock[]
+    if (nb.document?.blocks) {
+      blocks = validateDocumentBlocks(nb.document.blocks)
+    } else {
+      const pages = this.pages()
+      blocks = pages[0] ? getPageDocument(pages[0]) : validateDocumentBlocks(null)
+    }
+    this._cachedNbBlocks = blocks
+    return blocks
+  }
+
+  setNotebookDocument(blocks: DocumentBlock[], source: DiffSource = 'user'): void {
+    this._cachedNbBlocks = null
+    const nb = this.notebook()
+    this.put(
+      { ...nb, document: { blocks: consolidateDocumentBlocks(blocks) } },
+      source,
+    )
+  }
+
+  pageDocumentBlocks(_pageId: string): DocumentBlock[] {
+    return this.notebookDocumentBlocks()
+  }
+
+  pageDocumentTextBlocks(_pageId: string): TextBlock[] {
+    return textBlocksFromDocument(this.notebookDocumentBlocks())
+  }
+
+  setPageDocument(_pageId: string, blocks: DocumentBlock[], source: DiffSource = 'user'): void {
+    this.setNotebookDocument(blocks, source)
+  }
+
+  /** Single trailing drawing block for Apple Notes ink (end of body only). */
+  ensureEndDrawingBlock(_pageId: string, source: DiffSource = 'user'): number {
+    let blocks = consolidateDocumentBlocks(this.notebookDocumentBlocks())
+    const last = blocks[blocks.length - 1]
+    if (!last || !isDrawingBlock(last)) {
+      blocks = [...blocks, emptyDrawingBlock()]
+    }
+    this.setNotebookDocument(blocks, source)
+    return blocks.length - 1
+  }
+
+  appendDocumentDrawingStroke(
+    pageId: string,
+    blockIndex: number,
+    stroke: DrawingStroke,
+    source: DiffSource = 'user',
+  ): void {
+    if (!this.page(pageId)) throw new Error('Unknown page')
+    const blocks = this.notebookDocumentBlocks()
+    const block = blocks[blockIndex]
+    if (!block || !isDrawingBlock(block)) {
+      throw new Error(`Invalid drawing block index: ${blockIndex}`)
+    }
+    const next = blocks.slice()
+    next[blockIndex] = appendStrokeToDrawingBlock(block, stroke)
+    this.setNotebookDocument(next, source)
+  }
+
+  extendDocumentDrawingStroke(
+    _pageId: string,
+    blockIndex: number,
+    strokeIndex: number,
+    localX: number,
+    localY: number,
+    pressure: number,
+    source: DiffSource = 'user',
+  ): void {
+    const blocks = this.notebookDocumentBlocks()
+    const block = blocks[blockIndex]
+    if (!block || !isDrawingBlock(block)) return
+    const next = blocks.slice()
+    next[blockIndex] = extendDrawingStroke(block, strokeIndex, localX, localY, pressure)
+    this.setNotebookDocument(next, source)
+  }
+
+  insertDocumentDrawingBlock(_pageId: string, afterIndex: number, source: DiffSource = 'user'): number {
+    const blocks = this.notebookDocumentBlocks()
+    const insertAt = afterIndex < 0 ? 0 : afterIndex + 1
+    const existing = blocks[insertAt]
+    if (existing && isDrawingBlock(existing)) return insertAt
+    const next = blocks.slice()
+    next.splice(insertAt, 0, emptyDrawingBlock())
+    this.setNotebookDocument(next, source)
+    return insertAt
   }
 
   clear(source: DiffSource = 'user'): void {

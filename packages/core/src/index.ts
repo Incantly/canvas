@@ -25,7 +25,50 @@ export type {
   ShapeType, ShapeRecord, AssetRecord, BoardRecord, PageRecord, NotebookRecord,
   DrawShapeProps, LineishShapeProps, GeoShapeProps,
   TextShapeProps, NoteShapeProps, ImageShapeProps,
+  PageDocumentRecord,
 } from './types/models.js'
+export type { BlockType, InlineSpan, TextBlock, DrawingBlock, DrawingStroke, ImageBlock, DocumentBlock, RichTextLink } from './rich-text/types.js'
+export { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
+export {
+  PAGE_DOC_MARGIN_X,
+  PAGE_DOC_MARGIN_Y,
+  PAGE_DOC_FONT_SIZE,
+  pageContentRect,
+  getPageDocument,
+  pointInPageContent,
+  notesPageContentRect,
+  pointInNotesContent,
+} from './page-document.js'
+export {
+  NOTES_MIN_BODY_HEIGHT,
+  notesContentWidth,
+  notesPaperHeight,
+  notesPaperBounds,
+  virtualPrintPages,
+  mergePageDocumentsIntoNotebook,
+} from './notebook-document.js'
+export type { VirtualPrintPage } from './notebook-document.js'
+export {
+  validateDocumentBlocks,
+  layoutPageDocument,
+  DRAWING_BLOCK_MIN_HEIGHT,
+  drawingBlockHeight,
+} from './page-document-blocks.js'
+export {
+  emptyDocument,
+  textToBlocks,
+  blocksToPlainText,
+  isEmptyDocument,
+  validateBlocks,
+  migrateTextProps,
+  layoutRichText,
+  drawRichTextLayout,
+} from './rich-text/index.js'
+export {
+  defaultDocumentBackground,
+  normalizeCssColor,
+  contrastDocumentText,
+} from './document-background.js'
 export type { DiffSource, Diff, Snapshot } from './types/operations.js'
 export type { Theme, ThemePaletteEntry, ThemeGridConfig } from './types/themes.js'
 export type {
@@ -61,6 +104,9 @@ export function createCanvas(opts: CreateCanvasOptions): CanvasInstance {
     onSave: opts.onSave,
     themeToggle: opts.themeToggle,
     gridControl: opts.gridControl,
+    tools: opts.uiTools,
+    icons: opts.uiIcons,
+    hidePagesBar: opts.hidePagesBar,
   })
   const watermark = opts.watermark === false ? null : buildWatermark(editor)
   return {

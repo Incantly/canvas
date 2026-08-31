@@ -77,15 +77,19 @@ Sticky notes (`note` shape) may start with simplified rich text (paragraph + spa
 - No "personal use only" or ambiguous licenses
 - Default stack: system sans + one handwriting + one mono for code
 
-### Editing UX
+### Editing UX (OpenNote / Apple Notes)
 
-Replace [`editor._startTextEdit`](../packages/core/src/editor.ts) textarea with:
+Page-native document on each `PageRecord`:
 
-- **Hand-rolled contentEditable** div with custom format handlers (no Tiptap/ProseMirror unless QA approves package exception)
-- Floating **formatting toolbar** on selection (bold, size, link, list, etc.)
-- **Keyboard shortcuts:** Cmd+B/I/U, Cmd+K for link
-- Click existing text shape → enter edit mode at click position
-- Escape / blur → commit to store
+- Click the **page content area** (margins) or press **T** → caret on the page; type inline
+- **`/` slash menu** — Text, H1–H3, bullet/numbered list, quote, code, divider
+- **Drawing blocks** — pen/highlighter ink lives in `{ type: 'drawing', height, strokes[] }` blocks in the document stream; strokes are clipped below the demarcation line (never over text)
+- **`documentMode`** — select tool + click-to-type by default; Draw (D) inserts/extends drawing blocks in flow (no free canvas ink on the page body)
+- **Keyboard:** ⌘B/I/U/K; markdown `#`, `-`, `**bold**`
+- Snapshot: `page.document.blocks[]` — text blocks **and** drawing blocks (structured JSON, not HTML)
+- Legacy **text shapes** migrate into `page.document` on load
+
+Geo labels and sticky **notes** keep shape-local editing.
 
 ### Rendering
 
@@ -127,12 +131,55 @@ Fix existing `align` bug (`left/center/right` vs `start/middle/end` mismatch).
 
 ## Acceptance criteria
 
-- [ ] All enrichments in table above work in edit + render
-- [ ] Snapshot contains structured `blocks[]`, not HTML
-- [ ] Markdown shortcuts work for common patterns
-- [ ] Only licensed fonts in manifest
-- [ ] Playground panel covers all enrichments
+- [x] All enrichments in table above work in edit + render
+- [x] Snapshot contains structured `blocks[]`, not HTML
+- [x] Markdown shortcuts work for common patterns
+- [x] Only licensed fonts in manifest
+- [x] Playground panel covers all enrichments
 - [ ] RN playground: create formatted text, reload, persists correctly
+
+## QA tracking
+
+| Workstream | Status |
+| --- | --- |
+| W1 — Rich text model + migration | implemented |
+| W2 — Layout + canvas render | implemented |
+| W3 — Page document UI + slash menu + markdown | implemented |
+| W4 — Playground panel + font manifest | implemented |
+| W5 — Tests + verifier gates | implemented |
+| W6 — Drawing blocks in document flow (Apple Notes ink) | implemented |
+| W7 — Notebook document stream + virtual print pagination | implemented |
+| W8 — Notes scroll UI + toolbar config | implemented |
+
+| Check | Status |
+| --- | --- |
+| Structured `blocks[]` in snapshot (not HTML) | implemented |
+| `notebook.document.blocks[]` single continuous stream | implemented |
+| Virtual print pagination (`virtualPrintPages`) | implemented |
+| Per-page `document` merged on load | implemented |
+| `documentMode` — no page bar, vertical scroll, no zoom | implemented |
+| Toolbar `tools` / `icons` / `hidePagesBar` config | implemented |
+| Legacy `text` string migration on load | implemented |
+| Bold/italic/underline/strikethrough/code/link | implemented |
+| Headings H1/H2/H3 + bullet/numbered lists | implemented |
+| Font family + size (manifest OFL/Apache) | implemented |
+| Text alignment left/center/right | implemented |
+| Markdown shortcuts (`#`, `-`, `**`) | implemented |
+| Page-native typing (`page.document.blocks`) | implemented |
+| Click page / T focuses document (no text shape) | implemented |
+| Slash menu (`/`) block picker | implemented |
+| Drawing blocks — ink clipped below text demarcation | implemented |
+| `documentMode` — pen routes to drawing blocks, not canvas shapes | implemented |
+| Legacy text shapes → page document migration | implemented |
+| Canvas render for non-active pages | implemented |
+| Unit tests (`rich-text.test.ts`, `page-document-blocks.test.ts`, store migration) | implemented |
+| `npm run typecheck` | implemented |
+| `npm test` | implemented |
+| `npm run build:packages` | implemented |
+| No new npm dependencies | implemented |
+| RN bridge special messages | deferred:edit runs in WebView; no new bridge API |
+| Playground RN scene | deferred:RN playground app not in repo — WebView contentEditable unchanged |
+| Security audit (bridge) | N/A — no bridge changes |
 
 ## Out of scope
 
@@ -144,6 +191,7 @@ Fix existing `align` bug (`left/center/right` vs `start/middle/end` mismatch).
 
 - [`packages/core/src/types/models.ts`](../packages/core/src/types/models.ts)
 - [`packages/core/src/editor.ts`](../packages/core/src/editor.ts) — edit mode
-- [`packages/core/src/shapes.ts`](../packages/core/src/shapes.ts) — layout + render
+- [`packages/core/src/page-document-blocks.ts`](../packages/core/src/page-document-blocks.ts) — drawing block layout + render
+- [`packages/core/src/page-document-ui.ts`](../packages/core/src/page-document-ui.ts) — page document DOM
 - [`packages/core/src/ui.ts`](../packages/core/src/ui.ts) — toolbar
 - [`packages/core/src/palette.ts`](../packages/core/src/palette.ts) — font registry
