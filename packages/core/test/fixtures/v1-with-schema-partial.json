@@ -1,0 +1,46 @@
+{
+  "schema": {
+    "schemaVersion": 1,
+    "sequences": {
+      "com.incantly.store": 1,
+      "com.incantly.shape.text": 1,
+      "com.incantly.page.document": 0,
+      "com.incantly.notebook.document": 0
+    }
+  },
+  "document": {
+    "store": {
+      "notebook:main": {
+        "id": "notebook:main",
+        "typeName": "notebook",
+        "pageLayout": "vertical"
+      },
+      "p1": {
+        "id": "p1",
+        "typeName": "page",
+        "index": 0,
+        "x": 0,
+        "y": 0,
+        "width": 816,
+        "height": 1056,
+        "name": "Page 1"
+      },
+      "t1": {
+        "id": "t1",
+        "typeName": "shape",
+        "type": "text",
+        "parentId": "p1",
+        "x": 0,
+        "y": 0,
+        "rot": 0,
+        "z": 1,
+        "props": {
+          "blocks": [{ "type": "paragraph", "content": [{ "text": "Already migrated" }] }],
+          "color": "black",
+          "size": "m",
+          "font": "sans"
+        }
+      }
+    }
+  }
+}

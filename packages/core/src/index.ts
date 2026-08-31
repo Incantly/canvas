@@ -70,6 +70,20 @@ export {
   contrastDocumentText,
 } from './document-background.js'
 export type { DiffSource, Diff, Snapshot } from './types/operations.js'
+export type { SerializedSchema } from './types/schema.js'
+export { CURRENT_SCHEMA } from './types/schema.js'
+export { migrateSnapshot } from './migrations/index.js'
+export {
+  createVersionManager,
+  type VersionManager,
+  type VersionManagerOptions,
+  type VersionManagerStore,
+  type DocumentVersion,
+  type VersionStorage,
+  type VersionKind,
+} from './version-history.js'
+export { MemoryVersionStorage } from './storage/memory-version-storage.js'
+export { IndexedDbVersionStorage } from './storage/indexed-db-version-storage.js'
 export type { Theme, ThemePaletteEntry, ThemeGridConfig } from './types/themes.js'
 export type {
   EditorOptions, EditorEvent, BoardUI, BuildUIOptions,

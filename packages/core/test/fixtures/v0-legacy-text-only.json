@@ -1,0 +1,48 @@
+{
+  "document": {
+    "store": {
+      "p1": {
+        "id": "p1",
+        "typeName": "page",
+        "index": 0,
+        "x": 0,
+        "y": 0,
+        "width": 816,
+        "height": 1056,
+        "name": "Page 1"
+      },
+      "t1": {
+        "id": "t1",
+        "typeName": "shape",
+        "type": "text",
+        "parentId": "p1",
+        "x": 48,
+        "y": 48,
+        "rot": 0,
+        "z": 2,
+        "props": {
+          "text": "First line",
+          "color": "black",
+          "size": "m",
+          "font": "sans"
+        }
+      },
+      "t2": {
+        "id": "t2",
+        "typeName": "shape",
+        "type": "text",
+        "parentId": "p1",
+        "x": 48,
+        "y": 96,
+        "rot": 0,
+        "z": 3,
+        "props": {
+          "text": "Second line",
+          "color": "black",
+          "size": "m",
+          "font": "sans"
+        }
+      }
+    }
+  }
+}

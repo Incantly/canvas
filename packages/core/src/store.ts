@@ -9,6 +9,7 @@ import type {
   NotebookRecord,
 } from './types/index.js'
 import type { PageGapPreset } from './types/base.js'
+import { CURRENT_SCHEMA } from './types/schema.js'
 import { newId } from './utils/id.js'
 import {
   emptyDiff,
@@ -50,6 +51,7 @@ import {
   consolidateDocumentBlocks,
 } from './page-document-blocks.js'
 import { mergePageDocumentsIntoNotebook } from './notebook-document.js'
+import { migrateSnapshot } from './migrations/index.js'
 
 export { newId } from './utils/id.js'
 export { isDiffEmpty, invertDiff, composeDiff } from './utils/diff.js'
@@ -333,7 +335,7 @@ export class Store {
   }
 
   getSnapshot(): Snapshot {
-    return { document: { store: Object.fromEntries(this.records) } }
+    return { schema: CURRENT_SCHEMA, document: { store: Object.fromEntries(this.records) } }
   }
 
   /** Ensure at least one page exists and orphan shapes have parentId. */
@@ -358,8 +360,6 @@ export class Store {
     for (const { id, parentId } of assignOrphanShapes(this.shapes(), pageId)) {
       this.update(id, { parentId }, source)
     }
-    this.migratePageDocuments(source)
-    this.migrateNotebookDocument(source)
     return pageId
   }
 
@@ -394,7 +394,8 @@ export class Store {
 
   loadSnapshot(snap: Snapshot, source: DiffSource = 'remote'): void {
     this._cachedNbBlocks = null
-    const recs = snap?.document?.store || {}
+    const migrated = migrateSnapshot(snap)
+    const recs = migrated.document?.store || {}
     this.transact(() => {
       this.remove(this.ids(), source)
       for (const rec of Object.values(recs)) if (rec && (rec as any).id) this.put(rec as BoardRecord, source)
@@ -402,14 +403,11 @@ export class Store {
     this.undos.length = 0
     this.redos.length = 0
     this._batch = null
-    this.migrateRichText(source)
-    this.migratePageDocuments(source)
-    this.migrateNotebookDocument(source)
     this.normalizePages(source)
     this._notifyHistory()
   }
 
-  /** Forward migration: legacy `text` string → structured `blocks`. */
+  /** @deprecated Use {@link migrateSnapshot} instead. Kept for backward compatibility. */
   migrateRichText(source: DiffSource = 'remote'): void {
     for (const s of this.shapes()) {
       if (s.type !== 'text' && s.type !== 'note') continue
@@ -421,7 +419,7 @@ export class Store {
     }
   }
 
-  /** Ensure each page has a document; merge orphaned text shapes into page body. */
+  /** @deprecated Use {@link migrateSnapshot} instead. Kept for backward compatibility. */
   migratePageDocuments(source: DiffSource = 'remote'): void {
     const nb = this.notebook()
     if (nb.document?.blocks?.length) {
@@ -457,7 +455,7 @@ export class Store {
     }
   }
 
-  /** Merge per-page documents into notebook.document (continuous notes stream). */
+  /** @deprecated Use {@link migrateSnapshot} instead. Kept for backward compatibility. */
   migrateNotebookDocument(source: DiffSource = 'remote'): void {
     const nb = this.notebook()
     if (nb.document?.blocks?.length) {

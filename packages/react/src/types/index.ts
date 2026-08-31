@@ -41,6 +41,8 @@ export interface CanvasProps {
   hidePagesBar?: boolean
   /** Seamless notes canvas background (documentMode). */
   documentBackground?: string | null
+  /** Touch-first formatting bar (default: auto-detect). Set false on desktop web. */
+  touchUi?: boolean
   onMount?: (editor: Editor, ui: BoardUI) => void
   onChange?: (diff: Diff, source: DiffSource, editor: Editor) => void
   onSelectionChange?: (ids: string[], editor: Editor) => void

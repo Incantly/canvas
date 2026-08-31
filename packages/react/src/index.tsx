@@ -35,6 +35,7 @@ export const Canvas = forwardRef(function Canvas(
     uiIcons,
     hidePagesBar,
     documentBackground,
+    touchUi,
     autoFit = false,
     onMount,
     onChange,
@@ -74,6 +75,7 @@ export const Canvas = forwardRef(function Canvas(
       styles,
       documentMode,
       documentBackground: documentBackground ?? undefined,
+      touchUi,
     } as any)
     host.dataset.icTheme = editor.theme.id
     const ui = buildUI(editor, {

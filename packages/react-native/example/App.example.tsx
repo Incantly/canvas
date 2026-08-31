@@ -1,6 +1,7 @@
 /**
  * Reference Expo screen — copy into apps/mobile when the shell lands.
  * RN document mode smoke test: notes typing + draw tool.
+ * Version history is session-scoped (MemoryVersionStorage inside the WebView).
  */
 import { useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -17,8 +18,11 @@ export default function PlaygroundScreen() {
         documentMode
         hidePagesBar
         touchUi
-        onReady={() => {
+        onReady={async () => {
           ref.current?.setTool('select')
+          // Session-scoped version smoke: save a checkpoint and list metadata.
+          await ref.current?.saveVersion('Example checkpoint')
+          await ref.current?.listVersions()
         }}
       />
     </View>

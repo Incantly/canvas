@@ -23,6 +23,7 @@ export const ROADMAP_FEATURES: FeatureEntry[] = [
   { id: '13', title: 'Sync package', status: 'coming-soon' },
   { id: '14', title: 'Web product shell', status: 'coming-soon' },
   { id: '15', title: 'Mobile product shell', status: 'coming-soon' },
+  { id: '16', title: 'Snapshot versioning', status: 'active' },
 ]
 
 const STATUS_LABEL: Record<FeatureStatus, string> = {

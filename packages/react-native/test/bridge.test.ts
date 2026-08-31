@@ -26,6 +26,18 @@ describe('encodeDispatch', () => {
       'window.__icDispatch({"type":"setDocumentBackground","color":"#fff8e7"}); true;',
     )
   })
+
+  it('encodes version-history bridge messages', () => {
+    expect(encodeDispatch({ type: 'listVersions' })).toBe(
+      'window.__icDispatch({"type":"listVersions"}); true;',
+    )
+    expect(encodeDispatch({ type: 'revertVersion', versionId: 'version:abc' })).toBe(
+      'window.__icDispatch({"type":"revertVersion","versionId":"version:abc"}); true;',
+    )
+    expect(encodeDispatch({ type: 'saveVersion', label: 'Before demo' })).toBe(
+      'window.__icDispatch({"type":"saveVersion","label":"Before demo"}); true;',
+    )
+  })
 })
 
 describe('createBridge', () => {

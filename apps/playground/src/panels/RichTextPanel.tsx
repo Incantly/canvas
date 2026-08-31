@@ -81,6 +81,7 @@ export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
         <Canvas
           store={store}
           documentMode
+          touchUi={false}
           grid="none"
           documentBackground={documentBackground}
             onMount={(editor) => {
