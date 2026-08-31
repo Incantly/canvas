@@ -162,6 +162,7 @@ export class PageDocumentUI {
 
   destroy(): void {
     if (this._syncRaf !== null) cancelAnimationFrame(this._syncRaf)
+    if (this._hintTimer) clearTimeout(this._hintTimer)
     document.removeEventListener('selectionchange', this.onSelectionChange)
     this.wrap.remove()
     this.slashMenu.remove()
@@ -385,8 +386,15 @@ export class PageDocumentUI {
     this.el.blur()
   }
 
+  private _hintTimer: ReturnType<typeof setTimeout> | null = null;
+
   flashInkHint(textBlockIndex: number): void {
     this.showDocHint(textBlockIndex)
+    if (this._hintTimer) clearTimeout(this._hintTimer)
+    this._hintTimer = setTimeout(() => {
+      this.clearDocHints()
+      this._hintTimer = null
+    }, 600)
   }
 
   private lastTextBlockIndex(before = this.blocks().length): number {

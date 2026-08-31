@@ -232,6 +232,49 @@ export function findDrawingTarget(
   return { action: 'reject' }
 }
 
+export function hitDocumentStroke(
+  layout: PageDocumentLayout,
+  blocks: DocumentBlock[],
+  lx: number,
+  ly: number,
+  tolerance: number,
+): { blockIndex: number; strokeIndex: number } | null {
+  for (const entry of layout.entries) {
+    if (!isDrawingBlock(entry.block)) continue
+    const rx = lx - entry.x - DRAWING_BLOCK_PAD
+    const ry = ly - entry.y - DRAWING_BLOCK_PAD
+    for (let si = entry.block.strokes.length - 1; si >= 0; si--) {
+      const stroke = entry.block.strokes[si]
+      const pts = stroke.pts
+      for (let i = 0; i < pts.length - 2; i += 3) {
+        const dx = pts[i] - rx
+        const dy = pts[i + 1] - ry
+        if (dx * dx + dy * dy <= tolerance * tolerance) {
+          return { blockIndex: entry.index, strokeIndex: si }
+        }
+      }
+    }
+  }
+  return null
+}
+
+export function removeDocumentStroke(
+  blocks: DocumentBlock[],
+  blockIndex: number,
+  strokeIndex: number,
+): DocumentBlock[] {
+  const block = blocks[blockIndex]
+  if (!block || !isDrawingBlock(block)) return blocks
+  const strokes = block.strokes.filter((_, i) => i !== strokeIndex)
+  const next = blocks.slice()
+  next[blockIndex] = {
+    ...block,
+    strokes,
+    height: Math.max(DRAWING_BLOCK_MIN_HEIGHT, strokeBoundsHeight(strokes)),
+  }
+  return next
+}
+
 export function insertDrawingBlockAfter(
   blocks: DocumentBlock[],
   afterIndex: number,

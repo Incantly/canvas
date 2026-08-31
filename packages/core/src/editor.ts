@@ -71,6 +71,8 @@ import { PageDocumentUI, drawPageDocument, type PageDocumentHost } from "./page-
 import { pointInPageContent, pageContentRect, pointInNotesContent, notesPageContentRect } from "./page-document.js";
 import {
   findDrawingTarget,
+  hitDocumentStroke,
+  removeDocumentStroke,
   layoutPageDocument,
   drawPageDocumentBlocks,
   DRAWING_BLOCK_PAD,
@@ -1642,6 +1644,9 @@ export class Editor {
   }
 
   _beginErase(p: XY): void {
+    if (this.documentMode) {
+      this.store.beginBatch();
+    }
     this.session = {
       type: "erasing",
       hits: new Set(),
@@ -1671,13 +1676,39 @@ export class Editor {
     this.requestRender();
   }
   _eraseAt(p: XY): void {
+    if (this.documentMode) {
+      this._eraseDocStrokeAt(p);
+      return;
+    }
     const hit = this.hitTest(p.x, p.y);
     if (hit) (this.session as SessionErasing).hits.add(hit.id);
+  }
+  _eraseDocStrokeAt(p: XY): void {
+    const cp = this._contentPointFromPage(p);
+    if (!cp) return;
+    const page = this.currentPage();
+    if (!page) return;
+    const rect = this.documentMode
+      ? notesPageContentRect(page, this._notesPaperHeight())
+      : pageContentRect(page);
+    const blocks = this.store.notebookDocumentBlocks();
+    const layout = layoutPageDocument(blocks, rect.w, this.theme);
+    const tol = 10 / this.camera.z;
+    const hit = hitDocumentStroke(layout, blocks, cp.lx, cp.ly, tol);
+    if (hit) {
+      const next = removeDocumentStroke(blocks, hit.blockIndex, hit.strokeIndex);
+      this.store.setNotebookDocument(next);
+    }
   }
   _endErase(): void {
     const hits = [...(this.session as SessionErasing).hits];
     this.session = null;
-    if (hits.length) this.store.remove(hits);
+    if (this.documentMode) {
+      this.store.endBatch();
+      this.pageDocUI?.syncFromStore();
+    } else if (hits.length) {
+      this.store.remove(hits);
+    }
     this.requestRender();
   }
 
