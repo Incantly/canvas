@@ -89,3 +89,46 @@ alwaysApply: true
 
 See roadmap/QA_CHECKLIST.md for full gates.
 ```
+
+---
+
+## ci-build-order.mdc
+
+```mdc
+---
+description: Monorepo build order — core before react-native so CI npm run build passes
+alwaysApply: true
+---
+
+# CI build order
+
+CI runs `npm run build` on a **fresh checkout** with no prebuilt `dist/` folders.
+
+## Required build order
+
+Packages must compile in dependency order:
+
+1. `@incantly/canvas` (`packages/core`) — emits `dist/index.js`
+2. `@incantly/canvas-react` — depends on core types/dist
+3. `@incantly/canvas-react-native` — `build-html.mjs` esbuild aliases `@incantly/canvas` → `packages/core/dist/index.js`
+
+## Root scripts
+
+- **`npm run build`** must delegate to **`npm run build:packages`** (all three packages, in order). Never point root `build` at react-native alone.
+- Before pushing changes to root `package.json` or any package `build` script, verify:
+
+```bash
+rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo
+npm run build
+```
+
+## When editing react-native bundle
+
+After core API changes, rebuild core before react-native:
+
+```bash
+npm run build --workspace=@incantly/canvas
+npm run build --workspace=@incantly/canvas-react-native
+```
+```
+
