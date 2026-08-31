@@ -16,6 +16,7 @@ import {
   parseSingleBlockFromDom,
   layoutPageDocument,
   textBlocksFromDocument,
+  DRAWING_BLOCK_TOP_GAP,
 } from './page-document-blocks.js'
 import { drawPageDocumentBlocks } from './page-document-blocks.js'
 import type { DocumentBlock } from './rich-text/types.js'
@@ -338,12 +339,28 @@ export class PageDocumentUI {
     this.el.style.fontSize = `${PAGE_DOC_FONT_SIZE * z}px`
     this.el.style.lineHeight = `${PAGE_DOC_FONT_SIZE * 1.45 * z}px`
     const layout = layoutPageDocument(this.blocks(), rect.w, this.host.theme)
+    const blocks = this.blocks()
+    const lastTextIdx = (() => {
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        if (!isDrawingBlock(blocks[i]!)) return i
+      }
+      return -1
+    })()
+    const hasDrawingBlock = blocks.some(isDrawingBlock)
     for (const child of Array.from(this.el.children)) {
+      if (child instanceof HTMLElement && child.dataset.block) {
+        const idx = Number(child.dataset.docIndex)
+        child.style.marginBottom =
+          idx === lastTextIdx && hasDrawingBlock
+            ? `${DRAWING_BLOCK_TOP_GAP * z}px`
+            : ''
+      }
       if (!(child instanceof HTMLElement) || !child.classList.contains('ic-drawing-slot')) continue
       const idx = Number(child.dataset.docIndex)
       const entry = layout.entries.find((e) => e.index === idx)
       if (entry && isDrawingBlock(entry.block)) {
         child.style.height = `${entry.h * z}px`
+        child.style.marginTop = '0'
         child.style.marginBottom = `${4 * z}px`
       }
     }
@@ -387,14 +404,32 @@ export class PageDocumentUI {
   }
 
   private _hintTimer: ReturnType<typeof setTimeout> | null = null;
+  inkZoneDividerVisible = false;
 
   flashInkHint(textBlockIndex: number): void {
     this.showDocHint(textBlockIndex)
+    this.showInkZoneDivider()
     if (this._hintTimer) clearTimeout(this._hintTimer)
     this._hintTimer = setTimeout(() => {
       this.clearDocHints()
       this._hintTimer = null
     }, 600)
+  }
+
+  showInkZoneDivider(): void {
+    this.inkZoneDividerVisible = true
+    this.host.requestRender()
+  }
+
+  hideInkZoneDivider(): void {
+    if (!this.inkZoneDividerVisible) return
+    this.inkZoneDividerVisible = false
+    this.host.requestRender()
+  }
+
+  clearInkRedirectHint(): void {
+    this.clearDocHints()
+    this.hideInkZoneDivider()
   }
 
   private lastTextBlockIndex(before = this.blocks().length): number {

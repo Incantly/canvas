@@ -18,6 +18,8 @@ import { PAGE_DOC_FONT_SIZE, pageContentRect, notesPageContentRect } from './pag
 export const DRAWING_BLOCK_MIN_HEIGHT = 120
 export const DRAWING_BLOCK_GAP = 10
 export const DRAWING_BLOCK_PAD = 12
+/** Breathing room between the last text line and the ink-zone divider. */
+export const DRAWING_BLOCK_TOP_GAP = 28
 
 export interface LayoutBlockEntry {
   index: number
@@ -132,6 +134,7 @@ function computeLayout(
       entries.push({ index, block, x: 0, y, w: contentW, h })
       y += h + 4
     } else {
+      y += DRAWING_BLOCK_TOP_GAP
       const h = drawingBlockHeight(block)
       entries.push({ index, block, x: 0, y, w: contentW, h })
       y += h + DRAWING_BLOCK_GAP
@@ -344,6 +347,50 @@ function drawStrokeInBlock(
   ctx.restore()
 }
 
+function drawInkZoneDividerLine(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  theme: Theme,
+): void {
+  ctx.save()
+  ctx.strokeStyle = theme.id === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(60, 50, 30, 0.22)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  ctx.lineTo(x + w, y)
+  ctx.stroke()
+  ctx.fillStyle = theme.id === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(60, 50, 30, 0.35)'
+  ctx.beginPath()
+  ctx.moveTo(x + 4, y + 5)
+  ctx.lineTo(x + 10, y + 9)
+  ctx.lineTo(x + 4, y + 13)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+}
+
+/** Transient “write ink here” marker below the last text block. */
+export function drawInkZoneHintDivider(
+  ctx: CanvasRenderingContext2D,
+  layout: PageDocumentLayout,
+  theme: Theme,
+  contentW: number,
+): void {
+  let lastText: LayoutBlockEntry | undefined
+  for (let i = layout.entries.length - 1; i >= 0; i--) {
+    const entry = layout.entries[i]!
+    if (isTextBlock(entry.block)) {
+      lastText = entry
+      break
+    }
+  }
+  if (!lastText) return
+  const y = lastText.y + lastText.h + DRAWING_BLOCK_TOP_GAP
+  drawInkZoneDividerLine(ctx, 0, y, contentW, theme)
+}
+
 export function drawDrawingBlockRegion(
   ctx: CanvasRenderingContext2D,
   block: DrawingBlock,
@@ -367,21 +414,7 @@ export function drawDrawingBlockRegion(
   ctx.restore()
 
   if (opts?.showDivider !== false) {
-    ctx.save()
-    ctx.strokeStyle = theme.id === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(60, 50, 30, 0.22)'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(x, y)
-    ctx.lineTo(x + w, y)
-    ctx.stroke()
-    ctx.fillStyle = theme.id === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(60, 50, 30, 0.35)'
-    ctx.beginPath()
-    ctx.moveTo(x + 4, y + 5)
-    ctx.lineTo(x + 10, y + 9)
-    ctx.lineTo(x + 4, y + 13)
-    ctx.closePath()
-    ctx.fill()
-    ctx.restore()
+    drawInkZoneDividerLine(ctx, x, y, w, theme)
   }
 }
 
@@ -395,6 +428,8 @@ export function drawPageDocumentBlocks(
     drawingOnly?: boolean
     skipDrawingIndices?: Set<number>
     paperHeight?: number
+    /** Transient divider when ink is redirected off text (Apple Notes hint). */
+    showDrawingDivider?: boolean
   },
 ): PageDocumentLayout {
   const rect =
@@ -430,9 +465,12 @@ export function drawPageDocumentBlocks(
         entry.w,
         entry.h,
         theme,
-        { showDivider: true },
+        { showDivider: false },
       )
     }
+  }
+  if (opts?.showDrawingDivider) {
+    drawInkZoneHintDivider(ctx, layout, theme, rect.w)
   }
   ctx.restore()
   return layout

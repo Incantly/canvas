@@ -672,7 +672,7 @@
   display: block;
   width: 100%;
   min-height: 80px;
-  margin: 0.25em 0 0.5em;
+  margin: 0 0 0.5em;
   border-radius: 4px;
   background: transparent;
   pointer-events: none;
@@ -680,8 +680,8 @@
 }
 
 .ic-page-doc-mode .ic-drawing-slot {
-  border-top: 1px solid rgba(60, 50, 30, 0.18);
-  padding-top: 0.35em;
+  /* Divider is drawn on canvas in drawDrawingBlockRegion — no duplicate border here. */
+  padding-top: 0;
 }
 
 .ic-document-mode {

@@ -1564,7 +1564,9 @@ export class Editor {
       );
       const drawEntry = layout2.entries.find((en) => en.index === blockIndex)!;
       local = { x: cp.lx - drawEntry.x - DRAWING_BLOCK_PAD, y: 0 };
-    } else if (target.action === "ensure-end") {
+    } else {
+      this.pageDocUI?.clearInkRedirectHint();
+      if (target.action === "ensure-end") {
       blockIndex = this.store.ensureEndDrawingBlock(page.id);
       inserted = true;
       const layout2 = layoutPageDocument(
@@ -1574,12 +1576,13 @@ export class Editor {
       );
       const drawEntry = layout2.entries.find((en) => en.index === blockIndex)!;
       local = { x: target.localX - drawEntry.x - DRAWING_BLOCK_PAD, y: 0 };
-    } else {
+      } else {
       blockIndex = target.blockIndex;
       local = {
         x: target.localX - DRAWING_BLOCK_PAD,
         y: target.localY - DRAWING_BLOCK_PAD,
       };
+      }
     }
     const stroke = {
       pts: [local.x, local.y, e.pressure || 0.5],
@@ -1639,6 +1642,7 @@ export class Editor {
   _endDocDraw(): void {
     this.store.endBatch();
     this.session = null;
+    this.pageDocUI?.clearInkRedirectHint();
     this.pageDocUI?.syncFromStore();
     this.requestRender();
   }
@@ -3026,10 +3030,12 @@ export class Editor {
       drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
         drawingOnly: true,
         paperHeight: paperH,
+        showDrawingDivider: !!this.pageDocUI?.inkZoneDividerVisible,
       });
     } else {
       drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
         paperHeight: paperH,
+        showDrawingDivider: !!this.pageDocUI?.inkZoneDividerVisible,
       });
     }
     ctx.restore();
