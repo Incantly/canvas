@@ -7,7 +7,7 @@
       "runtimeArgs": [
         "run",
         "dev",
-        "--workspace=quickdraw-react-demo"
+        "--workspace=incantly-react-demo"
       ],
       "port": 5199,
       "autoPort": true
@@ -18,7 +18,7 @@
       "runtimeArgs": [
         "run",
         "dev",
-        "--workspace=quickdraw-website"
+        "--workspace=incantly-website"
       ],
       "port": 4399,
       "autoPort": true
@@ -29,7 +29,7 @@
       "runtimeArgs": [
         "run",
         "dev",
-        "--workspace=quickdraw-app",
+        "--workspace=incantly-app",
         "--",
         "--port",
         "5299",
@@ -43,7 +43,7 @@
       "runtimeArgs": [
         "run",
         "dev",
-        "--workspace=quickdraw-docs"
+        "--workspace=incantly-docs"
       ],
       "port": 4499
     }

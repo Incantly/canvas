@@ -1,6 +1,6 @@
 import type { JsonFetcher, StarHistoryPayload } from '../types/index.js'
 
-const REPO = 'quickdrawjs/quickdraw'
+const REPO = 'Incantly/canvas'
 const REPO_API = `https://api.github.com/repos/${REPO}`
 const SNAPSHOT = `https://raw.githubusercontent.com/${REPO}/main/docs/star-history.json`
 const COUNT_KEY = 'qd-star-count'

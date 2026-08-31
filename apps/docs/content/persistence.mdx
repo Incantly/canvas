@@ -1,6 +1,6 @@
 ---
 title: Persistence
-description: Save and restore Quickdraw boards — snapshots are plain JSON that round-trip through localStorage, your database, or a file.
+description: Save and restore Incantly Canvas boards — snapshots are plain JSON that round-trip through localStorage, your database, or a file.
 ---
 
 # Persistence
@@ -34,7 +34,7 @@ store.listen(() => {
 In React the same pattern is two props:
 
 ```jsx
-<Quickdraw
+<Canvas
   snapshot={saved}
   autoFit
   onChange={(diff, source, editor) =>

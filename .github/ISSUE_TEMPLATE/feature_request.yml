@@ -1,5 +1,5 @@
 name: Feature request
-description: A tool, API, or behavior you wish Quickdraw had
+description: A tool, API, or behavior you wish Incantly Canvas had
 labels: [enhancement]
 body:
   - type: textarea
@@ -8,7 +8,7 @@ body:
       label: What are you trying to build?
       description: >
         The use case matters more than the proposed API — describe what you're
-        embedding Quickdraw into and what's missing.
+        embedding Incantly Canvas into and what's missing.
     validations:
       required: true
   - type: textarea

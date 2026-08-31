@@ -1,8 +1,8 @@
 {
-  "name": "quickdraw-app",
+  "name": "incantly-app",
   "private": true,
   "version": "0.0.0",
-  "description": "app.tryquickdraw.com — the hosted Quickdraw whiteboard.",
+  "description": "Hosted Incantly Canvas whiteboard demo app.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@quickdrawjs/core": "^0.2.0"
+    "@incantly/canvas": "^0.2.0"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

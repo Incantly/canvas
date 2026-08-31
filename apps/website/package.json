@@ -1,8 +1,8 @@
 {
-  "name": "quickdraw-website",
+  "name": "incantly-website",
   "private": true,
   "version": "0.0.0",
-  "description": "tryquickdraw.com — the Quickdraw marketing site and blog.",
+  "description": "Incantly Canvas marketing site and blog.",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.3.0",
-    "@quickdrawjs/core": "^0.2.0",
+    "@incantly/canvas": "^0.2.0",
     "astro": "^5.7.0"
   },
   "devDependencies": {

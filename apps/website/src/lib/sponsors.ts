@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { Sponsor, SponsorSnapshot, SponsorSnapshotRow } from '../../src/types/index.js'
 
-export const SPONSOR_URL = 'https://github.com/sponsors/quickdrawjs'
+export const SPONSOR_URL = 'https://github.com/sponsors/Incantly'
 
 export const OVERRIDES: Record<string, Partial<Sponsor>> = {}
 

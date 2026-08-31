@@ -1,6 +1,6 @@
 ---
 title: The data model
-description: How Quickdraw documents work — a flat store of records, transactions that emit JSON diffs, and source-tagged history.
+description: How Incantly Canvas documents work — a flat store of records, transactions that emit JSON diffs, and source-tagged history.
 ---
 
 # The data model
@@ -42,7 +42,7 @@ Three properties make this shape do all the work:
 3. **Composable.** `composeDiff(a, b)` merges consecutive diffs — that's
    how a multi-event gesture becomes a single undo entry.
 
-Both helpers are exported from `@quickdrawjs/core`.
+Both helpers are exported from `@incantly/canvas`.
 
 ## Listening
 

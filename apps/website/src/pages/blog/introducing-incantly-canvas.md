@@ -1,24 +1,24 @@
 ---
 layout: ../../layouts/Article.astro
-title: "Introducing Quickdraw: an MIT-licensed whiteboard SDK for React, React Native, and plain JS"
+title: "Introducing Incantly Canvas: an MIT-licensed whiteboard SDK for React, React Native, and plain JS"
 description: "I needed a drawing feature and found the good options either cost money or couldn't be embedded. So I extracted my app's canvas engine into a standalone SDK and MIT-licensed all of it."
 date: 2026-08-01
 ---
 
-[Quickdraw](https://tryquickdraw.com) is an infinite-canvas whiteboard SDK
+[Incantly Canvas](https://github.com/Incantly/canvas) is an infinite-canvas whiteboard SDK
 for React, React Native, and plain JavaScript. It's MIT-licensed — no
 license keys, no fees, commercial use included — and you can
-[try it right now without signing up](https://app.tryquickdraw.com).
+[try it right now without signing up](https://github.com/Incantly/canvas).
 
 ```bash
-npm install @quickdrawjs/react
+npm install @incantly/canvas-react
 ```
 
 ```jsx
-import { Quickdraw } from '@quickdrawjs/react'
-import '@quickdrawjs/core/quickdraw.css'
+import { Canvas } from '@incantly/canvas-react'
+import '@incantly/canvas/canvas.css'
 
-<Quickdraw theme="light" grid="lines" watermark={false} />
+<Canvas theme="light" grid="lines" watermark={false} />
 ```
 
 That's a complete whiteboard: pressure-sensitive ink, hand-drawn shapes,
@@ -84,9 +84,9 @@ The core is plain ESM with **zero runtime dependencies** and no build step.
 
 | Package | For |
 | --- | --- |
-| [`@quickdrawjs/core`](https://www.npmjs.com/package/@quickdrawjs/core) | any page or framework — framework-free engine |
-| [`@quickdrawjs/react`](https://www.npmjs.com/package/@quickdrawjs/react) | `<Quickdraw />` component + hooks |
-| [`@quickdrawjs/react-native`](https://www.npmjs.com/package/@quickdrawjs/react-native) | WebView component + typed bridge |
+| [`@incantly/canvas`](https://www.npmjs.com/package/@incantly/canvas) | any page or framework — framework-free engine |
+| [`@incantly/canvas-react`](https://www.npmjs.com/package/@incantly/canvas-react) | `<Canvas />` component + hooks |
+| [`@incantly/canvas-react-native`](https://www.npmjs.com/package/@incantly/canvas-react-native) | WebView component + typed bridge |
 
 The React Native package ships the engine as a self-contained HTML string
 inside the package — no network, works offline, Apple Pencil pressure and
@@ -119,13 +119,13 @@ instead of yanking away someone else's work.
 
 ## About the badge
 
-There's a small "Made with Quickdraw" badge in the corner of the board by
+There's a small "Made with Incantly Canvas" badge in the corner of the board by
 default. `watermark: false` turns it off — free, no license key, no signup,
 no phone-home, and it's in the first code sample in the README.
 
 I want to be precise about this, because it's the exact thing that got
 tldraw criticized: their watermark was a *license term* backed by technical
-enforcement. This isn't. Quickdraw is MIT, so removing the badge is
+enforcement. This isn't. Incantly Canvas is MIT, so removing the badge is
 legally fine and always will be. It's a default I'd appreciate you keeping,
 not a condition of use.
 
@@ -137,18 +137,18 @@ the transport), no layers, no frames, and no rich text. Excalidraw and
 tldraw have years of production hardening and far bigger communities than a
 project released today.
 
-The [roadmap is public](https://github.com/quickdrawjs/quickdraw/issues/1).
+The [roadmap is public](https://github.com/Incantly/canvas/issues/1).
 If the missing feature that sent you back to a paid SDK is on it — or
 isn't — say so there.
 
 ## Try it
 
-- **Live app, no signup:** [app.tryquickdraw.com](https://app.tryquickdraw.com)
-- **Repo:** [github.com/quickdrawjs/quickdraw](https://github.com/quickdrawjs/quickdraw)
-- **Docs:** [tryquickdraw.com](https://tryquickdraw.com)
+- **Live app, no signup:** [github.com/Incantly/canvas](https://github.com/Incantly/canvas)
+- **Repo:** [github.com/Incantly/canvas](https://github.com/Incantly/canvas)
+- **Docs:** [github.com/Incantly/canvas](https://github.com/Incantly/canvas)
 
 If you've embedded a whiteboard in production before, I'd genuinely like to
 know what you hit that I should handle better —
-[open an issue](https://github.com/quickdrawjs/quickdraw/issues) or start a
-[discussion](https://github.com/quickdrawjs/quickdraw/discussions). And if
+[open an issue](https://github.com/Incantly/canvas/issues) or start a
+[discussion](https://github.com/Incantly/canvas/discussions). And if
 it's useful to you, a star helps other people find it.

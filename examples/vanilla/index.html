@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quickdraw — vanilla example</title>
-  <link rel="stylesheet" href="../../packages/core/src/quickdraw.css" />
+  <title>Incantly Canvas — vanilla example</title>
+  <link rel="stylesheet" href="../../packages/core/src/canvas.css" />
   <style>
     html, body { margin: 0; height: 100%; }
     #board { position: fixed; inset: 0; }
@@ -19,39 +19,20 @@
   <div id="board"></div>
   <button class="theme-toggle" id="theme">dark</button>
   <script type="module">
-    // In your own project:  import { createQuickdraw } from '@quickdrawjs/core'
-    import { createQuickdraw } from '../../packages/core/src/index.js'
+    // In your own project:  import { createCanvas } from '@incantly/canvas'
+    import { createCanvas } from '../../packages/core/src/index.js'
 
-    const board = createQuickdraw({
+    const board = createCanvas({
       container: document.getElementById('board'),
       theme: 'light',
-      grid: 'lines', // 'none' | 'lines' | 'dots' — also switchable in the ⋮ menu
+      grid: 'lines',
     })
 
-    // persistence: the whole document round-trips as JSON
-    const saved = localStorage.getItem('quickdraw-vanilla')
-    if (saved) {
-      board.editor.store.loadSnapshot(JSON.parse(saved), 'remote')
-      board.editor.fitContent()
-    }
-    let t = 0
-    board.editor.store.listen(() => {
-      clearTimeout(t)
-      t = setTimeout(() => {
-        localStorage.setItem('quickdraw-vanilla', JSON.stringify(board.editor.store.getSnapshot()))
-      }, 500)
+    document.getElementById('theme').addEventListener('click', () => {
+      const next = board.editor.theme.id === 'light' ? 'dark' : 'light'
+      board.editor.setTheme(next)
+      document.getElementById('theme').textContent = next === 'light' ? 'dark' : 'light'
     })
-
-    const btn = document.getElementById('theme')
-    btn.onclick = () => {
-      board.editor.setTheme(board.editor.theme.id === 'light' ? 'dark' : 'light')
-    }
-    // the ⋮ menu can switch the theme too — keep this button's label honest
-    board.editor.on('theme', () => {
-      btn.textContent = board.editor.theme.id === 'light' ? 'dark' : 'light'
-    })
-
-    window.board = board // for poking around in devtools
   </script>
 </body>
 </html>

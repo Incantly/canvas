@@ -15,12 +15,12 @@ const jsonLd = isPost
       headline: fm.title,
       description: fm.description,
       datePublished: fm.date,
-      author: { '@type': 'Organization', name: 'Quickdraw', url: SITE_URL },
+      author: { '@type': 'Organization', name: 'Incantly Canvas', url: SITE_URL },
       mainEntityOfPage: new URL(Astro.url.pathname, SITE_URL).href,
     }
   : null
 ---
-<Base title={`${fm.title} — Quickdraw`} description={fm.description} ogType={isPost ? 'article' : 'website'} jsonLd={jsonLd}>
+<Base title={`${fm.title} — Incantly Canvas`} description={fm.description} ogType={isPost ? 'article' : 'website'} jsonLd={jsonLd}>
   <main class="article">
     <article>
       {isPost && (
@@ -36,7 +36,7 @@ const jsonLd = isPost
     {isPost && (
       <aside class="post-cta">
         <div>
-          <strong>Quickdraw is an MIT-licensed whiteboard SDK.</strong>
+          <strong>Incantly Canvas is an MIT-licensed whiteboard SDK.</strong>
           <p>React, React Native, and plain JS — free for commercial use.</p>
         </div>
         <div class="cta-actions">

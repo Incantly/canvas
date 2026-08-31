@@ -14,7 +14,7 @@ const jsonLd = {
   '@graph': [
     {
       '@type': 'SoftwareApplication',
-      name: 'Quickdraw',
+      name: 'Incantly Canvas',
       applicationCategory: 'DeveloperApplication',
       operatingSystem: 'Web, iOS, Android',
       url: SITE_URL,
@@ -29,23 +29,23 @@ const jsonLd = {
       mainEntity: [
         {
           '@type': 'Question',
-          name: 'Is Quickdraw really free for commercial use?',
+          name: 'Is Incantly Canvas really free for commercial use?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Yes. Quickdraw is MIT-licensed. You can embed it in commercial products, modify it, and redistribute it with no license key and no fees — forever.',
+            text: 'Yes. Incantly Canvas is MIT-licensed. You can embed it in commercial products, modify it, and redistribute it with no license key and no fees — forever.',
           },
         },
         {
           '@type': 'Question',
-          name: 'How is Quickdraw different from tldraw?',
+          name: 'How is Incantly Canvas different from tldraw?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: "tldraw's SDK uses a custom license with a paid business tier. Quickdraw is MIT-licensed with no fees, has zero runtime dependencies, and ships React, React Native, and framework-free packages.",
+            text: "tldraw's SDK uses a custom license with a paid business tier. Incantly Canvas is MIT-licensed with no fees, has zero runtime dependencies, and ships React, React Native, and framework-free packages.",
           },
         },
         {
           '@type': 'Question',
-          name: 'Does Quickdraw support real-time collaboration?',
+          name: 'Does Incantly Canvas support real-time collaboration?',
           acceptedAnswer: {
             '@type': 'Answer',
             text: 'Sync is built into the data model: every change emits a JSON-safe diff you can send over any transport (WebSocket, WebRTC, anything), and remote diffs never pollute local undo history.',
@@ -53,15 +53,15 @@ const jsonLd = {
         },
         {
           '@type': 'Question',
-          name: 'Does Quickdraw work in React Native and Expo?',
+          name: 'Does Incantly Canvas work in React Native and Expo?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Yes. @quickdrawjs/react-native wraps the engine in a WebView with a typed bridge — Apple Pencil pressure, palm rejection, offline support, snapshot and PNG export included.',
+            text: 'Yes. @incantly/canvas-react-native wraps the engine in a WebView with a typed bridge — Apple Pencil pressure, palm rejection, offline support, snapshot and PNG export included.',
           },
         },
         {
           '@type': 'Question',
-          name: 'Can I remove the Quickdraw mark in the corner?',
+          name: 'Can I remove the Incantly Canvas mark in the corner?',
           acceptedAnswer: {
             '@type': 'Answer',
             text: 'Yes — pass watermark: false. It is on by default because it helps people find the project, but removing it is free and does not require a license.',
@@ -72,7 +72,7 @@ const jsonLd = {
   ],
 }
 
-// Hero proof points. Sizes are measured, not rounded down: `@quickdrawjs/core`
+// Hero proof points. Sizes are measured, not rounded down: `@incantly/canvas`
 // bundles to 73.5 kB minified / 24.4 kB gzipped, plus 1.6 kB of gzipped CSS.
 const badges = [
   {
@@ -156,14 +156,14 @@ const features = [
           <a class="btn primary" href={APP_URL} rel="noopener">Try the app</a>
           <StarButton stars={starData.stars} />
         </div>
-        <a class="install" href="https://www.npmjs.com/package/@quickdrawjs/react" rel="noopener" title="View @quickdrawjs/react on npm">
+        <a class="install" href="https://www.npmjs.com/package/@incantly/canvas-react" rel="noopener" title="View @incantly/canvas-react on npm">
           <span class="npm-mark" aria-hidden="true">npm</span>
-          <span class="install-cmd"><span class="prompt">$</span> <span class="cmd-long">npm install @quickdrawjs/react</span><span class="cmd-short">npm i @quickdrawjs/react</span></span>
+          <span class="install-cmd"><span class="prompt">$</span> <span class="cmd-long">npm install @incantly/canvas-react</span><span class="cmd-short">npm i @incantly/canvas-react</span></span>
           <span class="install-go" aria-hidden="true">→</span>
         </a>
       </div>
       <div class="board-frame">
-        <div id="hero-board" aria-label="Live Quickdraw whiteboard — draw here"></div>
+        <div id="hero-board" aria-label="Live Incantly Canvas whiteboard — draw here"></div>
         <div id="hero-hint" aria-hidden="true">
           <div class="hint-stage">
             <div class="hint-doodle-wrap">
@@ -212,28 +212,28 @@ const features = [
         </div>
         <div class="qs-body">
           <div class="qs-pane on" data-qs-pane="react">
-            <pre><code>{`npm install @quickdrawjs/react`}</code></pre>
-            <pre><code>{`import { Quickdraw } from '@quickdrawjs/react'
-import '@quickdrawjs/core/quickdraw.css'
+            <pre><code>{`npm install @incantly/canvas-react`}</code></pre>
+            <pre><code>{`import { Canvas } from '@incantly/canvas-react'
+import '@incantly/canvas/canvas.css'
 
 export default function Board() {
-  return <Quickdraw theme="light" grid="lines" />
+  return <Canvas theme="light" grid="lines" />
 }`}</code></pre>
           </div>
           <div class="qs-pane" data-qs-pane="js">
-            <pre><code>{`npm install @quickdrawjs/core`}</code></pre>
-            <pre><code>{`import { createQuickdraw } from '@quickdrawjs/core'
-import '@quickdrawjs/core/quickdraw.css'
+            <pre><code>{`npm install @incantly/canvas`}</code></pre>
+            <pre><code>{`import { createCanvas } from '@incantly/canvas'
+import '@incantly/canvas/canvas.css'
 
-createQuickdraw({
+createCanvas({
   container: document.getElementById('board'),
 })`}</code></pre>
           </div>
           <div class="qs-pane" data-qs-pane="rn">
-            <pre><code>{`npm install @quickdrawjs/react-native react-native-webview`}</code></pre>
-            <pre><code>{`import { Quickdraw } from '@quickdrawjs/react-native'
+            <pre><code>{`npm install @incantly/canvas-react-native react-native-webview`}</code></pre>
+            <pre><code>{`import { Canvas } from '@incantly/canvas-react-native'
 
-<Quickdraw
+<Canvas
   theme="dark"
   onChange={(diff) => sync(diff)}
   style={{ flex: 1 }}
@@ -251,7 +251,7 @@ createQuickdraw({
     <section class="compare" id="compare">
       <h2>How it compares</h2>
       <p class="section-lede">
-        tldraw and Excalidraw are both excellent. Quickdraw is for teams that
+        tldraw and Excalidraw are both excellent. Incantly Canvas is for teams that
         want an MIT license, a framework-free core, and React Native support
         in the same package.
       </p>
@@ -269,7 +269,7 @@ createQuickdraw({
         <svg class="support-star" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.6l3.1 6.7 7.3.9-5.4 5 1.4 7.2L12 17.8l-6.4 3.6L7 14.2 1.6 9.2l7.3-.9L12 1.6z"/></svg>
         <h2>Built in the open. Powered by stars.</h2>
         <p>
-          Quickdraw is free forever — no license fees, no upsell. If it saves
+          Incantly Canvas is free forever — no license fees, no upsell. If it saves
           you one, a GitHub star is how other developers find it.
         </p>
         <StarHistory
@@ -279,9 +279,9 @@ createQuickdraw({
         />
         <div class="support-actions">
           <StarButton stars={starData.stars} variant="cream" />
-          <a class="btn-npm" href="https://www.npmjs.com/package/@quickdrawjs/react" rel="noopener">
+          <a class="btn-npm" href="https://www.npmjs.com/package/@incantly/canvas-react" rel="noopener">
             <span class="npm-mark" aria-hidden="true">npm</span>
-            @quickdrawjs/react
+            @incantly/canvas-react
           </a>
         </div>
       </div>
@@ -292,11 +292,11 @@ createQuickdraw({
     <section class="faq" id="faq">
       <h2>Questions people ask</h2>
       <details open>
-        <summary>Is Quickdraw really free for commercial use?</summary>
+        <summary>Is Incantly Canvas really free for commercial use?</summary>
         <p>Yes. MIT means you can embed it in commercial products, modify it, and redistribute it — no license key, no fees, forever. The license can't be revoked for versions you already have.</p>
       </details>
       <details>
-        <summary>Can I remove the Quickdraw mark in the corner?</summary>
+        <summary>Can I remove the Incantly Canvas mark in the corner?</summary>
         <p>Yes — pass <code>watermark: false</code>. It's on by default because it helps people find the project, but removing it is free. No license required.</p>
       </details>
       <details>
@@ -328,12 +328,12 @@ createQuickdraw({
 </Base>
 
 <script>
-  import { createQuickdraw } from '@quickdrawjs/core'
-  import '@quickdrawjs/core/quickdraw.css'
+  import { createCanvas } from '@incantly/canvas'
+  import '@incantly/canvas/canvas.css'
 
   const container = document.getElementById('hero-board')
   if (container) {
-    const board = createQuickdraw({ container, theme: 'light', grid: 'lines' })
+    const board = createCanvas({ container, theme: 'light', grid: 'lines' })
     const { store } = board.editor
     const saved = sessionStorage.getItem('qd-hero')
     if (saved) {

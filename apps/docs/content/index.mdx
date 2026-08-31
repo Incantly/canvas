@@ -1,18 +1,18 @@
 ---
 title: Getting started
-description: Install Quickdraw and render your first infinite-canvas whiteboard in React, React Native, or plain JavaScript.
+description: Install Incantly Canvas and render your first infinite-canvas whiteboard in React, React Native, or plain JavaScript.
 ---
 
 # Getting started
 
-Quickdraw is an MIT-licensed infinite-canvas whiteboard SDK. One engine,
+Incantly Canvas is an MIT-licensed infinite-canvas whiteboard SDK. One engine,
 three packages:
 
 | Package | For |
 | --- | --- |
-| [`@quickdrawjs/react`](https://www.npmjs.com/package/@quickdrawjs/react) | React apps — a `<Quickdraw />` component |
-| [`@quickdrawjs/react-native`](https://www.npmjs.com/package/@quickdrawjs/react-native) | React Native / Expo — a WebView component with a typed bridge |
-| [`@quickdrawjs/core`](https://www.npmjs.com/package/@quickdrawjs/core) | Any web page — framework-free, zero dependencies |
+| [`@incantly/canvas-react`](https://www.npmjs.com/package/@incantly/canvas-react) | React apps — a `<Canvas />` component |
+| [`@incantly/canvas-react-native`](https://www.npmjs.com/package/@incantly/canvas-react-native) | React Native / Expo — a WebView component with a typed bridge |
+| [`@incantly/canvas`](https://www.npmjs.com/package/@incantly/canvas) | Any web page — framework-free, zero dependencies |
 
 Every board comes complete: pressure ink, highlighter, shapes with editable
 labels, arrows, lines, text, sticky notes, images, laser pointer, selection,
@@ -22,22 +22,22 @@ export.
 ## Install
 
 ```sh
-npm install @quickdrawjs/react
+npm install @incantly/canvas-react
 ```
 
-For plain JS use `@quickdrawjs/core`; for React Native use
-`@quickdrawjs/react-native react-native-webview`.
+For plain JS use `@incantly/canvas`; for React Native use
+`@incantly/canvas-react-native react-native-webview`.
 
 ## First board
 
 ```jsx
-import { Quickdraw } from '@quickdrawjs/react'
-import '@quickdrawjs/core/quickdraw.css'
+import { Canvas } from '@incantly/canvas-react'
+import '@incantly/canvas/canvas.css'
 
 export default function App() {
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Quickdraw theme="light" grid="dots" />
+      <Canvas theme="light" grid="dots" />
     </div>
   )
 }
@@ -61,12 +61,12 @@ Everything revolves around two objects:
   `store.undo()` / `store.redo()` walk history.
 
 In React you reach them through a ref (`ref.current.editor`); in plain JS,
-`createQuickdraw()` returns them directly.
+`createCanvas()` returns them directly.
 
 ```jsx
 const ref = useRef(null)
 
-<Quickdraw
+<Canvas
   ref={ref}
   snapshot={saved}                          // restore a saved board
   autoFit                                   // fit content on mount/resize

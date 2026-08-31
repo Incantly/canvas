@@ -12,9 +12,9 @@ import type {
   Styles,
   ThemeId,
   ToolId,
-} from '@quickdrawjs/core'
+} from '@incantly/canvas'
 
-export interface QuickdrawRef {
+export interface CanvasRef {
   loadSnapshot(snapshot: Snapshot, fit?: boolean): void
   applyDiff(diff: Diff): void
   setTool(tool: ToolId): void
@@ -28,7 +28,7 @@ export interface QuickdrawRef {
   exportPng(opts?: { background?: boolean; scale?: number; margin?: number }): Promise<string | null>
 }
 
-export interface QuickdrawProps {
+export interface CanvasProps {
   theme?: ThemeId | string
   grid?: GridId
   readonly?: boolean

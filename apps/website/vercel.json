@@ -4,11 +4,11 @@
   "rewrites": [
     {
       "source": "/docs/",
-      "destination": "https://tryquickdraw-docs.vercel.app/docs/"
+      "destination": "https://incantly-docs.vercel.app/docs/"
     },
     {
       "source": "/docs/:path(.*)",
-      "destination": "https://tryquickdraw-docs.vercel.app/docs/:path"
+      "destination": "https://incantly-docs.vercel.app/docs/:path"
     }
   ]
 }

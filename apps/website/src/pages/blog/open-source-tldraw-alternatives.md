@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Article.astro
 title: "Open-source tldraw alternatives in 2026"
-description: "tldraw's SDK requires a paid business license for some production use. Here are the genuinely MIT-licensed whiteboard libraries — Excalidraw, Quickdraw, and the DIY route — compared."
+description: "tldraw's SDK requires a paid business license for some production use. Here are the genuinely MIT-licensed whiteboard libraries — Excalidraw, Incantly Canvas, and the DIY route — compared."
 date: 2026-08-01
 ---
 
@@ -49,22 +49,22 @@ gzipped across 31 runtime dependencies, per
 Collaboration runs through the separate `excalidraw-room` server. If you
 want "the Excalidraw experience inside my app," it's an excellent choice.
 
-## Quickdraw
+## Incantly Canvas
 
-[Quickdraw](https://tryquickdraw.com) — this project — is an MIT-licensed
+[Incantly Canvas](https://github.com/Incantly/canvas) — this project — is an MIT-licensed
 whiteboard SDK built to be embedded. The core engine is plain ESM with zero
 runtime dependencies (~25 kB minified + gzipped — about 14× lighter than
 the Excalidraw component), and the same engine ships as three packages:
 
-- `@quickdrawjs/core` — any web page, no framework, no build step
-- `@quickdrawjs/react` — a `<Quickdraw />` component with an imperative ref
-- `@quickdrawjs/react-native` — a WebView component with a typed bridge,
+- `@incantly/canvas` — any web page, no framework, no build step
+- `@incantly/canvas-react` — a `<Canvas />` component with an imperative ref
+- `@incantly/canvas-react-native` — a WebView component with a typed bridge,
   Apple Pencil pressure, and palm rejection
 
 You get pressure-sensitive ink, shapes with a hand-drawn wobble, arrows,
 sticky notes, images, a laser pointer, per-gesture undo, light and dark
 themes, grids, and PNG export — plus a diff-emitting store designed for
-persistence and real-time sync. A small "Made with Quickdraw" badge sits in
+persistence and real-time sync. A small "Made with Incantly Canvas" badge sits in
 the board's corner by default; unlike tldraw's attribution, turning it off is
 a boolean (`watermark: false`) — free, no license key, no phone-home.
 
@@ -83,7 +83,7 @@ gestures, palm rejection. Budget for that before you commit.
 
 ## Quick comparison
 
-| | Quickdraw | Excalidraw | tldraw SDK |
+| | Incantly Canvas | Excalidraw | tldraw SDK |
 |---|---|---|---|
 | License | MIT | MIT | Custom |
 | React | Yes | Yes | Yes |
@@ -96,7 +96,7 @@ gestures, palm rejection. Budget for that before you commit.
 
 Sizes are minified + gzipped, from
 [Bundlephobia](https://bundlephobia.com/package/tldraw) (Excalidraw 0.18.1,
-tldraw 5.2.5) with Quickdraw measured the same way. Both alternatives are
+tldraw 5.2.5) with Incantly Canvas measured the same way. Both alternatives are
 heavier because both do more — that trade is the whole point of this page,
 not a knock on either project.
 
@@ -104,11 +104,11 @@ not a knock on either project.
 
 - **You want maximum maturity and MIT:** Excalidraw.
 - **You want a lightweight embed, plain-JS support, or React Native:**
-  Quickdraw.
+  Incantly Canvas.
 - **You only need ink and enjoy building canvases:** perfect-freehand.
 - **The license cost is fine for your business:** tldraw remains excellent.
 
-Quickdraw is [open to contributions](https://github.com/quickdrawjs/quickdraw).
+Incantly Canvas is [open to contributions](https://github.com/Incantly/canvas).
 If the missing feature that sent you back to a paid SDK is on the
-[roadmap](https://github.com/quickdrawjs/quickdraw/issues/1), tell us — or
+[roadmap](https://github.com/Incantly/canvas/issues/1), tell us — or
 build it with us.

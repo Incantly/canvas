@@ -20,10 +20,10 @@ switches back, so the board can follow your app's theme — or drive it:
 
 ```jsx
 const [theme, setTheme] = useState('light')
-<Quickdraw theme={theme} onThemeChange={setTheme} />
+<Canvas theme={theme} onThemeChange={setTheme} />
 ```
 
-The board's container also carries `data-qd-theme="light" | "dark"`, which
+The board's container also carries `data-ic-theme="light" | "dark"`, which
 is handy for styling chrome around the canvas.
 
 ## Colors
@@ -60,9 +60,9 @@ The ⋮ menu includes theme and grid switches by default. If your app owns
 its own controls, drop them:
 
 ```js
-createQuickdraw({ container, themeToggle: false, gridControl: false })
+createCanvas({ container, themeToggle: false, gridControl: false })
 ```
 
 ```jsx
-<Quickdraw themeToggle={false} gridControl={false} />
+<Canvas themeToggle={false} gridControl={false} />
 ```

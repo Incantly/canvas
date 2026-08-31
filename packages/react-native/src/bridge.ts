@@ -2,7 +2,7 @@ export const encodeDispatch = (msg: object): string => {
   const json = JSON.stringify(msg)
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029')
-  return `window.__qdDispatch(${json}); true;`
+  return `window.__icDispatch(${json}); true;`
 }
 
 export function createBridge(
@@ -25,7 +25,7 @@ export function createBridge(
       return new Promise((resolve, reject) => {
         const t = setTimeout(() => {
           pending.delete(id)
-          reject(new Error('quickdraw bridge timeout: ' + (msg as any).type))
+          reject(new Error('incantly canvas bridge timeout: ' + (msg as any).type))
         }, timeout)
         pending.set(id, { resolve, t })
         send(encodeDispatch({ ...(msg as any), id }))

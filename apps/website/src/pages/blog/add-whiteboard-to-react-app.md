@@ -9,28 +9,28 @@ You need a drawing surface in your React app — for annotations, a
 brainstorming feature, a teaching tool, a support sketch. Building one from
 scratch is a multi-month project (camera math, hit-testing, undo semantics,
 touch gestures). Embedding one takes five minutes. This tutorial uses
-[Quickdraw](https://tryquickdraw.com), which is MIT-licensed and free for
+[Incantly Canvas](https://github.com/Incantly/canvas), which is MIT-licensed and free for
 commercial use — but the persistence and sync patterns apply to any
 whiteboard SDK.
 
 ## 1. Install
 
 ```bash
-npm install @quickdrawjs/react
+npm install @incantly/canvas-react
 ```
 
-That pulls in `@quickdrawjs/core` (the engine — zero dependencies of its own).
+That pulls in `@incantly/canvas` (the engine — zero dependencies of its own).
 
 ## 2. Render a board
 
 ```jsx
-import { Quickdraw } from '@quickdrawjs/react'
-import '@quickdrawjs/core/quickdraw.css'
+import { Canvas } from '@incantly/canvas-react'
+import '@incantly/canvas/canvas.css'
 
 export default function Board() {
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Quickdraw theme="light" grid="lines" />
+      <Canvas theme="light" grid="lines" />
     </div>
   )
 }
@@ -51,8 +51,8 @@ The document is plain JSON. Save on change, restore on mount:
 
 ```jsx
 import { useRef } from 'react'
-import { Quickdraw } from '@quickdrawjs/react'
-import '@quickdrawjs/core/quickdraw.css'
+import { Canvas } from '@incantly/canvas-react'
+import '@incantly/canvas/canvas.css'
 
 export default function Board() {
   const ref = useRef(null)
@@ -60,7 +60,7 @@ export default function Board() {
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Quickdraw
+      <Canvas
         ref={ref}
         snapshot={saved ? JSON.parse(saved) : undefined}
         autoFit
@@ -84,7 +84,7 @@ By default the toolbar's export downloads a PNG. Intercept it to upload
 instead:
 
 ```jsx
-<Quickdraw onSave={async (blob) => {
+<Canvas onSave={async (blob) => {
   const form = new FormData()
   form.append('file', blob, 'board.png')
   await fetch('/api/upload', { method: 'POST', body: form })
@@ -123,5 +123,5 @@ deeper story — why diffs beat operational transforms for this use case — rea
 ## Where to go next
 
 - [Documentation](/docs/) — persistence, headless mode, React Native
-- [Try the hosted app](https://app.tryquickdraw.com) — the same SDK, deployed
-- [GitHub](https://github.com/quickdrawjs/quickdraw) — MIT, open to contributions
+- [Try the hosted app](https://github.com/Incantly/canvas) — the same SDK, deployed
+- [GitHub](https://github.com/Incantly/canvas) — MIT, open to contributions

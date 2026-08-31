@@ -1,27 +1,27 @@
 ---
 title: React
-description: The <Quickdraw /> React component — props, callbacks, refs, and controlled usage with an external store.
+description: The <Canvas /> React component — props, callbacks, refs, and controlled usage with an external store.
 ---
 
 # React
 
 ```sh
-npm install @quickdrawjs/react
+npm install @incantly/canvas-react
 ```
 
-The package re-exports everything from `@quickdrawjs/core`, so one import
+The package re-exports everything from `@incantly/canvas`, so one import
 gives you the component *and* the engine (`Store`, `Editor`, diff helpers).
 
 ## Basic usage
 
 ```jsx
-import { Quickdraw } from '@quickdrawjs/react'
-import '@quickdrawjs/core/quickdraw.css'
+import { Canvas } from '@incantly/canvas-react'
+import '@incantly/canvas/canvas.css'
 
 export default function Board() {
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Quickdraw theme="light" grid="lines" />
+      <Canvas theme="light" grid="lines" />
     </div>
   )
 }
@@ -65,7 +65,7 @@ back into your app state:
 ```jsx
 const [theme, setTheme] = useState('light')
 
-<Quickdraw theme={theme} onThemeChange={setTheme} />
+<Canvas theme={theme} onThemeChange={setTheme} />
 ```
 
 ## The ref
@@ -76,7 +76,7 @@ reachable from it:
 ```jsx
 const ref = useRef(null)
 
-<Quickdraw ref={ref} />
+<Canvas ref={ref} />
 
 ref.current.editor.setTool('draw')
 ref.current.editor.fitContent({ animate: 220 })
@@ -90,11 +90,11 @@ Pass your own `Store` when the document outlives the component — shared
 between views, preloaded before render, or synced with peers:
 
 ```jsx
-import { Quickdraw, useQuickdrawStore } from '@quickdrawjs/react'
+import { Canvas, useCanvasStore } from '@incantly/canvas-react'
 
 function App({ savedSnapshot }) {
-  const store = useQuickdrawStore(savedSnapshot) // stable across renders
-  return <Quickdraw store={store} />
+  const store = useCanvasStore(savedSnapshot) // stable across renders
+  return <Canvas store={store} />
 }
 ```
 

@@ -11,6 +11,6 @@ export type {
   Editor,
   BoardUI,
   BuildUIOptions,
-  QuickdrawInstance,
-  CreateQuickdrawOptions,
+  CanvasInstance,
+  CreateCanvasOptions,
 } from './editor.js'

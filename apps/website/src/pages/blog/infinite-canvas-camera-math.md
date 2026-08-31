@@ -6,14 +6,14 @@ date: 2026-08-01
 ---
 
 Every infinite-canvas app — Figma, tldraw, Excalidraw,
-[Quickdraw](https://tryquickdraw.com) — is built on one small idea: shapes
+[Incantly Canvas](https://github.com/Incantly/canvas) — is built on one small idea: shapes
 live in an unbounded coordinate system called **page space**, and a
 **camera** decides which part of it your screen shows. Get the camera math
 right and pan, zoom, pinch, and zoom-to-fit all fall out of one transform.
 Get it wrong and your canvas drifts, jitters, or zooms toward the corner
 instead of the cursor.
 
-This is the math Quickdraw uses. It fits in a page.
+This is the math Incantly Canvas uses. It fits in a page.
 
 ## The camera is three numbers
 
@@ -117,11 +117,11 @@ working when zoomed" bugs.
 ## See it running
 
 All of this is implemented in
-[Quickdraw's editor](https://github.com/quickdrawjs/quickdraw), MIT-licensed
+[Incantly Canvas's editor](https://github.com/Incantly/canvas), MIT-licensed
 — `editor.js` has the camera, `shapes.js` the hit-testing. If you'd rather
 not build the rest of the whiteboard (undo, selection, styles, export...),
 that's the [point of the SDK](/docs/):
 
 ```bash
-npm install @quickdrawjs/core
+npm install @incantly/canvas
 ```

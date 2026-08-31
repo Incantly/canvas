@@ -1,7 +1,7 @@
 {
-  "name": "@quickdrawjs/core",
+  "name": "@incantly/canvas",
   "version": "0.2.0",
-  "description": "Framework-free infinite-canvas whiteboard engine — the heart of Quickdraw, the MIT-licensed drawing SDK.",
+  "description": "Framework-free infinite-canvas whiteboard engine — the heart of Incantly Canvas, the MIT-licensed drawing SDK.",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -16,17 +16,17 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./quickdraw.css": "./src/quickdraw.css",
-    "./styles.css": "./src/quickdraw.css",
+    "./canvas.css": "./src/canvas.css",
+    "./styles.css": "./src/canvas.css",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "src/quickdraw.css",
+    "src/canvas.css",
     "README.md"
   ],
   "sideEffects": [
-    "./src/quickdraw.css",
+    "./src/canvas.css",
     "./dist/**/*.css"
   ],
   "keywords": [
@@ -41,13 +41,13 @@
     "diagram"
   ],
   "license": "MIT",
-  "homepage": "https://tryquickdraw.com",
+  "homepage": "https://github.com/Incantly/canvas",
   "repository": {
     "type": "git",
-    "url": "https://github.com/quickdrawjs/quickdraw.git",
+    "url": "https://github.com/Incantly/canvas.git",
     "directory": "packages/core"
   },
-  "bugs": "https://github.com/quickdrawjs/quickdraw/issues",
+  "bugs": "https://github.com/Incantly/canvas/issues",
   "publishConfig": {
     "access": "public"
   }

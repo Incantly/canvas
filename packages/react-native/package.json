@@ -1,7 +1,7 @@
 {
-  "name": "@quickdrawjs/react-native",
+  "name": "@incantly/canvas-react-native",
   "version": "0.2.0",
-  "description": "React Native component for Quickdraw — the MIT-licensed infinite-canvas whiteboard SDK (WebView-based).",
+  "description": "React Native component for Incantly Canvas — the MIT-licensed infinite-canvas whiteboard SDK (WebView-based).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -37,7 +37,7 @@
     "excalidraw-alternative"
   ],
   "dependencies": {
-    "@quickdrawjs/core": "0.2.0"
+    "@incantly/canvas": "0.2.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
@@ -48,13 +48,13 @@
     "react-native-webview": ">=11"
   },
   "license": "MIT",
-  "homepage": "https://tryquickdraw.com",
+  "homepage": "https://github.com/Incantly/canvas",
   "repository": {
     "type": "git",
-    "url": "https://github.com/quickdrawjs/quickdraw.git",
+    "url": "https://github.com/Incantly/canvas.git",
     "directory": "packages/react-native"
   },
-  "bugs": "https://github.com/quickdrawjs/quickdraw/issues",
+  "bugs": "https://github.com/Incantly/canvas/issues",
   "publishConfig": {
     "access": "public"
   }

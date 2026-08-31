@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path'
 import { buildStarChart } from '../apps/website/src/lib/starChart.js'
 import { renderStarSvg, THEMES, VIEW } from './lib/starSvg.mjs'
 
-const REPO = process.env.STAR_HISTORY_REPO ?? 'quickdrawjs/quickdraw'
+const REPO = process.env.STAR_HISTORY_REPO ?? 'Incantly/canvas'
 const API = `https://api.github.com/repos/${REPO}`
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs')
 const PER_PAGE = 100
@@ -39,7 +39,7 @@ async function api(url, accept = 'application/vnd.github+json') {
     headers: {
       Accept: accept,
       Authorization: `Bearer ${token}`,
-      'User-Agent': 'quickdraw-star-history',
+      'User-Agent': 'incantly-star-history',
       'X-GitHub-Api-Version': '2022-11-28',
     },
   })

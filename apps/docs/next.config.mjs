@@ -9,7 +9,7 @@ const withNextra = nextra({
 
 export default withNextra({
   output: 'export',
-  // served at tryquickdraw.com/docs via a proxy route on the main site
+  // served at /docs via a proxy route on the main site
   basePath: '/docs',
   trailingSlash: true,
   images: { unoptimized: true },

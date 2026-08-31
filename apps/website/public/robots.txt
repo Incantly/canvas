@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tryquickdraw.com/sitemap-index.xml
-Sitemap: https://tryquickdraw.com/docs/sitemap.xml
+Sitemap: https://github.com/Incantly/canvas/sitemap-index.xml
+Sitemap: https://github.com/Incantly/canvas/docs/sitemap.xml

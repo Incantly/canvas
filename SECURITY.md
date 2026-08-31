@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the latest published version of each `@quickdrawjs/*` package receives
+Only the latest published version of each `@incantly/canvas*` package receives
 security fixes.
 
 ## Reporting a vulnerability
@@ -10,7 +10,7 @@ security fixes.
 Please **do not open a public issue** for security problems.
 
 Report privately via
-[GitHub Security Advisories](https://github.com/quickdrawjs/quickdraw/security/advisories/new)
+[GitHub Security Advisories](https://github.com/Incantly/canvas/security/advisories/new)
 or email **promptifyapps@gmail.com**.
 
 You can expect an acknowledgment within a few days. Once a fix ships we'll
@@ -18,7 +18,7 @@ credit you in the release notes unless you prefer otherwise.
 
 ## Scope notes
 
-Quickdraw renders user-provided documents (snapshots and diffs). Anything that
+Incantly Canvas renders user-provided documents (snapshots and diffs). Anything that
 lets a crafted document escape the canvas — script execution from text or
 label records, prototype pollution through `applyDiff`/`loadSnapshot`, or
 resource exhaustion that a host app can't guard against — is in scope and

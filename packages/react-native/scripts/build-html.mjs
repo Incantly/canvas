@@ -20,8 +20,8 @@ const result = await build({
   outdir: 'out',
   loader: { '.css': 'css', '.ts': 'ts' },
   alias: {
-    '@quickdrawjs/core': join(pkg, '../core/dist/index.js'),
-    '@quickdrawjs/core/quickdraw.css': join(pkg, '../core/src/quickdraw.css'),
+    '@incantly/canvas': join(pkg, '../core/dist/index.js'),
+    '@incantly/canvas/canvas.css': join(pkg, '../core/src/canvas.css'),
   },
 })
 

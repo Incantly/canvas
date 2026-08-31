@@ -1,0 +1,13 @@
+---
+description: Commits and PRs must never identify Cursor as author or co-author
+alwaysApply: true
+---
+
+# No Cursor in commits or PRs
+
+- Never use Cursor as git author or committer name/email
+- Never add `Co-authored-by: Cursor` or similar trailers
+- Commit messages and PR titles/bodies must not mention Cursor, "Made with Cursor", or auto-assistant footers
+- Security sub-agent must PASS before any commit when the feature touches sync, auth, storage, paste, or bridge
+- Verifier must PASS (see `roadmap/QA_CHECKLIST.md`) before any commit
+- Commits only when the user explicitly asks

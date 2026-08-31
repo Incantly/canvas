@@ -1,6 +1,6 @@
 ---
 title: Real-time sync
-description: Build a collaborative whiteboard with Quickdraw's diff stream — any transport, correct multiplayer undo, and a relay that fits in 15 lines.
+description: Build a collaborative whiteboard with Incantly Canvas's diff stream — any transport, correct multiplayer undo, and a relay that fits in 15 lines.
 ---
 
 # Real-time sync
@@ -64,11 +64,11 @@ authority model.
 
 ## React Native peers
 
-`@quickdrawjs/react-native` emits the same diffs, so a phone and a browser
+`@incantly/canvas-react-native` emits the same diffs, so a phone and a browser
 can share one relay:
 
 ```jsx
-<Quickdraw
+<Canvas
   onChange={(diff, source) => source === 'user' && socket.send(JSON.stringify(diff))}
 />
 // board.current.applyDiff(remoteDiff) on message

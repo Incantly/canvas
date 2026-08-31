@@ -6,13 +6,13 @@ import './brand.css'
 import type { DocsLayoutProps, Metadata } from './types/index'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://tryquickdraw.com'),
+  metadataBase: new URL('https://github.com/Incantly/canvas'),
   title: {
-    default: 'Quickdraw Docs',
-    template: '%s — Quickdraw Docs',
+    default: 'Incantly Canvas Docs',
+    template: '%s — Incantly Canvas Docs',
   },
   description:
-    'Documentation for Quickdraw, the MIT-licensed infinite-canvas whiteboard SDK for React, React Native, and plain JavaScript.',
+    'Documentation for Incantly Canvas, the MIT-licensed infinite-canvas whiteboard SDK for React, React Native, and plain JavaScript.',
   icons: { icon: [{ url: '/docs/favicon.svg', type: 'image/svg+xml' }] },
 }
 
@@ -37,18 +37,18 @@ const logo = (
       />
       <circle cx="24.5" cy="24.5" r="2.6" fill="#2f6fed" />
     </svg>
-    Quickdraw
+    Incantly Canvas
     <span style={{ fontWeight: 500, opacity: 0.55 }}>Docs</span>
   </span>
 )
 
 const npmLink = (
   <a
-    href="https://www.npmjs.com/package/@quickdrawjs/react"
+    href="https://www.npmjs.com/package/@incantly/canvas-react"
     target="_blank"
     rel="noreferrer"
-    aria-label="Quickdraw on npm"
-    title="@quickdrawjs/react on npm"
+    aria-label="Incantly Canvas on npm"
+    title="@incantly/canvas-react on npm"
     className="qd-npm-link"
   >
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -60,8 +60,8 @@ const npmLink = (
 const navbar = (
   <Navbar
     logo={logo}
-    logoLink="https://tryquickdraw.com"
-    projectLink="https://github.com/quickdrawjs/quickdraw"
+    logoLink="https://github.com/Incantly/canvas"
+    projectLink="https://github.com/Incantly/canvas"
   >
     {npmLink}
   </Navbar>
@@ -74,7 +74,7 @@ const footer = (
     <span>
       MIT licensed. Built in the open —{' '}
       <a
-        href="https://github.com/quickdrawjs/quickdraw"
+        href="https://github.com/Incantly/canvas"
         target="_blank"
         rel="noreferrer"
         style={footerLink}
@@ -83,30 +83,30 @@ const footer = (
       </a>
       . On npm:{' '}
       <a
-        href="https://www.npmjs.com/package/@quickdrawjs/core"
+        href="https://www.npmjs.com/package/@incantly/canvas"
         target="_blank"
         rel="noreferrer"
         style={footerLink}
       >
-        @quickdrawjs/core
+        @incantly/canvas
       </a>
       ,{' '}
       <a
-        href="https://www.npmjs.com/package/@quickdrawjs/react"
+        href="https://www.npmjs.com/package/@incantly/canvas-react"
         target="_blank"
         rel="noreferrer"
         style={footerLink}
       >
-        @quickdrawjs/react
+        @incantly/canvas-react
       </a>
       ,{' '}
       <a
-        href="https://www.npmjs.com/package/@quickdrawjs/react-native"
+        href="https://www.npmjs.com/package/@incantly/canvas-react-native"
         target="_blank"
         rel="noreferrer"
         style={footerLink}
       >
-        @quickdrawjs/react-native
+        @incantly/canvas-react-native
       </a>
       .
     </span>
@@ -122,7 +122,7 @@ export default async function RootLayout({ children }: DocsLayoutProps) {
           navbar={navbar}
           footer={footer}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/quickdrawjs/quickdraw/edit/main/apps/docs"
+          docsRepositoryBase="https://github.com/Incantly/canvas/edit/main/apps/docs"
           editLink="Edit this page on GitHub"
           sidebar={{ defaultMenuCollapseLevel: 2 }}
         >

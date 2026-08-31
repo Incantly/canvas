@@ -7,10 +7,10 @@ body:
     attributes:
       label: Package
       options:
-        - "@quickdrawjs/core"
-        - "@quickdrawjs/react"
-        - "@quickdrawjs/react-native"
-        - The hosted app (app.tryquickdraw.com)
+        - "@incantly/canvas"
+        - "@incantly/canvas-react"
+        - "@incantly/canvas-react-native"
+        - The hosted app (apps/app)
         - Not sure
     validations:
       required: true
@@ -41,5 +41,5 @@ body:
   - type: input
     id: version
     attributes:
-      label: Quickdraw version
-      placeholder: "0.1.0"
+      label: Incantly Canvas version
+      placeholder: "0.2.0"

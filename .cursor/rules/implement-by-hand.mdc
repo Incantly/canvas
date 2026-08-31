@@ -1,0 +1,27 @@
+---
+description: Prefer hand-implemented core code; strict error checking and data safety
+alwaysApply: true
+---
+
+# Hand-implement + data safety
+
+## Hand-implement by default
+
+- Implement features in `packages/core` by hand
+- Do not add npm dependencies unless the active roadmap doc approves an exception with justification
+- Keep SDK lean for RN WebView bundle size
+
+## Error checking
+
+- Validate inputs at editor, store, and RN bridge boundaries
+- TypeScript strict; avoid @ts-ignore
+- User-visible error states — never silent crash
+
+## Data risk
+
+- Snapshot changes require version + forward migration
+- Remote diffs use source: 'remote' and skip undo stack
+- Validate clipboard paste payloads
+- Handle storage quota and corrupt JSON gracefully
+
+See [`roadmap/QA_CHECKLIST.md`](../../roadmap/QA_CHECKLIST.md) for full gates.

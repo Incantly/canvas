@@ -10,7 +10,7 @@ description: PNG export of the whole board or a selection, on paper or transpare
 The board menu exports PNG out of the box: the whole board or the current
 selection, on the paper background or transparent, plus copy-as-image to
 the clipboard. By default exports download as
-`quickdraw-<timestamp>.png`.
+`canvas-<timestamp>.png`.
 
 ## Intercepting exports
 
@@ -18,7 +18,7 @@ Pass `onSave` to receive the blob instead — upload it, attach it, preview
 it:
 
 ```jsx
-<Quickdraw onSave={async (blob, background) => {
+<Canvas onSave={async (blob, background) => {
   const form = new FormData()
   form.append('file', blob, 'board.png')
   await fetch('/api/upload', { method: 'POST', body: form })
@@ -27,7 +27,7 @@ it:
 
 ```js
 // plain JS
-createQuickdraw({ container, onSave: (blob, background) => upload(blob) })
+createCanvas({ container, onSave: (blob, background) => upload(blob) })
 ```
 
 ## The API
