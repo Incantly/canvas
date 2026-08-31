@@ -4,6 +4,7 @@ import type {
   BoardRecord,
   ShapeRecord,
   AssetRecord,
+  PageRecord,
   ShapeProps,
 } from './models.js'
 import type { Diff, DiffSource, Snapshot } from './operations.js'
@@ -29,6 +30,9 @@ export type EditorEvent =
   | 'selection'
   | 'theme'
   | 'grid'
+  | 'page'
+  | 'pagelayout'
+  | 'pagegap'
   | 'edit'
   | 'scribbles'
   | 'penmode'
@@ -45,6 +49,19 @@ export interface Store {
   ids(): string[]
   all(): BoardRecord[]
   shapes(): ShapeRecord[]
+  pages(): PageRecord[]
+  page(id: string): PageRecord | null
+  shapesOnPage(pageId: string): ShapeRecord[]
+  normalizePages(source?: DiffSource): string
+  pageLayout(): import('./base.js').PageLayout
+  setPageLayout(layout: import('./base.js').PageLayout, source?: DiffSource): void
+  pageGap(): number
+  setPageGap(gap: number, source?: DiffSource): void
+  setPageGapPreset(preset: import('./base.js').PageGapPreset, source?: DiffSource): void
+  adjustPageGap(delta: number, source?: DiffSource): void
+  addPage(opts?: { width?: number; height?: number; name?: string }, source?: DiffSource): PageRecord
+  removePage(id: string, source?: DiffSource): boolean
+  clearPage(pageId: string, source?: DiffSource): void
   asset(id: string): AssetRecord | null
   readonly size: number
 
@@ -88,6 +105,9 @@ type EditorListenerMap = {
   selection: (ids: Set<string>) => void
   theme: (theme: Theme) => void
   grid: (grid: GridId) => void
+  page: (pageId: string) => void
+  pagelayout: (layout: import('./base.js').PageLayout) => void
+  pagegap: (gap: number) => void
   edit: (editing: string | null) => void
   scribbles: (strokes: ScribbleStroke[]) => void
   penmode: (penMode: boolean) => void
@@ -106,6 +126,7 @@ export interface Editor {
   geoKind: GeoId
   tool: ToolId
   selection: Set<string>
+  currentPageId: string
   penMode: boolean
 
   on<E extends EditorEvent>(ev: E, fn: EditorListenerMap[E]): () => void
@@ -125,7 +146,26 @@ export interface Editor {
     animate?: number
     ease?: number
   }): void
+  fitPage(opts?: {
+    margin?: number
+    maxZoom?: number
+    animate?: number
+    ease?: number
+  }): void
   followBounds(b: import('./base.js').Bounds, opts?: { animate?: number; ease?: number }): void
+
+  pages(): PageRecord[]
+  currentPage(): PageRecord | null
+  setPage(id: string, opts?: { fit?: boolean; animate?: number; preserveZoom?: boolean }): void
+  addPage(opts?: { width?: number; height?: number; name?: string }): PageRecord
+  removePage(id: string): boolean
+  pageLayout(): import('./base.js').PageLayout
+  setPageLayout(layout: import('./base.js').PageLayout): void
+  pageGap(): number
+  pageGapPreset(): import('./base.js').PageGapPreset | null
+  setPageGap(gap: number): void
+  setPageGapPreset(preset: import('./base.js').PageGapPreset): void
+  adjustPageGap(delta: number): void
 
   setTool(tool: ToolId): void
   setGeoKind(kind: GeoId): void

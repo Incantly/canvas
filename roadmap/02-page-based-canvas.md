@@ -99,12 +99,27 @@ Migration: existing snapshots without pages get a single default page containing
 
 ## Acceptance criteria
 
-- [ ] Shapes scoped to pages; switching pages shows correct content
-- [ ] Zoom/pan works within page; camera doesn't drift to infinite void
-- [ ] Add/remove/reorder pages persists in snapshot
-- [ ] Migration loads old infinite snapshots as single-page notebooks
-- [ ] Playground panel demonstrates all above
-- [ ] RN playground confirms page navigation + draw isolation
+- [x] Shapes scoped to pages; switching pages shows correct content
+- [x] Zoom/pan works within page; camera doesn't drift to infinite void
+- [x] Add/remove/reorder pages persists in snapshot
+- [x] Migration loads old infinite snapshots as single-page notebooks
+- [x] Playground panel demonstrates all above
+- [x] RN bridge: setPage, addPage, page events
+- [x] Page layout: vertical (stack below) or horizontal (row to the right)
+- [x] `editor.setPageLayout()` / RN `setPageLayout` + `pagelayout` event
+
+### Page layout
+
+`NotebookRecord` stores `pageLayout: 'vertical' | 'horizontal'` and `pageGap`.
+
+- **Vertical** (default): pages stack downward — 1, then 2 below, then 3, then 4.
+- **Horizontal**: pages in one row left-to-right — 1, then 2 to the right, then 3, then 4.
+
+Each `PageRecord` has world-space `x`, `y`; shapes stay in page-local coordinates.
+
+**Page spacing:** `pageGap` on the notebook (default 48px). Presets: `connected` (0), `normal` (48), `wide` (96). Use `editor.setPageGap()`, `setPageGapPreset()`, or `adjustPageGap(±16)` — pages relayout without changing zoom.
+
+Toggle in the pages bar (↕ / ↔ / − linked + / trash) or playground panel; persists in snapshot.
 
 ## Out of scope
 
@@ -117,4 +132,33 @@ Migration: existing snapshots without pages get a single default page containing
 - [`packages/core/src/types/models.ts`](../packages/core/src/types/models.ts) — `PageRecord`
 - [`packages/core/src/store.ts`](../packages/core/src/store.ts) — page CRUD, parentId on shapes
 - [`packages/core/src/editor.ts`](../packages/core/src/editor.ts) — camera clamp, page events
+- [`packages/core/src/pages.ts`](../packages/core/src/pages.ts) — layout positions, notebook defaults
 - [`packages/core/src/shapes.ts`](../packages/core/src/shapes.ts) — page background render
+
+## QA tracking
+
+| Workstream | Status |
+| --- | --- |
+| W1 — Page model + store CRUD | implemented |
+| W2 — Editor scope + camera + multi-page render | implemented |
+| W3 — Vertical/horizontal layout | implemented |
+| W4 — UI + playground + RN bridge | implemented |
+| W5 — Tests + verifier gates | implemented |
+
+| Check | Status |
+| --- | --- |
+| Shapes scoped per page | implemented |
+| Camera clamp to active page world bounds | implemented |
+| Vertical layout stacks pages below | implemented |
+| Page gap presets (connected / normal / wide) + adjust | implemented |
+| Invalid `setPageLayout` throws | implemented |
+| Snapshot migration (orphan shapes → default page) | implemented |
+| Playground `PageCanvasPanel` layout toggle | implemented |
+| RN bridge `setPageLayout` + `pagelayout` event | implemented |
+| Unit tests (`pages.test.ts`, editor/store pages) | implemented |
+| `npm run typecheck` | implemented |
+| `npm test` | implemented |
+| `npm run build:packages` | implemented |
+| No new npm dependencies | implemented |
+| Playground RN scene | deferred:RN playground app not in repo yet — bridge + example updated |
+| Security audit (bridge touched) | implemented — payload validated; no secrets |

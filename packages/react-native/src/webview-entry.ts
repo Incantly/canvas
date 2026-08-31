@@ -51,10 +51,13 @@ const handlers: Record<string, (m: any) => any> = {
     })
     if (m.snapshot) {
       board.editor.store.loadSnapshot(m.snapshot, 'remote')
-      board.editor.fitContent()
+      board.editor.setPage(board.editor.pages()[0]?.id ?? board.editor.currentPageId, { fit: true })
     }
     board.editor.store.listen((diff: any, source: any) => post({ type: 'change', diff, source }))
     board.editor.on('selection', () => post({ type: 'selection', ids: [...board!.editor.selection] }))
+    board.editor.on('page', () => post({ type: 'page', pageId: board!.editor.currentPageId, pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })) }))
+    board.editor.on('pagelayout', () => post({ type: 'pagelayout', layout: board!.editor.pageLayout() }))
+    board.editor.on('pagegap', () => post({ type: 'pagegap', gap: board!.editor.pageGap() }))
     board.editor.on('theme', () => {
       host.dataset.icTheme = board!.editor.theme.id
       post({ type: 'theme', theme: board!.editor.theme.id })
@@ -64,7 +67,7 @@ const handlers: Record<string, (m: any) => any> = {
   },
   loadSnapshot(m: any) {
     board!.editor.store.loadSnapshot(m.snapshot, 'remote')
-    if (m.fit !== false) board!.editor.fitContent()
+    if (m.fit !== false) board!.editor.fitPage({ animate: m.animate || 0 })
   },
   applyDiff(m: any) { board!.editor.store.applyDiff(m.diff, 'remote') },
   setTheme(m: any) {
@@ -81,7 +84,35 @@ const handlers: Record<string, (m: any) => any> = {
   undo() { board!.editor.store.undo() },
   redo() { board!.editor.store.redo() },
   clear() { board!.editor.clearBoard() },
-  fitContent(m: any) { board!.editor.fitContent({ animate: m.animate || 0 }) },
+  fitContent(m: any) { board!.editor.fitPage({ animate: m.animate || 0 }) },
+  setPage(m: any) { board!.editor.setPage(m.pageId, { fit: m.fit !== false, animate: m.animate || 0 }) },
+  addPage(m: any) {
+    const page = board!.editor.addPage(m.opts || {})
+    post({ type: 'page', pageId: board!.editor.currentPageId, pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })) })
+    return page
+  },
+  removePage(m: any) {
+    const id = m.pageId || board!.editor.currentPageId
+    if (!board!.editor.removePage(id)) {
+      throw new Error('Cannot remove page')
+    }
+    post({ type: 'page', pageId: board!.editor.currentPageId, pages: board!.editor.pages().map((p) => ({ id: p.id, name: p.name, index: p.index })) })
+  },
+  setPageLayout(m: any) {
+    const layout = m.layout
+    if (layout !== 'vertical' && layout !== 'horizontal') {
+      throw new Error('Invalid page layout: ' + layout)
+    }
+    board!.editor.setPageLayout(layout)
+    post({ type: 'pagelayout', layout: board!.editor.pageLayout() })
+  },
+  setPageGap(m: any) {
+    if (typeof m.gap === 'number') board!.editor.setPageGap(m.gap)
+    else if (m.preset) board!.editor.setPageGapPreset(m.preset)
+    else if (typeof m.delta === 'number') board!.editor.adjustPageGap(m.delta)
+    else throw new Error('setPageGap requires gap, preset, or delta')
+    post({ type: 'pagegap', gap: board!.editor.pageGap() })
+  },
   getSnapshot(m: any) { post({ type: 'snapshot', id: m.id, snapshot: board!.editor.store.getSnapshot() }) },
   async exportPng(m: any) {
     const blob = await board!.editor.exportImage(m.opts || {})

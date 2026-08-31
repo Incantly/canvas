@@ -13,6 +13,8 @@ export type FontId = 'draw' | 'sans' | 'serif' | 'mono'
 export type GeoId = 'rectangle' | 'ellipse' | 'triangle' | 'diamond' | 'hexagon' | 'star' | 'cloud'
 export type ThemeId = 'light' | 'dark'
 export type GridId = 'none' | 'lines' | 'ruled' | 'dots' | 'crosses' | 'iso'
+export type PageLayout = 'vertical' | 'horizontal'
+export type PageGapPreset = 'connected' | 'normal' | 'wide'
 
 export interface Bounds { x: number; y: number; w: number; h: number }
 export interface Camera { x: number; y: number; z: number }

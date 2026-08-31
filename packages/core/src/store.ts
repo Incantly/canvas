@@ -5,7 +5,10 @@ import type {
   Snapshot,
   ShapeRecord,
   AssetRecord,
+  PageRecord,
+  NotebookRecord,
 } from './types/index.js'
+import type { PageGapPreset } from './types/base.js'
 import { newId } from './utils/id.js'
 import {
   emptyDiff,
@@ -13,6 +16,22 @@ import {
   invertDiff,
   composeDiff,
 } from './utils/diff.js'
+import {
+  assignOrphanShapes,
+  createNotebook,
+  createPage,
+  isNotebookRecord,
+  isPageRecord,
+  layoutPagePositions,
+  NOTEBOOK_ID,
+  validatePageLayout,
+  validatePageGap,
+  validatePageGapPreset,
+  clampPageGap,
+  pageGapForPreset,
+  DEFAULT_PAGE_GAP,
+  PAGE_GAP_STEP,
+} from './pages.js'
 
 export { newId } from './utils/id.js'
 export { isDiffEmpty, invertDiff, composeDiff } from './utils/diff.js'
@@ -61,7 +80,64 @@ export class Store {
     return [...this.records.values()]
   }
   shapes(): ShapeRecord[] {
-    return this.all().filter((r) => r.typeName !== 'asset') as ShapeRecord[]
+    return this.all().filter((r) => r.typeName === 'shape') as ShapeRecord[]
+  }
+  pages(): PageRecord[] {
+    return this.all()
+      .filter((r) => isPageRecord(r))
+      .sort((a, b) => a.index - b.index || (a.id < b.id ? -1 : 1))
+  }
+  page(id: string): PageRecord | null {
+    const r = this.records.get(id)
+    return r && isPageRecord(r) ? r : null
+  }
+  notebook(): NotebookRecord {
+    const r = this.records.get(NOTEBOOK_ID)
+    if (r && isNotebookRecord(r)) return r
+    return createNotebook('vertical')
+  }
+  pageLayout(): import('./types/base.js').PageLayout {
+    return this.notebook().pageLayout
+  }
+  setPageLayout(layout: import('./types/base.js').PageLayout, source: DiffSource = 'user'): void {
+    if (!validatePageLayout(layout)) throw new Error(`Invalid page layout: ${layout}`)
+    const nb = this.notebook()
+    this.put({ ...nb, pageLayout: layout }, source)
+    this.relayoutPages(source)
+  }
+  pageGap(): number {
+    return this.notebook().pageGap ?? DEFAULT_PAGE_GAP
+  }
+  setPageGap(gap: number, source: DiffSource = 'user'): void {
+    if (!validatePageGap(gap)) throw new Error(`Invalid page gap: ${gap}`)
+    const next = clampPageGap(gap)
+    const nb = this.notebook()
+    if ((nb.pageGap ?? DEFAULT_PAGE_GAP) === next) return
+    this.put({ ...nb, pageGap: next }, source)
+    this.relayoutPages(source)
+  }
+  setPageGapPreset(preset: PageGapPreset, source: DiffSource = 'user'): void {
+    if (!validatePageGapPreset(preset)) throw new Error(`Invalid page gap preset: ${preset}`)
+    this.setPageGap(pageGapForPreset(preset), source)
+  }
+  adjustPageGap(delta: number, source: DiffSource = 'user'): void {
+    if (!Number.isFinite(delta)) throw new Error(`Invalid page gap delta: ${delta}`)
+    this.setPageGap(this.pageGap() + delta, source)
+  }
+  relayoutPages(source: DiffSource = 'user'): void {
+    const pages = this.pages()
+    if (!pages.length) return
+    const gap = this.pageGap()
+    const updates = layoutPagePositions(pages, this.pageLayout(), gap)
+    this.transact(() => {
+      for (const u of updates) {
+        const p = this.page(u.id)
+        if (p && (p.x !== u.x || p.y !== u.y)) this.update(u.id, { x: u.x, y: u.y }, source)
+      }
+    }, source)
+  }
+  shapesOnPage(pageId: string): ShapeRecord[] {
+    return this.shapes().filter((s) => s.parentId === pageId)
   }
   asset(id: string): AssetRecord | null {
     const r = this.records.get(id)
@@ -241,6 +317,60 @@ export class Store {
     return { document: { store: Object.fromEntries(this.records) } }
   }
 
+  /** Ensure at least one page exists and orphan shapes have parentId. */
+  normalizePages(source: DiffSource = 'remote'): string {
+    if (!this.records.has(NOTEBOOK_ID)) {
+      this.put(createNotebook('vertical'), source)
+    }
+    let pages = this.pages()
+    if (!pages.length) {
+      const page = createPage(0)
+      this.put(page, source)
+      pages = [page]
+    } else {
+      for (const p of pages) {
+        if (typeof p.x !== 'number' || typeof p.y !== 'number') {
+          this.update(p.id, { x: p.x ?? 0, y: p.y ?? 0 }, source)
+        }
+      }
+    }
+    this.relayoutPages(source)
+    const pageId = this.pages()[0].id
+    for (const { id, parentId } of assignOrphanShapes(this.shapes(), pageId)) {
+      this.update(id, { parentId }, source)
+    }
+    return pageId
+  }
+
+  addPage(
+    opts: { width?: number; height?: number; name?: string } = {},
+    source: DiffSource = 'user'
+  ): PageRecord {
+    const page = createPage(this.pages().length, opts)
+    this.put(page, source)
+    this.relayoutPages(source)
+    return this.page(page.id)!
+  }
+
+  removePage(id: string, source: DiffSource = 'user'): boolean {
+    const pages = this.pages()
+    if (pages.length <= 1) return false
+    const page = this.page(id)
+    if (!page) return false
+    const shapeIds = this.shapesOnPage(id).map((s) => s.id)
+    this.transact(() => {
+      if (shapeIds.length) this.remove(shapeIds, source)
+      this.remove([id], source)
+      let i = 0
+      for (const p of this.pages()) {
+        if (p.index !== i) this.update(p.id, { index: i }, source)
+        i++
+      }
+    }, source)
+    this.relayoutPages(source)
+    return true
+  }
+
   loadSnapshot(snap: Snapshot, source: DiffSource = 'remote'): void {
     const recs = snap?.document?.store || {}
     this.transact(() => {
@@ -250,11 +380,17 @@ export class Store {
     this.undos.length = 0
     this.redos.length = 0
     this._batch = null
+    this.normalizePages(source)
     this._notifyHistory()
   }
 
   clear(source: DiffSource = 'user'): void {
     this.remove(this.ids(), source)
+  }
+
+  clearPage(pageId: string, source: DiffSource = 'user'): void {
+    const ids = this.shapesOnPage(pageId).map((s) => s.id)
+    if (ids.length) this.remove(ids, source)
   }
 
   maxZ(): number {

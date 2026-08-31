@@ -88,6 +88,66 @@
 .ic-ui.ic-hidden { display: none; }
 .ic-ui button { -webkit-tap-highlight-color: transparent; }
 
+.ic-pages {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  pointer-events: auto;
+  background: var(--ic-bar-bg);
+  border: 1px solid var(--ic-border);
+  box-shadow: var(--ic-bar-shadow);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font: 600 13px/1 ui-sans-serif, system-ui, sans-serif;
+  color: var(--ic-ink-strong);
+  transition: background 320ms ease, color 320ms ease, border-color 320ms ease;
+}
+.ic-page-label {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.ic-page-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  pointer-events: auto;
+}
+.ic-page-btn svg { width: 16px; height: 16px; display: block; }
+.ic-page-btn:hover { background: var(--ic-hover); }
+.ic-page-btn:disabled { opacity: 0.32; pointer-events: none; }
+.ic-page-add { font-size: 18px; font-weight: 500; line-height: 1; }
+.ic-page-gap-label {
+  min-width: 36px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+  border-radius: 6px;
+  line-height: 28px;
+}
+.ic-page-gap-label:hover { background: var(--ic-hover); }
+
 .ic-dock {
   position: absolute;
   left: 50%;
