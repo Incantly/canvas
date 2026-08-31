@@ -4,6 +4,8 @@
    light glass on the light one. Theme switches animate because the surfaces
    transition background/color/border while the variables flip. */
 
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:wght@400;500;600&display=swap');
+
 .ic-root {
   position: relative;
   width: 100%;
@@ -488,4 +490,260 @@
   caret-color: currentColor;
   -webkit-user-select: text;
   user-select: text;
+}
+
+.ic-rich-edit {
+  position: absolute;
+  z-index: 30;
+  background: transparent;
+  border: none;
+  outline: 1.5px dashed rgba(110, 140, 200, 0.55);
+  outline-offset: 3px;
+  border-radius: 2px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  caret-color: currentColor;
+  -webkit-user-select: text;
+  user-select: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ic-rich-edit:focus {
+  outline-color: rgba(47, 128, 236, 0.65);
+}
+
+.ic-rt-block {
+  margin: 0;
+  min-height: 1.2em;
+}
+
+.ic-rt-heading1 { font-size: 2em; font-weight: 600; line-height: 1.15; }
+.ic-rt-heading2 { font-size: 1.5em; font-weight: 600; line-height: 1.2; }
+.ic-rt-heading3 { font-size: 1.25em; font-weight: 600; line-height: 1.25; }
+.ic-rt-codeBlock {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: rgba(120, 120, 120, 0.1);
+  padding: 4px 6px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
+.ic-rt-bulletList,
+.ic-rt-numberedList {
+  padding-left: 1.4em;
+  position: relative;
+}
+.ic-rt-bulletList::before { content: '•'; position: absolute; left: 0.2em; }
+.ic-rt-numberedList { counter-increment: ic-rt-li; }
+.ic-rt-numberedList::before { content: counter(ic-rt-li) '.'; position: absolute; left: 0; }
+
+.ic-rich-edit code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: rgba(120, 120, 120, 0.12);
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+.ic-rich-edit a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.ic-rt-toolbar {
+  position: absolute;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--ic-pop-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: 8px;
+  box-shadow: var(--ic-pop-shadow);
+  max-width: min(420px, 96vw);
+}
+
+.ic-rt-toolbar-btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ic-ink-strong);
+  font: 600 12px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.ic-rt-toolbar-btn:hover {
+  background: var(--ic-hover);
+}
+
+.ic-rt-toolbar-select {
+  height: 28px;
+  border: 1px solid var(--ic-border);
+  border-radius: 6px;
+  background: var(--ic-bar-bg);
+  color: var(--ic-ink-strong);
+  font: 12px system-ui, sans-serif;
+  padding: 0 4px;
+}
+
+/* ---- page document (OpenNote / Apple Notes style) ---- */
+.ic-page-doc-wrap {
+  position: absolute;
+  z-index: 25;
+  pointer-events: none;
+  color: var(--ic-doc-fg, #1d1d1d);
+}
+
+/* Document-first mode: page body is always the typing surface until ink tools are active. */
+.ic-page-doc-wrap.ic-page-doc-mode {
+  pointer-events: auto;
+}
+
+.ic-page-doc-wrap.ic-page-doc-mode.ic-page-doc-ink-pass {
+  pointer-events: none;
+}
+
+.ic-page-doc-wrap.ic-page-doc-focused {
+  pointer-events: auto;
+}
+
+.ic-page-doc {
+  outline: none;
+  min-height: 1em;
+  caret-color: currentColor;
+  -webkit-user-select: text;
+  user-select: text;
+  word-break: break-word;
+}
+
+.ic-page-doc-mode .ic-page-doc {
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  letter-spacing: 0.01em;
+  min-height: 100%;
+  cursor: text;
+}
+
+.ic-page-doc:empty::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--ic-doc-fg, #1d1d1d) 38%, transparent);
+  pointer-events: none;
+}
+
+.ic-page-doc .ic-rt-block {
+  margin: 0 0 0.35em;
+}
+
+.ic-page-doc .ic-rt-heading1 { font-size: 2em; font-weight: 600; line-height: 1.15; margin-bottom: 0.25em; }
+.ic-page-doc .ic-rt-heading2 { font-size: 1.5em; font-weight: 600; line-height: 1.2; }
+.ic-page-doc .ic-rt-heading3 { font-size: 1.25em; font-weight: 600; line-height: 1.25; }
+.ic-page-doc .ic-rt-quote {
+  border-left: 3px solid rgba(60, 50, 30, 0.2);
+  padding-left: 0.75em;
+  color: rgba(29, 29, 29, 0.85);
+  font-style: italic;
+}
+.ic-page-doc .ic-rt-divider hr {
+  border: none;
+  border-top: 1px solid rgba(60, 50, 30, 0.22);
+  margin: 0.6em 0;
+}
+.ic-page-doc .ic-rt-codeBlock {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: rgba(120, 120, 120, 0.08);
+  padding: 0.5em 0.65em;
+  border-radius: 6px;
+  white-space: pre-wrap;
+}
+.ic-page-doc code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: rgba(120, 120, 120, 0.1);
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+.ic-page-doc a { color: inherit; text-decoration: underline; }
+
+.ic-drawing-slot {
+  display: block;
+  width: 100%;
+  min-height: 80px;
+  margin: 0.25em 0 0.5em;
+  border-radius: 4px;
+  background: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ic-page-doc-mode .ic-drawing-slot {
+  border-top: 1px solid rgba(60, 50, 30, 0.18);
+  padding-top: 0.35em;
+}
+
+.ic-document-mode {
+  background: var(--ic-doc-bg, #ffffff);
+}
+.ic-root[data-ic-theme='dark'].ic-document-mode {
+  background: var(--ic-doc-bg, #191713);
+}
+
+.ic-document-mode .ic-pages.ic-notes-pages {
+  display: none !important;
+}
+
+.ic-document-mode .ic-pages.ic-notes-pages .ic-page-layout,
+.ic-document-mode .ic-pages.ic-notes-pages .ic-page-gap,
+.ic-document-mode .ic-pages.ic-notes-pages .ic-page-gap-label {
+  display: none !important;
+}
+
+.ic-page-doc .ic-rt-block.ic-ink-hint {
+  background: rgba(0, 122, 255, 0.07);
+  box-shadow: inset 0 -3px 0 rgba(0, 122, 255, 0.55);
+  border-radius: 2px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ic-slash-menu {
+  position: absolute;
+  z-index: 45;
+  min-width: 200px;
+  max-width: 280px;
+  background: var(--ic-pop-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: 10px;
+  box-shadow: var(--ic-pop-shadow);
+  padding: 6px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.ic-slash-menu-title {
+  font: 600 11px/1.2 system-ui, sans-serif;
+  color: var(--ic-ink-soft);
+  padding: 4px 8px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ic-slash-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--ic-ink-strong);
+  font: 13px/1.3 system-ui, sans-serif;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ic-slash-item:hover,
+.ic-slash-item-active {
+  background: var(--ic-hover);
 }

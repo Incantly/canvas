@@ -10,6 +10,7 @@ import type {
   Store,
   Styles,
   ThemeId,
+  ToolId,
 } from '@incantly/canvas'
 
 export interface CanvasRef {
@@ -30,6 +31,16 @@ export interface CanvasProps {
   camera?: Camera
   styles?: Partial<Styles>
   autoFit?: boolean
+  /** Page body is the primary typing surface (OpenNote / Apple Notes style). */
+  documentMode?: boolean
+  /** Primary dock tools (notes preset when documentMode). */
+  uiTools?: ToolId[]
+  /** Custom dock icon SVG inner HTML. */
+  uiIcons?: Partial<Record<string, string>>
+  /** Hide page navigation bar (default true when documentMode). */
+  hidePagesBar?: boolean
+  /** Seamless notes canvas background (documentMode). */
+  documentBackground?: string | null
   onMount?: (editor: Editor, ui: BoardUI) => void
   onChange?: (diff: Diff, source: DiffSource, editor: Editor) => void
   onSelectionChange?: (ids: string[], editor: Editor) => void

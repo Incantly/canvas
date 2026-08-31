@@ -2,6 +2,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { Editor, TOOLS } from '../src/editor.js'
 import { createCanvas } from '../src/index.js'
+import { blocksToPlainText, blocksToHtml, textToBlocks } from '../src/rich-text/index.js'
+import { notesPageContentRect } from '../src/page-document.js'
+import { notesPaperHeight } from '../src/notebook-document.js'
 
 let pid = 1
 const ev = (x: number, y: number, over: any = {}) => ({
@@ -50,6 +53,21 @@ describe('setup', () => {
     expect(TOOLS).toContain('draw')
   })
 
+  it('documentMode starts on select with page document layer active', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    expect(docEditor.tool).toBe('select')
+    expect(docContainer.classList.contains('ic-document-mode')).toBe(true)
+    const wrap = docContainer.querySelector('.ic-page-doc-wrap')
+    expect(wrap?.classList.contains('ic-page-doc-mode')).toBe(true)
+    expect(wrap?.classList.contains('ic-page-doc-ink-pass')).toBe(false)
+    docEditor.setTool('draw')
+    expect(wrap?.classList.contains('ic-page-doc-ink-pass')).toBe(true)
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
   it('camera math round-trips', () => {
     editor.setCamera({ x: 50, y: -20, z: 2 })
     const p = editor.screenToPage(100, 100)
@@ -84,6 +102,117 @@ describe('deferred fit', () => {
     expect(center.x).toBeLessThan(700)
     expect(center.y).toBeGreaterThan(50)
     expect(center.y).toBeLessThan(500)
+  })
+})
+
+describe('document mode drawing', () => {
+  it('draw tool stores ink in page document, not canvas draw shapes', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.setTool('draw')
+    drag(docEditor, [[100, 120], [160, 180], [220, 240]])
+    const inkShapes = docEditor.store.shapes().filter((s) => s.type === 'draw' || s.type === 'highlight')
+    expect(inkShapes.length).toBe(0)
+    const page = docEditor.currentPage()!
+    const blocks = docEditor.store.pageDocumentBlocks(page.id)
+    const drawing = blocks.find((b) => b.type === 'drawing')
+    expect(drawing).toBeDefined()
+    if (drawing?.type === 'drawing') {
+      expect(drawing.strokes.length).toBeGreaterThanOrEqual(1)
+      expect(drawing.strokes[0]!.pts.length).toBeGreaterThanOrEqual(3)
+    }
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('repeated drags reuse one drawing block at document end', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.setTool('draw')
+    drag(docEditor, [[100, 120], [160, 180]])
+    drag(docEditor, [[100, 120], [140, 200]])
+    drag(docEditor, [[100, 130], [180, 220]])
+    const page = docEditor.currentPage()!
+    const blocks = docEditor.store.pageDocumentBlocks(page.id)
+    const drawingBlocks = blocks.filter((b) => b.type === 'drawing')
+    expect(drawingBlocks.length).toBe(1)
+    expect(blocks[blocks.length - 1]?.type).toBe('drawing')
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('documentMode ignores zoomAt', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.fitDocumentView()
+    const z0 = docEditor.camera.z
+    docEditor.zoomAt(100, 100, 2)
+    expect(docEditor.camera.z).toBeCloseTo(z0)
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('documentMode accepts custom background color', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({
+      container: docContainer,
+      documentMode: true,
+      documentBackground: '#e8f4ff',
+    })
+    expect(docEditor.documentBackgroundColor()).toBe('#e8f4ff')
+    expect(docContainer.style.getPropertyValue('--ic-doc-bg')).toBe('#e8f4ff')
+    docEditor.setDocumentBackground('#1a1a2e')
+    expect(docEditor.documentBackgroundColor()).toBe('#1a1a2e')
+    docEditor.setDocumentBackground(null)
+    expect(docEditor.documentBackgroundColor()).toBe('#ffffff')
+    expect(() => docEditor.setDocumentBackground('bad-color')).toThrow()
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('documentMode click on page focuses contenteditable with valid blocks', () => {
+    const docContainer = document.createElement('div')
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.setTool('select')
+    const page = docEditor.currentPage()!
+    const rect = notesPageContentRect(
+      page,
+      notesPaperHeight(page, docEditor.store.notebookDocumentBlocks(), docEditor.theme),
+    )
+    const pt = docEditor.pageToScreen(page.x + rect.x + 24, page.y + rect.y + 24)
+    drag(docEditor, [[pt.x, pt.y]])
+    const pageDoc = docContainer.querySelector('.ic-page-doc') as HTMLDivElement
+    expect(pageDoc).toBeTruthy()
+    expect(pageDoc.querySelector('[data-block="paragraph"]')).toBeTruthy()
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('documentMode paste appends text to notebook document, not canvas shapes', async () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    const readText = vi.fn().mockResolvedValue('Pasted line')
+    Object.assign(navigator, {
+      clipboard: { readText, writeText: vi.fn() },
+    })
+    await docEditor.pasteFromClipboard()
+    const blocks = docEditor.store.notebookDocumentBlocks()
+    expect(blocks.some((b) => b.type === 'paragraph' && b.content[0]?.text?.includes('Pasted line'))).toBe(true)
+    expect(docEditor.store.shapes().length).toBe(0)
+    docEditor.destroy()
+    docContainer.remove()
   })
 })
 
@@ -229,22 +358,27 @@ describe('selection & transforms', () => {
 })
 
 describe('text & notes', () => {
-  it('placing text opens a textarea; typing commits; empty evaporates', () => {
+  it('text tool focuses page document; typing updates page.document.blocks', () => {
     editor.setTool('text')
-    drag(editor, [[50, 50]])
-    const ta = container.querySelector('textarea.ic-text-edit') as HTMLTextAreaElement
-    expect(ta).toBeTruthy()
-    ta.value = 'hello world'
-    ta.dispatchEvent(new window.Event('input'))
-    ;(editor as any)._commitText()
-    const [s] = editor.store.shapes() as any[]
-    expect(s.type).toBe('text')
-    expect(s.props.text).toBe('hello world')
+    drag(editor, [[120, 120]])
+    const pageDoc = container.querySelector('.ic-page-doc') as HTMLDivElement
+    expect(pageDoc).toBeTruthy()
+    pageDoc.innerHTML = '<div class="ic-rt-block ic-rt-paragraph" data-block="paragraph">hello page</div>'
+    pageDoc.dispatchEvent(new window.Event('input'))
+    pageDoc.dispatchEvent(new window.Event('blur'))
+    const blocks = editor.store.notebookDocumentBlocks()
+    expect(blocks[0]?.type).toBe('paragraph')
+    if (blocks[0]?.type === 'paragraph') {
+      expect(blocks[0].content[0]?.text).toContain('hello page')
+    }
+  })
 
+  it('empty text tool click does not create text shapes', () => {
+    const before = editor.store.shapes().filter((s: any) => s.type === 'text').length
     editor.setTool('text')
     drag(editor, [[200, 200]])
-    ;(editor as any)._commitText()
-    expect(editor.store.shapes().length).toBe(1)
+    const after = editor.store.shapes().filter((s: any) => s.type === 'text').length
+    expect(after).toBe(before)
   })
 
   it('notes get the note default color when the pen is on the default ink', () => {
@@ -252,11 +386,11 @@ describe('text & notes', () => {
     drag(editor, [[50, 50]])
     const note = editor.store.shapes().find((s: any) => s.type === 'note') as any
     expect(note.props.color).toBe('yellow')
-    const ta = container.querySelector('textarea.ic-text-edit') as HTMLTextAreaElement
-    ta.value = 'sticky'
-    ta.dispatchEvent(new window.Event('input'))
+    const edit = container.querySelector('.ic-rich-edit') as HTMLDivElement
+    edit.innerHTML = blocksToHtml(textToBlocks('sticky'))
+    edit.dispatchEvent(new window.Event('input'))
     ;(editor as any)._commitText()
-    expect((editor.store.get(note.id) as any).props.text).toBe('sticky')
+    expect(blocksToPlainText((editor.store.get(note.id) as any).props.blocks)).toBe('sticky')
   })
 })
 

@@ -148,6 +148,8 @@ export const Canvas = forwardRef(function Canvas(
       applyDiff: (diff) => st.bridge.post({ type: 'applyDiff', diff }),
       setTool: (tool) => st.bridge.post({ type: 'setTool', tool }),
       setStyle: (key, value) => st.bridge.post({ type: 'setStyle', key, value }),
+      setDocumentBackground: (color) =>
+        st.bridge.post({ type: 'setDocumentBackground', color }),
       setGrid: (g) => st.bridge.post({ type: 'setGrid', grid: g }),
       undo: () => st.bridge.post({ type: 'undo' }),
       redo: () => st.bridge.post({ type: 'redo' }),

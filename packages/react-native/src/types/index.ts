@@ -19,6 +19,7 @@ export interface CanvasRef {
   applyDiff(diff: Diff): void
   setTool(tool: ToolId): void
   setStyle(key: keyof Styles, value: ColorId | SizeId | DashId | FillId | FontId): void
+  setDocumentBackground(color: string | null): void
   setGrid(grid: GridId): void
   undo(): void
   redo(): void

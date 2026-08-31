@@ -81,6 +81,7 @@ const handlers: Record<string, (m: any) => any> = {
   setGrid(m: any) { board!.editor.setGrid(m.grid) },
   setTool(m: any) { board!.editor.setTool(m.tool) },
   setStyle(m: any) { board!.editor.setStyle(m.key, m.value) },
+  setDocumentBackground(m: any) { board!.editor.setDocumentBackground(m.color ?? null) },
   undo() { board!.editor.store.undo() },
   redo() { board!.editor.store.redo() },
   clear() { board!.editor.clearBoard() },

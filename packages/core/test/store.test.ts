@@ -328,3 +328,138 @@ describe('pages', () => {
     expect(s.pages().length).toBe(1)
   })
 })
+
+describe('page document drawing blocks', () => {
+  const pageRecord = () => ({
+    id: 'p1',
+    typeName: 'page' as const,
+    index: 0,
+    x: 0,
+    y: 0,
+    width: 816,
+    height: 1056,
+    name: 'Page 1',
+    document: { blocks: [{ type: 'paragraph' as const, content: [{ text: 'Body' }] }] },
+  })
+
+  it('appendDocumentDrawingStroke throws on invalid block index', () => {
+    const s = new Store()
+    s.loadSnapshot({ document: { store: { p1: pageRecord() } } } as any)
+    const stroke = { pts: [1, 2, 0.5], color: 'black' as const, size: 'm' as const, kind: 'draw' as const }
+    expect(() => s.appendDocumentDrawingStroke('p1', 0, stroke)).toThrow(/Invalid drawing block index/)
+    expect(() => s.appendDocumentDrawingStroke('p1', 99, stroke)).toThrow(/Invalid drawing block index/)
+    expect(() => s.appendDocumentDrawingStroke('missing', 0, stroke)).toThrow(/Unknown page/)
+  })
+
+  it('appendDocumentDrawingStroke appends to a drawing block', () => {
+    const s = new Store()
+    const page = pageRecord()
+    page.document = {
+      blocks: [
+        { type: 'paragraph', content: [{ text: 'Note' }] },
+        { type: 'drawing', height: 120, strokes: [] },
+      ],
+    }
+    s.loadSnapshot({ document: { store: { p1: page } } } as any)
+    const stroke = { pts: [5, 5, 0.5, 20, 30, 0.5], color: 'black' as const, size: 'm' as const, kind: 'draw' as const }
+    s.appendDocumentDrawingStroke('p1', 1, stroke)
+    const blocks = s.pageDocumentBlocks('p1')
+    expect(blocks[1]?.type).toBe('drawing')
+    if (blocks[1]?.type === 'drawing') expect(blocks[1].strokes).toHaveLength(1)
+  })
+
+  it('loadSnapshot normalizes empty page document blocks', () => {
+    const s = new Store()
+    s.loadSnapshot({
+      document: {
+        store: {
+          p1: { ...pageRecord(), document: { blocks: [] } },
+        },
+      },
+    } as any)
+    const blocks = s.pageDocumentBlocks('p1')
+    expect(blocks.length).toBeGreaterThanOrEqual(1)
+    expect(blocks[0]?.type).toBe('paragraph')
+  })
+
+  it('loadSnapshot sanitizes corrupt drawing blocks in snapshot', () => {
+    const s = new Store()
+    s.loadSnapshot({
+      document: {
+        store: {
+          p1: {
+            ...pageRecord(),
+            document: {
+              blocks: [
+                { type: 'paragraph', content: [{ text: 'Keep me' }] },
+                { type: 'drawing', height: -1, strokes: [{ pts: [1], color: 'black', size: 'm', kind: 'draw' }] },
+                { type: 'drawing', strokes: [{ pts: [0, 0, 0.5, 10, 20, 0.5], color: 'black', size: 'm', kind: 'draw' }] },
+              ],
+            },
+          },
+        },
+      },
+    } as any)
+    const blocks = s.pageDocumentBlocks('p1')
+    expect(blocks.some((b) => b.type === 'paragraph' && b.content[0]?.text === 'Keep me')).toBe(true)
+    const drawings = blocks.filter((b) => b.type === 'drawing')
+    expect(drawings.length).toBe(1)
+    expect(drawings[0]!.strokes.length).toBe(1)
+    expect(drawings[0]!.strokes[0]!.pts.length).toBeGreaterThanOrEqual(3)
+    expect(drawings[0]!.height).toBeGreaterThan(0)
+  })
+
+  it('migratePageDocuments assigns default document when page has no document', () => {
+    const s = new Store()
+    s.put({
+      id: 'p1',
+      typeName: 'page',
+      index: 0,
+      x: 0,
+      y: 0,
+      width: 816,
+      height: 1056,
+      name: 'Bare page',
+    } as any)
+    s.migratePageDocuments('remote')
+    const page = s.page('p1')!
+    expect(page.document?.blocks?.length).toBeGreaterThanOrEqual(1)
+    expect(page.document!.blocks[0]?.type).toBe('paragraph')
+  })
+})
+
+describe('rich text migration', () => {
+  it('loadSnapshot migrates legacy text props to page document', () => {
+    const s = new Store()
+    s.loadSnapshot({
+      document: {
+        store: {
+          p1: {
+            id: 'p1',
+            typeName: 'page',
+            index: 0,
+            x: 0,
+            y: 0,
+            width: 816,
+            height: 1056,
+            name: 'Page 1',
+          },
+          t1: {
+            id: 't1',
+            typeName: 'shape',
+            type: 'text',
+            parentId: 'p1',
+            x: 0,
+            y: 0,
+            rot: 0,
+            z: 1,
+            props: { text: 'Legacy line', color: 'black', size: 'm', font: 'sans' },
+          },
+        },
+      },
+    })
+    expect(s.get('t1')).toBeUndefined()
+    const blocks = s.notebookDocumentBlocks()
+    expect(blocks.some((b: any) => b.content?.[0]?.text === 'Legacy line')).toBe(true)
+  })
+})

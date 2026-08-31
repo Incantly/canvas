@@ -60,8 +60,10 @@ export interface GeoShapeProps {
   labelSize?: SizeId
 }
 
+import type { TextBlock } from '../rich-text/types.js'
+
 export interface TextShapeProps {
-  text: string
+  blocks: TextBlock[]
   color: ColorId
   size: SizeId
   font: FontId
@@ -69,14 +71,18 @@ export interface TextShapeProps {
   scale?: number
   w?: number
   align?: 'left' | 'center' | 'right'
+  /** @deprecated Migrated to blocks on load */
+  text?: string
 }
 
 export interface NoteShapeProps {
-  text: string
+  blocks: TextBlock[]
   color: ColorId
   size: SizeId
   font: FontId
   scale?: number
+  /** @deprecated Migrated to blocks on load */
+  text?: string
 }
 
 export interface ImageShapeProps {
@@ -137,6 +143,10 @@ export interface AssetRecord {
   h: number
 }
 
+export interface PageDocumentRecord {
+  blocks: import('../rich-text/types.js').DocumentBlock[]
+}
+
 export interface PageRecord {
   id: string
   typeName: 'page'
@@ -147,6 +157,8 @@ export interface PageRecord {
   height: number
   name?: string
   grid?: GridId
+  /** Primary typing surface — OpenNote / Apple Notes style body. */
+  document?: PageDocumentRecord
 }
 
 export interface NotebookRecord {
@@ -154,6 +166,8 @@ export interface NotebookRecord {
   typeName: 'notebook'
   pageLayout: PageLayout
   pageGap?: number
+  /** Continuous notes body — single stream (OpenNote / Apple Notes). */
+  document?: PageDocumentRecord
 }
 
 export type BoardRecord = ShapeRecord | AssetRecord | PageRecord | NotebookRecord
