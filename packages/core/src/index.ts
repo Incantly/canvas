@@ -1,4 +1,10 @@
 export { Store, newId, isDiffEmpty, invertDiff, composeDiff } from './store.js'
+export {
+  PAGE_GAP_PRESETS,
+  PAGE_GAP_STEP,
+  DEFAULT_PAGE_GAP,
+  MAX_PAGE_GAP,
+} from './pages.js'
 export { buildUI } from './ui.js'
 export {
   themeOf, THEMES, COLOR_IDS, SIZE_IDS, DASH_IDS, FILL_IDS, GEO_IDS, GRID_IDS,
@@ -11,12 +17,12 @@ import { Editor, TOOLS } from './editor.js'
 export { Editor, TOOLS }
 
 export type {
-  Camera, ToolId, ColorId, SizeId, FontId, DashId, FillId, GeoId, ThemeId, GridId,
+  Camera, ToolId, ColorId, SizeId, FontId, DashId, FillId, GeoId, ThemeId, GridId, PageLayout, PageGapPreset,
   Bounds,
 } from './types/base.js'
 export type { Styles, ScribbleStroke } from './types/styles.js'
 export type {
-  ShapeType, ShapeRecord, AssetRecord, BoardRecord,
+  ShapeType, ShapeRecord, AssetRecord, BoardRecord, PageRecord, NotebookRecord,
   DrawShapeProps, LineishShapeProps, GeoShapeProps,
   TextShapeProps, NoteShapeProps, ImageShapeProps,
 } from './types/models.js'

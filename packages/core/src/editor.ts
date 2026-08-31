@@ -15,10 +15,19 @@ import type {
   BoardRecord,
   ShapeRecord,
   AssetRecord,
+  PageRecord,
+  PageLayout,
   Diff,
   Theme,
 } from "./types/index.js";
 import { Store, newId } from "./store.js";
+import {
+  pageBoundsRect,
+  PAGE_GAP_STEP,
+  pageGapForPreset,
+  pageGapPresetFor,
+} from "./pages.js";
+import type { PageGapPreset } from "./types/base.js";
 import {
   themeOf,
   SIZES,
@@ -236,6 +245,7 @@ export class Editor {
   geoKind: GeoId;
   tool: ToolId;
   selection: Set<string>;
+  currentPageId: string;
   session!: Session | null;
   editing!: Editing | null;
   scribbles!: ScribbleStroke[];
@@ -298,6 +308,7 @@ export class Editor {
   ) {
     this.container = container;
     this.store = store || new Store();
+    this.currentPageId = this.store.normalizePages("remote");
     this.theme = themeOf(theme);
     this.grid = GRID_IDS.includes(grid) ? grid : "lines";
     this.readonly = !!readonly;
@@ -339,6 +350,10 @@ export class Editor {
 
     this._bind();
     this._unsubStore = this.store.listen(() => {
+      const pages = this.store.pages();
+      if (pages.length && !pages.some((p) => p.id === this.currentPageId)) {
+        this.currentPageId = pages[0].id;
+      }
       this._pruneSelection();
       this.requestRender();
       this.emit("change");
@@ -380,6 +395,58 @@ export class Editor {
     const c = this.camera;
     return { x: (px + c.x) * c.z, y: (py + c.y) * c.z };
   }
+  _pageOrigin(pageId?: string): XY {
+    const p = this.store.page(pageId ?? this.currentPageId);
+    return p ? { x: p.x, y: p.y } : { x: 0, y: 0 };
+  }
+  localToWorld(lx: number, ly: number, pageId?: string): XY {
+    const o = this._pageOrigin(pageId);
+    return { x: o.x + lx, y: o.y + ly };
+  }
+  worldToLocal(wx: number, wy: number, pageId?: string): XY {
+    const o = this._pageOrigin(pageId);
+    return { x: wx - o.x, y: wy - o.y };
+  }
+  _pointerPagePoint(sx: number, sy: number): XY {
+    const w = this.screenToPage(sx, sy);
+    return this.worldToLocal(w.x, w.y, this.currentPageId);
+  }
+  _shapeToScreen(shape: ShapeRecord, lx: number, ly: number): XY {
+    const w = this.localToWorld(lx, ly, shape.parentId);
+    return this.pageToScreen(w.x, w.y);
+  }
+  pageLayout(): PageLayout {
+    return this.store.pageLayout();
+  }
+  setPageLayout(layout: PageLayout): void {
+    if (layout !== "vertical" && layout !== "horizontal") {
+      throw new Error(`Invalid page layout: ${layout}`);
+    }
+    this.store.setPageLayout(layout);
+    this.emit("pagelayout", layout);
+    this.requestRender();
+  }
+  pageGap(): number {
+    return this.store.pageGap();
+  }
+  pageGapPreset(): PageGapPreset | null {
+    return pageGapPresetFor(this.pageGap());
+  }
+  setPageGap(gap: number): void {
+    this.store.setPageGap(gap);
+    this.emit("pagegap", this.pageGap());
+    this.requestRender();
+  }
+  setPageGapPreset(preset: PageGapPreset): void {
+    this.store.setPageGapPreset(preset);
+    this.emit("pagegap", this.pageGap());
+    this.requestRender();
+  }
+  adjustPageGap(delta: number): void {
+    this.store.adjustPageGap(delta);
+    this.emit("pagegap", this.pageGap());
+    this.requestRender();
+  }
   viewportPageBounds(): Bounds {
     const { w, h } = this.viewSize();
     const c = this.camera;
@@ -409,6 +476,7 @@ export class Editor {
     this._camAnim = requestAnimationFrame(step);
   }
   _afterCamera(): void {
+    this._clampCamera();
     this.requestRender();
     this.emit("camera");
   }
@@ -427,10 +495,114 @@ export class Editor {
     const p = this.screenToPage(sx, sy);
     this.setCamera({ z, x: sx / z - p.x, y: sy / z - p.y }, opts);
   }
+
+  pages(): PageRecord[] {
+    return this.store.pages();
+  }
+  currentPage(): PageRecord | null {
+    return this.store.page(this.currentPageId);
+  }
+  setPage(
+    id: string,
+    {
+      fit = true,
+      animate = 220,
+      preserveZoom = false,
+    }: { fit?: boolean; animate?: number; preserveZoom?: boolean } = {},
+  ): void {
+    if (!this.store.page(id) || id === this.currentPageId) return;
+    this._cancelSession();
+    this._commitText();
+    this.currentPageId = id;
+    this.setSelection([]);
+    if (fit) this.fitPage({ animate, ease: animate ? 0 : 0 });
+    else if (preserveZoom) this._panToCurrentPageKeepingZoom({ animate });
+    else {
+      this._clampCamera();
+      this._afterCamera();
+    }
+    this.emit("page", id);
+    this.requestRender();
+  }
+  _panToCurrentPageKeepingZoom({
+    animate = 0,
+  }: { animate?: number } = {}): void {
+    const page = this.currentPage();
+    if (!page) return;
+    const { w, h } = this.viewSize();
+    const c = this.camera;
+    const cx = page.x + page.width / 2;
+    const cy = page.y + page.height / 2;
+    this.setCamera(
+      { z: c.z, x: w / 2 / c.z - cx, y: h / 2 / c.z - cy },
+      { animate },
+    );
+  }
+  addPage(opts: { width?: number; height?: number; name?: string } = {}): PageRecord {
+    const page = this.store.addPage(opts);
+    this.emit("page", this.currentPageId);
+    this.requestRender();
+    return page;
+  }
+  removePage(id: string): boolean {
+    if (id === this.currentPageId && this.store.pages().length <= 1) return false;
+    const pages = this.store.pages();
+    const idx = pages.findIndex((p) => p.id === id);
+    if (idx < 0) return false;
+    const next =
+      pages[idx + 1]?.id ?? pages[idx - 1]?.id ?? this.currentPageId;
+    if (!this.store.removePage(id)) return false;
+    if (this.currentPageId === id) this.setPage(next, { fit: true });
+    else this.emit("page", this.currentPageId);
+    return true;
+  }
+  fitPage({
+    margin = 0.08,
+    maxZoom = 1,
+    animate = 0,
+    ease = 0,
+  }: {
+    margin?: number;
+    maxZoom?: number;
+    animate?: number;
+    ease?: number;
+  } = {}): void {
+    const page = this.currentPage();
+    if (!page) return;
+    this.followBounds(pageBoundsRect(page), { animate, ease });
+  }
+  _clampCamera(): void {
+    const page = this.currentPage();
+    if (!page) return;
+    const { w, h } = this.viewSize();
+    const c = this.camera;
+    const margin = 48 / c.z;
+    const vw = w / c.z;
+    const vh = h / c.z;
+    let x = c.x;
+    let y = c.y;
+    const minX = -(page.x + page.width + margin - vw);
+    const maxX = margin - page.x;
+    const minY = -(page.y + page.height + margin - vh);
+    const maxY = margin - page.y;
+    if (minX > maxX) x = (minX + maxX) / 2;
+    else x = clamp(x, minX, maxX);
+    if (minY > maxY) y = (minY + maxY) / 2;
+    else y = clamp(y, minY, maxY);
+    if (x !== c.x || y !== c.y) this.camera = { ...c, x, y };
+  }
+  _pageShapes(): ShapeRecord[] {
+    return this.store.shapesOnPage(this.currentPageId);
+  }
+  _newShapeBase(): { parentId: string; z: number } {
+    return { parentId: this.currentPageId, z: this.store.maxZ() + 1 };
+  }
   contentBounds(): Bounds | null {
     let b: Bounds | null = null;
-    for (const s of this.store.shapes()) b = boundsUnion(b, pageBounds(s));
-    return b;
+    for (const s of this._pageShapes()) b = boundsUnion(b, pageBounds(s));
+    if (!b) return null;
+    const o = this._pageOrigin();
+    return { x: b.x + o.x, y: b.y + o.y, w: b.w, h: b.h };
   }
   fitContent({
     margin = 0.08,
@@ -666,11 +838,13 @@ export class Editor {
   }
   _pruneSelection(): void {
     let dirty = false;
-    for (const id of this.selection)
-      if (!this.store.has(id)) {
+    for (const id of this.selection) {
+      const s = this.store.get(id) as ShapeRecord | undefined;
+      if (!s || s.typeName !== "shape" || s.parentId !== this.currentPageId) {
         this.selection.delete(id);
         dirty = true;
       }
+    }
     if (dirty) this.emit("selection");
   }
   selectionBounds(): Bounds | null {
@@ -687,15 +861,15 @@ export class Editor {
     this.setSelection([]);
   }
   clearBoard(): void {
-    if (!this.store.ids().length) return;
+    if (!this._pageShapes().length) return;
     this._cancelSession();
     this._commitText();
-    this.store.clear();
+    this.store.clearPage(this.currentPageId);
     this.setSelection([]);
   }
   selectAll(): void {
     if (this.tool !== "select") this.setTool("select");
-    this.setSelection(this.store.shapes().map((s) => s.id));
+    this.setSelection(this._pageShapes().map((s) => s.id));
   }
   duplicateSelection(offset = 16): void {
     if (!this.selection.size) return;
@@ -704,12 +878,12 @@ export class Editor {
     this.store.transact(() => {
       for (const id of this.selection) {
         const s = this.store.get(id);
-        if (!s || s.typeName === "asset") continue;
+        if (!s || s.typeName !== "shape") continue;
         const copy: ShapeRecord = {
-          ...s,
+          ...(s as ShapeRecord),
           id: newId(),
-          x: s.x + offset,
-          y: s.y + offset,
+          x: (s as ShapeRecord).x + offset,
+          y: (s as ShapeRecord).y + offset,
           z: ++z,
         } as ShapeRecord;
         this.store.put(copy);
@@ -740,9 +914,7 @@ export class Editor {
   }
 
   shapesSorted(): ShapeRecord[] {
-    return this.store
-      .shapes()
-      .sort(
+    return this._pageShapes().sort(
         (a: ShapeRecord, b: ShapeRecord) =>
           (a.type === "highlight" ? 0 : 1) - (b.type === "highlight" ? 0 : 1) ||
           a.z - b.z ||
@@ -849,7 +1021,7 @@ export class Editor {
     if (this._pointers.size > 2) return;
     if (this.session?.type === "pinch") return;
 
-    const p = this.screenToPage(s.x, s.y);
+    const p = this._pointerPagePoint(s.x, s.y);
     if (e.button === 1 || this.spaceHeld || this.tool === "hand") {
       this.session = { type: "panning", last: s };
       this._syncCursor("grabbing");
@@ -895,7 +1067,7 @@ export class Editor {
     )
       return;
     const s = this._evPoint(e);
-    const p = this.screenToPage(s.x, s.y);
+    const p = this._pointerPagePoint(s.x, s.y);
 
     switch (ss.type) {
       case "pinch": {
@@ -1073,7 +1245,7 @@ export class Editor {
       x: p.x,
       y: p.y,
       rot: 0,
-      z: this.store.maxZ() + 1,
+      ...this._newShapeBase(),
       props: anyProps,
     } as ShapeRecord;
     this.store.put(shape);
@@ -1095,7 +1267,7 @@ export class Editor {
     const pts = shape.props.pts.slice();
     for (const ce of evs.length ? evs : [e]) {
       const r = this._evPoint(ce);
-      const cp = this.screenToPage(r.x, r.y);
+      const cp = this._pointerPagePoint(r.x, r.y);
       pts.push(cp.x - shape.x, cp.y - shape.y, ce.pressure || 0.5);
     }
     this.store.update(ss.id, { props: { pts } });
@@ -1224,7 +1396,7 @@ export class Editor {
       x: p.x,
       y: p.y,
       rot: 0,
-      z: this.store.maxZ() + 1,
+      ...this._newShapeBase(),
       props: {
         dx: 0.01,
         dy: 0.01,
@@ -1277,7 +1449,7 @@ export class Editor {
       x: p.x,
       y: p.y,
       rot: 0,
-      z: this.store.maxZ() + 1,
+      ...this._newShapeBase(),
       props: {
         geo: this.geoKind,
         w: 1,
@@ -1340,7 +1512,7 @@ export class Editor {
       x: p.x,
       y: p.y - FONT_SIZES[this.styles.size] * 0.66,
       rot: 0,
-      z: this.store.maxZ() + 1,
+      ...this._newShapeBase(),
       props: {
         text: "",
         color: this.styles.color,
@@ -1364,7 +1536,7 @@ export class Editor {
       x: p.x - NOTE_W / 2,
       y: p.y - NOTE_W / 2,
       rot: 0,
-      z: this.store.maxZ() + 1,
+      ...this._newShapeBase(),
       props: {
         text: "",
         color: (this.styles.color === DEFAULT_STYLES.color
@@ -1444,7 +1616,7 @@ export class Editor {
       lay = noteLayout(shape);
       const s = (shape.props as any).scale || 1;
       const yStart = Math.max(20, lay.boxH / 2 - lay.textH / 2);
-      pos = this.pageToScreen(shape.x + 20 * s, shape.y + yStart * s);
+      pos = this._shapeToScreen(shape, shape.x + 20 * s, shape.y + yStart * s);
       w = (NOTE_W - 40) * s;
       h = lay.textH * s;
       align = "center";
@@ -1454,7 +1626,7 @@ export class Editor {
       const p: any = shape.props;
       const fs = FONT_SIZES[(p.labelSize || "s") as SizeId];
       const fam = FONTS[(p.font || "draw") as FontId];
-      pos = this.pageToScreen(shape.x + 8, shape.y + 8);
+      pos = this._shapeToScreen(shape, shape.x + 8, shape.y + 8);
       w = p.w - 16;
       h = p.h - 16;
       align = "center";
@@ -1463,7 +1635,7 @@ export class Editor {
       ta.style.paddingTop = Math.max(0, (h * z) / 2 - fs * 1.3 * z) / 2 + "px";
     } else {
       lay = textLayout(shape);
-      pos = this.pageToScreen(shape.x, shape.y);
+      pos = this._shapeToScreen(shape, shape.x, shape.y);
       w = Math.max(lay.w + 4, 40);
       h = lay.h + 4;
       const p: any = shape.props;
@@ -1704,7 +1876,7 @@ export class Editor {
       );
       return;
     }
-    const p = this.screenToPage(s.x, s.y);
+    const p = this._pointerPagePoint(s.x, s.y);
     const hit = this.hitTest(p.x, p.y);
     this._syncCursor(hit && this.selection.has(hit.id) ? "move" : null);
   }
@@ -1728,7 +1900,7 @@ export class Editor {
       const bm = bendMidpoint(pr);
       pts.push({ which: "bend", x: one.x + bm.x, y: one.y + bm.y });
       for (const h of pts) {
-        const sc = this.pageToScreen(h.x, h.y);
+        const sc = this._shapeToScreen(one, h.x, h.y);
         if (Math.hypot(sc.x - sx, sc.y - sy) <= HANDLE + 3)
           return { kind: "handle", which: h.which, id: one.id };
       }
@@ -1736,8 +1908,9 @@ export class Editor {
     }
     const b = this.selectionBounds();
     if (!b) return null;
-    const tl = this.pageToScreen(b.x, b.y);
-    const br = this.pageToScreen(b.x + b.w, b.y + b.h);
+    const o = this._pageOrigin();
+    const tl = this.pageToScreen(b.x + o.x, b.y + o.y);
+    const br = this.pageToScreen(b.x + b.w + o.x, b.y + b.h + o.y);
     const rotatable = !one || !["arrow", "line"].includes(one.type);
     if (rotatable) {
       const rx = (tl.x + br.x) / 2;
@@ -1778,7 +1951,7 @@ export class Editor {
   _dblClick(e: MouseEvent): void {
     if (this.readonly || this.tool !== "select") return;
     const s = this._evPoint(e);
-    const p = this.screenToPage(s.x, s.y);
+    const p = this._pointerPagePoint(s.x, s.y);
     const hit = this.hitTest(p.x, p.y);
     if (hit) {
       if (hit.type === "text" || hit.type === "note") {
@@ -2061,6 +2234,7 @@ export class Editor {
           id: nid,
           x: (s as any).x + 16,
           y: (s as any).y + 16,
+          parentId: this.currentPageId,
           z: ++z,
           props: newProps,
         } as ShapeRecord);
@@ -2088,7 +2262,7 @@ export class Editor {
     e.preventDefault();
     e.stopPropagation();
     const s = this._evPoint(e);
-    this.importImageBlobs(files, this.screenToPage(s.x, s.y));
+    this.importImageBlobs(files, this._pointerPagePoint(s.x, s.y));
   }
   async importImageBlobs(blobs: Blob[] | File[], at?: XY): Promise<void> {
     let atPos = at ? { ...at } : undefined;
@@ -2117,7 +2291,7 @@ export class Editor {
             x: cx - pw / 2,
             y: cy - ph / 2,
             rot: 0,
-            z: this.store.maxZ() + 1,
+            ...this._newShapeBase(),
             props: { w: pw, h: ph, assetId },
           } as ShapeRecord);
         });
@@ -2153,7 +2327,15 @@ export class Editor {
   } = {}): Promise<Blob | null> {
     let b: Bounds | null = null;
     const shapes = this.shapesSorted().filter((s) => !ids || ids.has(s.id));
-    for (const s of shapes) b = boundsUnion(b, pageBounds(s));
+    for (const s of shapes) {
+      const o = this._pageOrigin(s.parentId);
+      const sb = pageBounds(s);
+      b = boundsUnion(b, { x: sb.x + o.x, y: sb.y + o.y, w: sb.w, h: sb.h });
+    }
+    if (!b) {
+      const pg = this.currentPage();
+      if (pg) b = pageBoundsRect(pg);
+    }
     if (!b) return null;
     b = boundsExpand(b, margin);
     const cap = Math.sqrt(24e6 / (b.w * b.h));
@@ -2175,8 +2357,13 @@ export class Editor {
     }
     ctx.setTransform(k, 0, 0, k, -b.x * k, -b.y * k);
     await this._decodeAssetsFn(shapes);
-    for (const s of shapes)
+    for (const s of shapes) {
+      const o = this._pageOrigin(s.parentId);
+      ctx.save();
+      ctx.translate(o.x, o.y);
       drawShape(ctx, s, { theme: this.theme, store: this.store, zoom: k });
+      ctx.restore();
+    }
     return new Promise((resolve) =>
       canvas.toBlob((blob) => resolve(blob), "image/png"),
     );
@@ -2229,7 +2416,6 @@ export class Editor {
     } else {
       ctx.clearRect(0, 0, w * dpr, h * dpr);
     }
-    if (background) this._drawGridFn(ctx, cam, w * dpr, h * dpr, dpr);
     ctx.setTransform(
       cam.z * dpr,
       0,
@@ -2241,8 +2427,36 @@ export class Editor {
     const vp = { x: -cam.x, y: -cam.y, w: w / cam.z, h: h / cam.z };
     const pad = 64 / cam.z;
     const vis = boundsExpand(vp, pad);
-    for (const s of this.shapesSorted()) {
-      const pb = pageBounds(s);
+    if (background) {
+      for (const pg of this.store.pages()) {
+        const pb = pageBoundsRect(pg);
+        if (
+          pb.x + pb.w < vis.x ||
+          pb.x > vis.x + vis.w ||
+          pb.y + pb.h < vis.y ||
+          pb.y > vis.y + vis.h
+        )
+          continue;
+        ctx.save();
+        ctx.translate(pg.x, pg.y);
+        ctx.shadowColor = "rgba(28, 27, 24, 0.14)";
+        ctx.shadowBlur = 12 / cam.z;
+        ctx.shadowOffsetY = 4 / cam.z;
+        ctx.fillStyle = pg.id === this.currentPageId ? "#ffffff" : "#fafafa";
+        ctx.fillRect(0, 0, pg.width, pg.height);
+        if (this.grid !== "none") {
+          ctx.beginPath();
+          ctx.rect(0, 0, pg.width, pg.height);
+          ctx.clip();
+          this._drawPageGridFn(ctx, pg, cam, dpr);
+        }
+        ctx.restore();
+      }
+    }
+    for (const pg of this.store.pages()) {
+      const shapes = this.store.shapesOnPage(pg.id);
+      if (!shapes.length) continue;
+      const pb = pageBoundsRect(pg);
       if (
         pb.x + pb.w < vis.x ||
         pb.x > vis.x + vis.w ||
@@ -2250,21 +2464,145 @@ export class Editor {
         pb.y > vis.y + vis.h
       )
         continue;
-      drawShape(ctx, s, {
-        theme: this.theme,
-        store: this.store,
-        zoom: cam.z,
-        ghost:
-          this.session?.type === "erasing" &&
-          (this.session as SessionErasing).hits.has(s.id),
-        hideText:
-          hideEditing && this.editing?.id === s.id
-            ? this.editing.field
-            : undefined,
-        onAssetLoad: () => this.requestRender(),
-      });
+      ctx.save();
+      ctx.translate(pg.x, pg.y);
+      for (const s of shapes.sort(
+        (a, b) =>
+          (a.type === "highlight" ? 0 : 1) - (b.type === "highlight" ? 0 : 1) ||
+          a.z - b.z ||
+          (a.id < b.id ? -1 : 1),
+      )) {
+        const sb = pageBounds(s);
+        const wx = pg.x + sb.x;
+        const wy = pg.y + sb.y;
+        if (
+          wx + sb.w < vis.x ||
+          wx > vis.x + vis.w ||
+          wy + sb.h < vis.y ||
+          wy > vis.y + vis.h
+        )
+          continue;
+        drawShape(ctx, s, {
+          theme: this.theme,
+          store: this.store,
+          zoom: cam.z,
+          ghost:
+            pg.id === this.currentPageId &&
+            this.session?.type === "erasing" &&
+            (this.session as SessionErasing).hits.has(s.id),
+          hideText:
+            hideEditing && this.editing?.id === s.id
+              ? this.editing.field
+              : undefined,
+          onAssetLoad: () => this.requestRender(),
+        });
+      }
+      ctx.restore();
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  /** Grid clipped to a single page (page-local coords; caller sets translate + clip). */
+  _drawPageGridFn(
+    ctx: CanvasRenderingContext2D,
+    page: PageRecord,
+    cam: Camera,
+    dpr: number,
+  ): void {
+    if (this.grid === "none" || !(cam.z > 0)) return;
+    const isDotGrid = ["dots", "crosses"].includes(this.grid);
+    const g: any = (this.theme.grid as any)?.[isDotGrid ? "dot" : "line"];
+    if (!g) return;
+    let step = GRID_STEP;
+    while (step * cam.z < 18) step *= 2;
+    while (step * cam.z > 72) step /= 2;
+    const fade = clamp((step * cam.z - 16) / 14, 0, 1);
+    if (fade <= 0) return;
+
+    const scale = cam.z * dpr;
+    const lw = 1 / scale;
+    const isMajor = (i: number) => i % GRID_MAJOR === 0;
+    const colCount = Math.ceil(page.width / step);
+    const rowCount = Math.ceil(page.height / step);
+
+    if (this.grid === "lines" || this.grid === "ruled") {
+      ctx.lineWidth = lw;
+      for (const major of [false, true]) {
+        ctx.beginPath();
+        if (this.grid === "lines") {
+          for (let n = 0; n <= colCount; n++) {
+            if (isMajor(n) !== major) continue;
+            const x = Math.min(n * step, page.width);
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, page.height);
+          }
+        }
+        for (let m = 0; m <= rowCount; m++) {
+          if (isMajor(m) !== major) continue;
+          const y = Math.min(m * step, page.height);
+          ctx.moveTo(0, y);
+          ctx.lineTo(page.width, y);
+        }
+        ctx.strokeStyle = major ? g.major : g.minor;
+        ctx.globalAlpha = fade;
+        ctx.stroke();
+      }
+    } else if (this.grid === "crosses") {
+      for (const major of [false, true]) {
+        const arm = (major ? 4.5 : 3) / scale;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        for (let m = 0; m <= rowCount; m++) {
+          for (let n = 0; n <= colCount; n++) {
+            const maj = isMajor(n) && isMajor(m);
+            if (maj !== major) continue;
+            const x = n * step;
+            const y = m * step;
+            if (x > page.width || y > page.height) continue;
+            ctx.moveTo(x - arm, y);
+            ctx.lineTo(x + arm, y);
+            ctx.moveTo(x, y - arm);
+            ctx.lineTo(x, y + arm);
+          }
+        }
+        ctx.strokeStyle = major ? g.major : g.minor;
+        ctx.globalAlpha = fade;
+        ctx.stroke();
+      }
+    } else if (this.grid === "iso") {
+      const s = Math.tan(Math.PI / 6);
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      for (const sign of [1, -1]) {
+        const slope = sign * s;
+        const k0 = 0;
+        const k1 = Math.ceil(page.height / step) + Math.ceil(page.width / step);
+        for (let k = k0; k <= k1; k++) {
+          const b = k * step;
+          ctx.moveTo(0, b);
+          ctx.lineTo(page.width, b + slope * page.width);
+        }
+      }
+      ctx.strokeStyle = g.minor;
+      ctx.globalAlpha = fade;
+      ctx.stroke();
+    } else {
+      const r = 1.6 / scale;
+      ctx.beginPath();
+      for (let m = 0; m <= rowCount; m++) {
+        for (let n = 0; n <= colCount; n++) {
+          const x = n * step;
+          const y = m * step;
+          if (x > page.width || y > page.height) continue;
+          ctx.moveTo(x + r, y);
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+        }
+      }
+      ctx.fillStyle = g.minor;
+      ctx.globalAlpha = fade;
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   _drawGridFn(
@@ -2417,11 +2755,11 @@ export class Editor {
       if (one && (one.type === "arrow" || one.type === "line")) {
         const pr: any = one.props;
         const hs = [
-          this.pageToScreen(one.x, one.y),
-          this.pageToScreen(one.x + pr.dx, one.y + pr.dy),
+          this._shapeToScreen(one, one.x, one.y),
+          this._shapeToScreen(one, one.x + pr.dx, one.y + pr.dy),
         ];
         const bm = bendMidpoint(pr);
-        hs.push(this.pageToScreen(one.x + bm.x, one.y + bm.y));
+        hs.push(this._shapeToScreen(one, one.x + bm.x, one.y + bm.y));
         for (const p2 of hs) {
           ctx.beginPath();
           ctx.arc(p2.x, p2.y, 5, 0, Math.PI * 2);
@@ -2441,7 +2779,7 @@ export class Editor {
             [one.x + lb.x, one.y + lb.y + lb.h],
           ].map(([px, py]) => {
             const r = rotWith(px, py, cx, cy, one.rot);
-            return this.pageToScreen(r.x, r.y);
+            return this._shapeToScreen(one, r.x, r.y);
           });
           ctx.moveTo(corners[0].x, corners[0].y);
           for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
@@ -2450,8 +2788,9 @@ export class Editor {
         }
         const b = this.selectionBounds();
         if (b) {
-          const tl = this.pageToScreen(b.x, b.y);
-          const br = this.pageToScreen(b.x + b.w, b.y + b.h);
+          const o = this._pageOrigin();
+          const tl = this.pageToScreen(b.x + o.x, b.y + o.y);
+          const br = this.pageToScreen(b.x + b.w + o.x, b.y + b.h + o.y);
           if (!(one && one.rot))
             ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
           const rx = (tl.x + br.x) / 2;
@@ -2487,7 +2826,8 @@ export class Editor {
 
     if (this.session?.type === "marquee" && this.session.rect) {
       const r = this.session.rect;
-      const tl = this.pageToScreen(r.x, r.y);
+      const o = this._pageOrigin();
+      const tl = this.pageToScreen(r.x + o.x, r.y + o.y);
       ctx.fillStyle = (t as any).selectionFill;
       ctx.strokeStyle = t.selection;
       ctx.lineWidth = 1;
@@ -2503,8 +2843,9 @@ export class Editor {
       ctx.lineJoin = "round";
       ctx.beginPath();
       const tr = this.session.trail;
+      const o = this._pageOrigin();
       for (let i = 0; i < tr.length; i += 2) {
-        const sp = this.pageToScreen(tr[i], tr[i + 1]);
+        const sp = this.pageToScreen(tr[i] + o.x, tr[i + 1] + o.y);
         i === 0 ? ctx.moveTo(sp.x, sp.y) : ctx.lineTo(sp.x, sp.y);
       }
       ctx.stroke();
@@ -2520,9 +2861,10 @@ export class Editor {
     for (const sc of all) {
       const pts = sc.points || [];
       if (pts.length < 2) continue;
+      const o = this._pageOrigin();
       ctx.beginPath();
       for (let i = 0; i < pts.length; i++) {
-        const sp = this.pageToScreen(pts[i].x, pts[i].y);
+        const sp = this.pageToScreen(pts[i].x + o.x, pts[i].y + o.y);
         i === 0 ? ctx.moveTo(sp.x, sp.y) : ctx.lineTo(sp.x, sp.y);
       }
       ctx.strokeStyle = t.scribble;
@@ -2572,10 +2914,11 @@ export class Editor {
       ]) {
         const pts = sc.points || [];
         if (pts.length < 2) continue;
+        const o = this._pageOrigin();
         ctx.beginPath();
         for (let i = 0; i < pts.length; i++) {
-          const x = (pts[i].x + cam2.x) * cam2.z;
-          const y = (pts[i].y + cam2.y) * cam2.z;
+          const x = (pts[i].x + o.x + cam2.x) * cam2.z;
+          const y = (pts[i].y + o.y + cam2.y) * cam2.z;
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.strokeStyle = this.theme.scribble;

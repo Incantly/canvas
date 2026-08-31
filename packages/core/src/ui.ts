@@ -1,4 +1,5 @@
 import type { Editor, BuildUIOptions, BoardUI, ToolId, GeoId, GridId, ThemeId, ColorId } from './types/index.js'
+import { PAGE_GAP_STEP } from './pages.js'
 import { COLOR_IDS, SIZE_IDS, DASH_IDS, FILL_IDS, GEO_IDS, GRID_IDS, THEMES } from './palette.js'
 
 const SVG = (inner: string): string =>
@@ -367,6 +368,111 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   addAction('duplicate', () => editor.duplicateSelection())
   addAction('delete', () => editor.deleteSelection())
 
+  const pagesBar = el<HTMLDivElement>('div', 'ic-pages')
+  ui.appendChild(pagesBar)
+  const prevPageBtn = makeBtn('chevronLeft', () => {
+    const pages = editor.pages()
+    const idx = pages.findIndex((p) => p.id === editor.currentPageId)
+    if (idx > 0) editor.setPage(pages[idx - 1].id)
+  }, 'ic-page-btn')
+  pagesBar.appendChild(prevPageBtn)
+  const pageLabel = el<HTMLSpanElement>('span', 'ic-page-label')
+  pagesBar.appendChild(pageLabel)
+  const nextPageBtn = makeBtn('chevronRight', () => {
+    const pages = editor.pages()
+    const idx = pages.findIndex((p) => p.id === editor.currentPageId)
+    if (idx >= 0 && idx < pages.length - 1) editor.setPage(pages[idx + 1].id)
+  }, 'ic-page-btn')
+  pagesBar.appendChild(nextPageBtn)
+  const addPageBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-add')
+  addPageBtn.type = 'button'
+  addPageBtn.title = 'Add page (stay on current view)'
+  addPageBtn.textContent = '+'
+  addPageBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+  addPageBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    editor.addPage()
+  })
+  pagesBar.appendChild(addPageBtn)
+
+  const removePageBtn = makeBtn(
+    'trash',
+    () => {
+      if (editor.pages().length <= 1) return
+      editor.removePage(editor.currentPageId)
+    },
+    'ic-page-btn ic-page-remove',
+  )
+  removePageBtn.title = 'Delete page'
+  pagesBar.appendChild(removePageBtn)
+
+  const layoutBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-layout')
+  layoutBtn.type = 'button'
+  layoutBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+  layoutBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    editor.setPageLayout(editor.pageLayout() === 'vertical' ? 'horizontal' : 'vertical')
+  })
+  pagesBar.appendChild(layoutBtn)
+
+  const gapDownBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-gap')
+  gapDownBtn.type = 'button'
+  gapDownBtn.textContent = '−'
+  gapDownBtn.title = 'Decrease page spacing'
+  gapDownBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+  gapDownBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    editor.adjustPageGap(-PAGE_GAP_STEP)
+  })
+  pagesBar.appendChild(gapDownBtn)
+
+  const gapLabel = el<HTMLSpanElement>('span', 'ic-page-gap-label')
+  gapLabel.title = 'Click for connected pages (no gap)'
+  gapLabel.addEventListener('pointerdown', (e) => e.stopPropagation())
+  gapLabel.addEventListener('click', (e) => {
+    e.stopPropagation()
+    editor.setPageGapPreset('connected')
+  })
+  pagesBar.appendChild(gapLabel)
+
+  const gapUpBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-gap')
+  gapUpBtn.type = 'button'
+  gapUpBtn.textContent = '+'
+  gapUpBtn.title = 'Increase page spacing'
+  gapUpBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+  gapUpBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    editor.adjustPageGap(PAGE_GAP_STEP)
+  })
+  pagesBar.appendChild(gapUpBtn)
+
+  const refreshPages = (): void => {
+    const pages = editor.pages()
+    const idx = pages.findIndex((p) => p.id === editor.currentPageId)
+    pageLabel.textContent = pages.length ? `${idx + 1} / ${pages.length}` : '—'
+    prevPageBtn.disabled = idx <= 0
+    nextPageBtn.disabled = idx < 0 || idx >= pages.length - 1
+    removePageBtn.disabled = pages.length <= 1
+  }
+  const refreshLayout = (): void => {
+    const layout = editor.pageLayout()
+    layoutBtn.textContent = layout === 'vertical' ? '↕' : '↔'
+    layoutBtn.title =
+      layout === 'vertical'
+        ? 'Vertical — new pages below. Click for horizontal.'
+        : 'Horizontal — pages in a row (1, 2, 3…). Click for vertical.'
+  }
+  const refreshGap = (): void => {
+    const gap = editor.pageGap()
+    const preset = editor.pageGapPreset()
+    gapLabel.textContent =
+      preset === 'connected' ? 'linked' : preset === 'wide' ? `${gap}` : `${gap}`
+    gapLabel.title =
+      preset === 'connected'
+        ? 'Connected — pages touch. Click to keep; use −/+ to adjust.'
+        : `Spacing ${gap}px — click for connected (0), use −/+ to adjust`
+  }
+
   function buildGrid(p: HTMLDivElement, names: string[]): void {
     p.classList.add('ic-grid-pop')
     for (const name of names) {
@@ -525,7 +631,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     })
     p.appendChild(el('i', 'ic-menu-div'))
     if (hasSel) item('trash', 'Delete selection', '⌫', () => editor.deleteSelection())
-    item('fit', 'Zoom to fit', '⇧1', () => editor.fitContent({ animate: 220 }))
+    item('fit', 'Zoom to fit page', '⇧1', () => editor.fitPage({ animate: 220 }))
     item('trash', 'Clear board', '⇧⌘⌫', () => editor.clearBoard())
 
     if (opts.gridControl || opts.themeToggle) p.appendChild(el('i', 'ic-menu-div'))
@@ -680,7 +786,13 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     editor.on('selection', refresh),
     editor.on('theme', refresh),
     editor.on('grid', refresh),
+    editor.on('page', refreshPages),
+    editor.on('pagelayout', refreshLayout),
+    editor.on('pagegap', refreshGap),
   ]
+  refreshPages()
+  refreshLayout()
+  refreshGap()
 
   const closeOnCanvas = (e: Event): void => {
     if (!ui.contains(e.target as Node)) closePopover()

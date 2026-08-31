@@ -35,7 +35,7 @@ describe('<Canvas />', () => {
       />
     )
     act(() => {
-      editor.store.put(rect(newId()))
+      editor.store.put({ ...rect(newId()), parentId: editor.currentPageId })
     })
     expect(onChange).toHaveBeenCalledTimes(1)
     const [diff, source] = onChange.mock.calls[0]
@@ -51,14 +51,15 @@ describe('<Canvas />', () => {
     const snap = { document: { store: { r1: rect('r1') } } }
     let editor
     render(<Canvas snapshot={snap} onMount={(e) => { editor = e }} />)
-    expect(editor.store.size).toBe(1)
+    expect(editor.store.shapes().length).toBe(1)
+    expect(editor.store.pages().length).toBe(1)
     expect(editor.store.get('r1').props.color).toBe('blue')
     expect(editor.store.canUndo).toBe(false)
   })
 
   it('renders an external store and live-switches theme/readonly props', () => {
     const store = new Store()
-    store.put(rect('r1'), 'remote')
+    store.put({ ...rect('r1'), parentId: store.normalizePages('remote') }, 'remote')
     const ref = createRef()
     const { rerender, container } = render(
       <Canvas ref={ref} store={store} theme="light" />
@@ -117,7 +118,7 @@ describe('<Canvas />', () => {
       </div>
     )
     act(() => {
-      a.current.editor.store.put(rect('shared'))
+      a.current.editor.store.put({ ...rect('shared'), parentId: a.current.editor.currentPageId })
     })
     expect(b.current.editor.store.get('shared')).toBeTruthy()
   })
@@ -133,7 +134,8 @@ describe('<Canvas />', () => {
     const { rerender } = render(<Probe />)
     rerender(<Probe />)
     expect(store1).toBe(store2)
-    expect(store1.size).toBe(1)
+    expect(store1.shapes().length).toBe(1)
+    expect(store1.pages().length).toBe(1)
   })
 
   afterEach(cleanup)

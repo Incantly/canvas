@@ -250,7 +250,8 @@ describe('snapshots', () => {
 
     const s2 = new Store()
     s2.loadSnapshot(snap)
-    expect(s2.size).toBe(2)
+    expect(s2.shapes().length).toBe(2)
+    expect(s2.pages().length).toBe(1)
     expect(s2.get('b')!.x).toBe(5)
     expect(s2.canUndo).toBe(false)
   })
@@ -259,7 +260,9 @@ describe('snapshots', () => {
     const s = new Store()
     s.put(shape('old'))
     s.loadSnapshot({ document: { store: { a: shape('a') } } } as any)
-    expect(s.ids()).toEqual(['a'])
+    expect(s.shapes().map((r) => r.id)).toEqual(['a'])
+    expect(s.pages().length).toBe(1)
+    expect(s.get('a')!.parentId).toBe(s.pages()[0].id)
   })
 
   it('loadSnapshot resets history', () => {
@@ -294,5 +297,34 @@ describe('z order helpers', () => {
     s.put({ ...shape('b'), z: -2 })
     expect(s.maxZ()).toBe(4)
     expect(s.minZ()).toBe(-2)
+  })
+})
+
+describe('pages', () => {
+  it('normalizePages creates a default page for orphan shapes', () => {
+    const s = new Store()
+    s.put(shape('a'))
+    const pageId = s.normalizePages('remote')
+    expect(s.pages().length).toBe(1)
+    expect(s.get('a')!.parentId).toBe(pageId)
+  })
+
+  it('addPage and removePage manage page records', () => {
+    const s = new Store()
+    s.normalizePages('remote')
+    const p2 = s.addPage({ name: 'Page 2' })
+    expect(s.pages().length).toBe(2)
+    expect(s.removePage(p2.id)).toBe(true)
+    expect(s.pages().length).toBe(1)
+    expect(s.removePage(s.pages()[0].id)).toBe(false)
+  })
+
+  it('clearPage removes shapes but keeps the page', () => {
+    const s = new Store()
+    const pageId = s.normalizePages('remote')
+    s.put({ ...shape('a'), parentId: pageId })
+    s.clearPage(pageId)
+    expect(s.shapes().length).toBe(0)
+    expect(s.pages().length).toBe(1)
   })
 })

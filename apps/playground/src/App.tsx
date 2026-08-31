@@ -3,6 +3,7 @@ import { useCanvasStore } from '@incantly/canvas-react'
 import type { Editor } from '@incantly/canvas'
 import { FeatureIndex } from './panels/FeatureIndex'
 import { CanvasDemoPanel } from './panels/CanvasDemoPanel'
+import { PageCanvasPanel } from './panels/PageCanvasPanel'
 import { DebugPanel } from './components/DebugPanel'
 
 export default function App() {
@@ -22,6 +23,8 @@ export default function App() {
       <main style={styles.main}>
         {selectedPanel === '01' ? (
           <CanvasDemoPanel store={store} onEditorReady={setEditor} />
+        ) : selectedPanel === '02' ? (
+          <PageCanvasPanel store={store} onEditorReady={setEditor} />
         ) : (
           <div style={styles.placeholder}>
             <p style={styles.placeholderTitle}>Coming soon</p>

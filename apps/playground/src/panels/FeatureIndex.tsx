@@ -8,8 +8,8 @@ export interface FeatureEntry {
 
 export const ROADMAP_FEATURES: FeatureEntry[] = [
   { id: '00', title: 'Package rename', status: 'done' },
-  { id: '01', title: 'Playground app', status: 'active' },
-  { id: '02', title: 'Page-based canvas', status: 'coming-soon' },
+  { id: '01', title: 'Playground app', status: 'done' },
+  { id: '02', title: 'Page-based canvas', status: 'active' },
   { id: '03', title: 'Rich text editor', status: 'coming-soon' },
   { id: '04', title: 'Canvas pen design', status: 'coming-soon' },
   { id: '05', title: 'Shape snapping', status: 'coming-soon' },

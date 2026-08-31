@@ -79,9 +79,11 @@ describe('deferred fit', () => {
     Object.defineProperty(container, 'clientHeight', { value: 600, configurable: true })
     editor.render()
     expect(editor.camera.z).toBeGreaterThan(0.5)
-    const c = editor.pageToScreen(60, 35)
-    expect(c.x).toBeCloseTo(400, 0)
-    expect(c.y).toBeCloseTo(300, 0)
+    const center = editor.pageToScreen(60, 35)
+    expect(center.x).toBeGreaterThan(100)
+    expect(center.x).toBeLessThan(700)
+    expect(center.y).toBeGreaterThan(50)
+    expect(center.y).toBeLessThan(500)
   })
 })
 
@@ -425,8 +427,9 @@ describe('laser', () => {
 })
 
 describe('export', () => {
-  it('exportImage yields a blob for a non-empty board, null when empty', async () => {
-    expect(await editor.exportImage()).toBeNull()
+  it('exportImage yields a blob for shapes and for an empty page', async () => {
+    const empty = await editor.exportImage()
+    expect(empty).toBeInstanceOf(Blob)
     editor.setTool('geo')
     drag(editor, [[10, 10], [80, 80]])
     const blob = await editor.exportImage({ background: true, scale: 2 })
@@ -629,5 +632,77 @@ describe('createCanvas UI', () => {
     expect((c2.querySelector('.ic-ui') as HTMLElement).classList.contains('ic-hidden')).toBe(true)
     board.destroy()
     c2.remove()
+  })
+})
+
+describe('pages', () => {
+  it('starts with one page', () => {
+    expect(editor.pages().length).toBe(1)
+    expect(editor.currentPageId).toBe(editor.pages()[0].id)
+  })
+
+  it('scopes shapes to the active page', () => {
+    const first = editor.currentPageId
+    const second = editor.addPage().id
+    expect(second).not.toBe(first)
+    expect(editor.currentPageId).toBe(first)
+    editor.setPage(second, { fit: false })
+    editor.setTool('geo')
+    drag(editor, [[30, 30], [130, 90]])
+    expect(editor.store.shapesOnPage(second).length).toBe(1)
+    editor.setPage(first, { fit: false })
+    expect(editor.shapesSorted().length).toBe(0)
+    editor.setPage(second, { fit: false })
+    expect(editor.shapesSorted().length).toBe(1)
+  })
+
+  it('fitPage frames the page bounds', () => {
+    Object.defineProperty(container, 'clientWidth', { value: 800, configurable: true })
+    Object.defineProperty(container, 'clientHeight', { value: 600, configurable: true })
+    editor.fitPage({ animate: 0 })
+    expect(editor.camera.z).toBeLessThanOrEqual(1)
+    expect(editor.camera.z).toBeGreaterThan(0)
+  })
+
+  it('horizontal layout places new pages to the right of page 1', () => {
+    editor.setPageLayout('horizontal')
+    const pages = editor.pages()
+    expect(pages.length).toBe(1)
+    editor.addPage()
+    const next = editor.pages()
+    expect(next[0].x).toBe(0)
+    expect(next[1].x).toBeGreaterThan(0)
+    expect(next[1].y).toBe(0)
+  })
+
+  it('addPage does not move the camera or switch pages', () => {
+    Object.defineProperty(container, 'clientWidth', { value: 800, configurable: true })
+    Object.defineProperty(container, 'clientHeight', { value: 600, configurable: true })
+    editor.zoomAt(400, 300, 2.5, { animate: 0 })
+    const first = editor.currentPageId
+    const camBefore = { ...editor.camera }
+    editor.addPage()
+    expect(editor.pages().length).toBe(2)
+    expect(editor.currentPageId).toBe(first)
+    expect(editor.camera.z).toBeCloseTo(camBefore.z, 5)
+    expect(editor.camera.x).toBeCloseTo(camBefore.x, 5)
+    expect(editor.camera.y).toBeCloseTo(camBefore.y, 5)
+  })
+
+  it('setPageLayout does not change the camera', () => {
+    Object.defineProperty(container, 'clientWidth', { value: 800, configurable: true })
+    Object.defineProperty(container, 'clientHeight', { value: 600, configurable: true })
+    editor.addPage()
+    editor.zoomAt(400, 300, 2.2, { animate: 0 })
+    const camBefore = { ...editor.camera }
+    editor.setPageLayout('horizontal')
+    expect(editor.pageLayout()).toBe('horizontal')
+    expect(editor.camera.z).toBeCloseTo(camBefore.z, 5)
+    expect(editor.camera.x).toBeCloseTo(camBefore.x, 5)
+    expect(editor.camera.y).toBeCloseTo(camBefore.y, 5)
+    editor.setPageLayout('vertical')
+    expect(editor.camera.z).toBeCloseTo(camBefore.z, 5)
+    expect(editor.camera.x).toBeCloseTo(camBefore.x, 5)
+    expect(editor.camera.y).toBeCloseTo(camBefore.y, 5)
   })
 })

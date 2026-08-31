@@ -4,6 +4,8 @@ import type {
   FillId,
   FontId,
   GeoId,
+  GridId,
+  PageLayout,
   SizeId,
 } from './base.js'
 
@@ -20,6 +22,7 @@ export type ShapeType =
 interface BaseShape {
   id: string
   typeName: 'shape'
+  parentId?: string
   x: number
   y: number
   rot: number
@@ -134,7 +137,26 @@ export interface AssetRecord {
   h: number
 }
 
-export type BoardRecord = ShapeRecord | AssetRecord
+export interface PageRecord {
+  id: string
+  typeName: 'page'
+  index: number
+  x: number
+  y: number
+  width: number
+  height: number
+  name?: string
+  grid?: GridId
+}
+
+export interface NotebookRecord {
+  id: string
+  typeName: 'notebook'
+  pageLayout: PageLayout
+  pageGap?: number
+}
+
+export type BoardRecord = ShapeRecord | AssetRecord | PageRecord | NotebookRecord
 
 export type ShapeProps =
   | DrawShapeProps
