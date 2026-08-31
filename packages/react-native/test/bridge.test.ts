@@ -4,14 +4,14 @@ import { encodeDispatch, createBridge } from '../src/bridge.js'
 describe('encodeDispatch', () => {
   it('produces an injectable JS statement carrying the message', () => {
     const js = encodeDispatch({ type: 'setTool', tool: 'draw' })
-    expect(js).toBe('window.__qdDispatch({"type":"setTool","tool":"draw"}); true;')
+    expect(js).toBe('window.__icDispatch({"type":"setTool","tool":"draw"}); true;')
   })
 
   it('escapes JS line terminators U+2028/U+2029', () => {
     const js = encodeDispatch({ type: 'x', text: 'a\u2028b\u2029c' })
     expect(js).not.toMatch(/[\u2028\u2029]/)
     expect(js).toContain('\\u2028')
-    const json = js.slice('window.__qdDispatch('.length, -'); true;'.length)
+    const json = js.slice('window.__icDispatch('.length, -'); true;'.length)
     expect(JSON.parse(json).text).toBe('a\u2028b\u2029c')
   })
 })
@@ -21,14 +21,14 @@ describe('createBridge', () => {
     const send = vi.fn()
     const b = createBridge(send)
     b.post({ type: 'undo' })
-    expect(send).toHaveBeenCalledWith('window.__qdDispatch({"type":"undo"}); true;')
+    expect(send).toHaveBeenCalledWith('window.__icDispatch({"type":"undo"}); true;')
   })
 
   it('request assigns ids and resolves on settle', async () => {
     const send = vi.fn()
     const b = createBridge(send)
     const p = b.request({ type: 'getSnapshot' })
-    const sent = JSON.parse(send.mock.calls[0][0].slice('window.__qdDispatch('.length, -'); true;'.length))
+    const sent = JSON.parse(send.mock.calls[0][0].slice('window.__icDispatch('.length, -'); true;'.length))
     expect(sent.id).toBe('r1')
     expect(b.settle(sent.id, { document: { store: {} } })).toBe(true)
     await expect(p).resolves.toEqual({ document: { store: {} } })

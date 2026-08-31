@@ -1,17 +1,29 @@
-import { createQuickdraw } from '@quickdrawjs/core'
-import type { QuickdrawInstance } from '@quickdrawjs/core'
-import '@quickdrawjs/core/quickdraw.css'
+import { createCanvas } from '@incantly/canvas'
+import type { CanvasInstance } from '@incantly/canvas'
+import '@incantly/canvas/canvas.css'
 import type { FileIndex, FileRecord } from './types/index.js'
 
 const LEGACY_DOC_KEY = 'quickdraw-app-doc'
-const THEME_KEY = 'quickdraw-app-theme'
-const INDEX_KEY = 'quickdraw-files'
-const fileKey = (id: string) => `quickdraw-file:${id}`
+const LEGACY_THEME_KEY = 'quickdraw-app-theme'
+const LEGACY_INDEX_KEY = 'quickdraw-files'
+const legacyFileKey = (id: string) => `quickdraw-file:${id}`
+
+const DOC_KEY = 'incantly-app-doc'
+const THEME_KEY = 'incantly-app-theme'
+const INDEX_KEY = 'incantly-files'
+const fileKey = (id: string) => `incantly-file:${id}`
+
+function readStorage(key: string, legacyKey?: string): string | null {
+  const value = localStorage.getItem(key)
+  if (value != null) return value
+  if (legacyKey) return localStorage.getItem(legacyKey)
+  return null
+}
 
 const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-const theme = localStorage.getItem(THEME_KEY) || (prefersDark ? 'dark' : 'light')
+const theme = readStorage(THEME_KEY, LEGACY_THEME_KEY) || (prefersDark ? 'dark' : 'light')
 
-const board: QuickdrawInstance = createQuickdraw({
+const board: CanvasInstance = createCanvas({
   container: document.getElementById('board') as HTMLElement,
   theme,
   grid: 'lines',
@@ -25,7 +37,7 @@ const newId = (): string =>
 
 function loadIndex(): FileIndex | null {
   try {
-    const raw = localStorage.getItem(INDEX_KEY)
+    const raw = readStorage(INDEX_KEY, LEGACY_INDEX_KEY)
     if (!raw) return null
     const idx = JSON.parse(raw) as FileIndex
     if (idx && Array.isArray(idx.files) && idx.files.length) return idx
@@ -43,7 +55,9 @@ let index: FileIndex = loadIndex() as FileIndex
 if (!index) {
   const id = newId()
   index = { current: id, files: [{ id, name: 'Untitled', updatedAt: Date.now() }] }
-  const legacy = localStorage.getItem(LEGACY_DOC_KEY)
+  const legacy =
+    readStorage(DOC_KEY, LEGACY_DOC_KEY) ||
+    readStorage(fileKey(id), legacyFileKey(id))
   if (legacy) {
     try { localStorage.setItem(fileKey(id), legacy) } catch {}
     localStorage.removeItem(LEGACY_DOC_KEY)
@@ -73,10 +87,11 @@ function openFile(id: string, { fit = true }: { fit?: boolean } = {}): void {
   saveIndex()
   let snap: any = null
   try {
-    const raw = localStorage.getItem(fileKey(file.id))
+    const raw = readStorage(fileKey(file.id), legacyFileKey(file.id))
     if (raw) snap = JSON.parse(raw)
   } catch {
     localStorage.removeItem(fileKey(file.id))
+    localStorage.removeItem(legacyFileKey(file.id))
   }
   store.loadSnapshot(snap || { document: { store: {} } }, 'remote')
   store.undos.length = 0
@@ -107,7 +122,7 @@ function renderMenu(): void {
   const files = [...index.files].sort((a, b) => b.updatedAt - a.updatedAt)
   for (const file of files) {
     const row = document.createElement('div')
-    row.className = `qd-file-row${file.id === index.current ? ' current' : ''}`
+    row.className = `ic-file-row${file.id === index.current ? ' current' : ''}`
     row.setAttribute('role', 'menuitem')
 
     const dot = document.createElement('span')
@@ -184,6 +199,7 @@ function deleteFile(id: string): void {
   if (!window.confirm(`Delete "${file.name}"? This can't be undone.`)) return
   index.files = index.files.filter((f) => f.id !== id)
   localStorage.removeItem(fileKey(id))
+  localStorage.removeItem(legacyFileKey(id))
   if (index.current === id) {
     const next = [...index.files].sort((a, b) => b.updatedAt - a.updatedAt)[0]
     openFile(next.id)

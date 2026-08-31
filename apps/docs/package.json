@@ -1,8 +1,8 @@
 {
-  "name": "quickdraw-docs",
+  "name": "incantly-docs",
   "private": true,
   "version": "0.0.0",
-  "description": "docs.tryquickdraw.com — the Quickdraw documentation site (Nextra).",
+  "description": "Incantly Canvas documentation site (Nextra).",
   "scripts": {
     "dev": "next dev --port 4499",
     "build": "next build",

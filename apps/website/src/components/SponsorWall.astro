@@ -44,7 +44,7 @@ const flat = hi <= 0 || hi === lo
 const sizeFor = (a) => (flat ? MID : MIN + (MAX - MIN) * Math.sqrt((a || 0) / hi))
 const spanFor = (h) => Math.max(2, Math.round((h + GAP) / (ROW + GAP)))
 
-// Quickdraw's own shape colors, so a sponsor without a logo still looks native.
+// Incantly Canvas's own shape colors, so a sponsor without a logo still looks native.
 const MONO = ['#4263eb', '#ae3ec9', '#099268', '#e16919', '#e03131', '#0e8f9b', '#7c4dcc', '#f1ac4b']
 const hashOf = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
 const initialsOf = (n) => n.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()

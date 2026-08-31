@@ -1,0 +1,27 @@
+---
+description: Every Plan-mode implementation must include a QA checklist
+alwaysApply: true
+---
+
+# Plan-mode QA checklist
+
+When you are in **Plan mode** (or writing/updating a plan), every implementation decision must include a **QA checklist**. Do not finalize a plan without it.
+
+Read: [`roadmap/QA_CHECKLIST.md`](../../roadmap/QA_CHECKLIST.md)
+
+## Must appear in the plan
+
+1. **Subagent split** — Coordinator + named Implementer workstreams (do not leave "the agent will just code").
+2. **Hand-implement first** — no new npm packages unless the roadmap doc lists an approved exception with justification.
+3. **Error checking + data risk** — input validation, snapshot migration safety, undo/remote diff rules, corrupt-data recovery.
+4. **Functional verify** — `npm run typecheck`, `npm test`, `npm run build:packages`.
+5. **Playground demo** — web panel in `apps/playground` + RN scene for the feature.
+6. **React Native parity** — WebView bridge updated if new APIs; test on RN playground.
+7. **Before commit** — Verifier PASS on feature QA rows + universal gates; Security PASS when sync/auth/storage/bridge touched.
+8. **Browser teardown** — after Playwright/Chromium: `browser.close()`. Do not kill the user's personal Chrome.
+
+## When executing the plan
+
+- Pipeline: Coordinator → SpecChecker → Implementer → Breaker → Fixer → IntegrationTester → Security (if applicable) → Verifier → Committer
+- Never commit without Verifier PASS
+- Commits only when user explicitly asks; no Cursor author or Co-authored-by (see `no-cursor-commits.mdc`)

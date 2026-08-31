@@ -1,4 +1,4 @@
-# Contributing to Quickdraw
+# Contributing to Incantly Canvas
 
 Thanks for helping! All contributors are expected to follow the
 [Code of Conduct](CODE_OF_CONDUCT.md). A few things keep this codebase what
@@ -39,15 +39,14 @@ fastest way to poke the raw engine.
 
 ## Add your project to the showcase
 
-Built something with Quickdraw? Add it to the
-["Made with Quickdraw" table in the README](README.md#made-with-quickdraw) —
-it's the standard drill:
+Built something with Incantly Canvas? Open a PR to add it to the README showcase
+section — it's the standard drill:
 
 1. Edit `README.md` and add one row to the table, keeping it alphabetical.
 2. Link the project name to a live URL (or the repo if it isn't public yet),
    and keep the description to 15 words or fewer, no superlatives.
 3. Open a PR titled `showcase: <project name>`. Nothing else in the diff.
 
-Any real project that ships Quickdraw qualifies — side projects included.
+Any real project that ships Incantly Canvas qualifies — side projects included.
 We only skip entries that are dead links, NSFW, or pure landing pages with no
 product behind them.

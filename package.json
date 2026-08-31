@@ -1,8 +1,8 @@
 {
-  "name": "quickdraw-monorepo",
+  "name": "incantly-canvas-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "Quickdraw \u2014 the MIT-licensed infinite-canvas whiteboard SDK. Monorepo root.",
+  "description": "Incantly Canvas — the MIT-licensed infinite-canvas whiteboard SDK. Monorepo root.",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -12,13 +12,14 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "npm run build --workspace=@quickdrawjs/react-native",
-    "build:packages": "npm run build --workspace=@quickdrawjs/core && npm run build --workspace=@quickdrawjs/react && npm run build --workspace=@quickdrawjs/react-native",
-    "dev": "npm run dev --workspace=quickdraw-react-demo",
+    "build": "npm run build --workspace=@incantly/canvas-react-native",
+    "build:packages": "npm run build --workspace=@incantly/canvas && npm run build --workspace=@incantly/canvas-react && npm run build --workspace=@incantly/canvas-react-native",
+    "dev": "npm run dev --workspace=incantly-react-demo",
+    "dev:playground": "npm run dev --workspace=incantly-playground",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "typecheck:packages": "npm run typecheck --workspace=@quickdrawjs/core && npm run typecheck --workspace=@quickdrawjs/react && npm run typecheck --workspace=@quickdrawjs/react-native",
+    "typecheck:packages": "npm run typecheck --workspace=@incantly/canvas && npm run typecheck --workspace=@incantly/canvas-react && npm run typecheck --workspace=@incantly/canvas-react-native",
     "star-history": "node scripts/star-history.mjs",
-    "publish:all": "npm publish --workspace=@quickdrawjs/core --access public && npm publish --workspace=@quickdrawjs/react --access public && npm publish --workspace=@quickdrawjs/react-native --access public"
+    "publish:all": "npm publish --workspace=@incantly/canvas --access public && npm publish --workspace=@incantly/canvas-react --access public && npm publish --workspace=@incantly/canvas-react-native --access public"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",

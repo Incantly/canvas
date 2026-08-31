@@ -1,10 +1,12 @@
-import type { QuickdrawInstance } from '@quickdrawjs/core'
-import { createQuickdraw } from '@quickdrawjs/core'
-import '@quickdrawjs/core/quickdraw.css'
+import type { CanvasInstance } from '@incantly/canvas'
+import { createCanvas } from '@incantly/canvas'
+import '@incantly/canvas/canvas.css'
 
 declare global {
   interface Window {
     ReactNativeWebView?: { postMessage(data: string): void }
+    __icDispatch?: (m: any) => Promise<void>
+    /** @deprecated Use {@link __icDispatch} */
     __qdDispatch?: (m: any) => Promise<void>
   }
 }
@@ -13,7 +15,7 @@ const post = (msg: object): void => {
   try {
     window.ReactNativeWebView?.postMessage(JSON.stringify(msg))
   } catch (e: any) {
-    console.warn('quickdraw post failed', e)
+    console.warn('incantly canvas post failed', e)
   }
 }
 
@@ -26,14 +28,14 @@ const blobToDataUrl = (blob: Blob): Promise<string | null> =>
   })
 
 const host = document.getElementById('board') as HTMLElement
-let board: QuickdrawInstance | null = null
+let board: CanvasInstance | null = null
 let hideUi = false
 
 const handlers: Record<string, (m: any) => any> = {
   init(m: any) {
     if (board) board.destroy()
     hideUi = !!m.hideUi
-    board = createQuickdraw({
+    board = createCanvas({
       container: host,
       theme: m.theme || 'light',
       grid: m.grid || 'none',
@@ -54,7 +56,7 @@ const handlers: Record<string, (m: any) => any> = {
     board.editor.store.listen((diff: any, source: any) => post({ type: 'change', diff, source }))
     board.editor.on('selection', () => post({ type: 'selection', ids: [...board!.editor.selection] }))
     board.editor.on('theme', () => {
-      host.dataset.qdTheme = board!.editor.theme.id
+      host.dataset.icTheme = board!.editor.theme.id
       post({ type: 'theme', theme: board!.editor.theme.id })
     })
     board.editor.on('grid', () => post({ type: 'grid', grid: board!.editor.grid }))
@@ -67,7 +69,7 @@ const handlers: Record<string, (m: any) => any> = {
   applyDiff(m: any) { board!.editor.store.applyDiff(m.diff, 'remote') },
   setTheme(m: any) {
     board!.editor.setTheme(m.theme)
-    host.dataset.qdTheme = board!.editor.theme.id
+    host.dataset.icTheme = board!.editor.theme.id
   },
   setReadonly(m: any) {
     board!.editor.setReadonly(!!m.readonly)
@@ -87,7 +89,7 @@ const handlers: Record<string, (m: any) => any> = {
   },
 }
 
-window.__qdDispatch = async (m: any): Promise<void> => {
+const dispatch = async (m: any): Promise<void> => {
   try {
     if (!m || !handlers[m.type]) return
     if (!board && m.type !== 'init') return
@@ -96,5 +98,8 @@ window.__qdDispatch = async (m: any): Promise<void> => {
     post({ type: 'error', message: String((e && e.message) || e) })
   }
 }
+
+window.__icDispatch = dispatch
+window.__qdDispatch = dispatch
 
 post({ type: 'ready' })

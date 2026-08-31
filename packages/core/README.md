@@ -1,27 +1,26 @@
-# @quickdrawjs/core
+# @incantly/canvas
 
-The framework-free heart of [Quickdraw](https://tryquickdraw.com) — an MIT-licensed
+The framework-free heart of Incantly Canvas — an MIT-licensed
 infinite-canvas whiteboard engine. Zero dependencies, zero build step: plain ESM
 that runs in any modern browser.
 
 If you're using React or React Native, you probably want
-[`@quickdrawjs/react`](https://www.npmjs.com/package/@quickdrawjs/react) or
-[`@quickdrawjs/react-native`](https://www.npmjs.com/package/@quickdrawjs/react-native)
+`@incantly/canvas-react` or `@incantly/canvas-react-native`
 instead — they wrap this engine.
 
 ## Install
 
 ```bash
-npm install @quickdrawjs/core
+npm install @incantly/canvas
 ```
 
 ## Quick start
 
 ```js
-import { createQuickdraw } from '@quickdrawjs/core'
-import '@quickdrawjs/core/quickdraw.css'
+import { createCanvas } from '@incantly/canvas'
+import '@incantly/canvas/canvas.css'
 
-const board = createQuickdraw({
+const board = createCanvas({
   container: document.getElementById('board'),
   theme: 'light', // or 'dark'
   grid: 'lines',  // 'none' (default) | 'lines' | 'dots'
@@ -60,10 +59,10 @@ board.editor.on('grid', () => setMyGrid(board.editor.grid))
 If your app owns its own theme chrome, drop the in-board switches:
 
 ```js
-createQuickdraw({ container, themeToggle: false, gridControl: false })
+createCanvas({ container, themeToggle: false, gridControl: false })
 ```
 
-A small "Quickdraw" mark sits in the board's corner. Keeping it helps people
+A small "Incantly Canvas" mark sits in the board's corner. Keeping it helps people
 find the project; `watermark: false` removes it — no purchase required.
 
 The grid spacing adapts to the zoom (doubling and halving around a 40px page
@@ -71,12 +70,12 @@ step, majors every fifth) and travels into PNG exports that keep the paper.
 
 ## Headless / custom UI
 
-`createQuickdraw` is just `new Editor(...)` plus the stock toolbar. Use the
+`createCanvas` is just `new Editor(...)` plus the stock toolbar. Use the
 editor bare and bring your own chrome:
 
 ```js
-import { Editor } from '@quickdrawjs/core'
-import '@quickdrawjs/core/quickdraw.css'
+import { Editor } from '@incantly/canvas'
+import '@incantly/canvas/canvas.css'
 
 const editor = new Editor({ container, theme: 'dark', grid: 'dots' })
 editor.setTool('draw')
@@ -107,8 +106,7 @@ Remote diffs don't enter local undo history, so collaborative undo stays sane.
 const blob = await editor.exportImage({ background: true, scale: 2 })
 ```
 
-See the [repository README](https://github.com/quickdrawjs/quickdraw) for the
-full API, data model and guides.
+See the repository README for the full API, data model and guides.
 
 ## License
 

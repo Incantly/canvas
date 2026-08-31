@@ -233,7 +233,7 @@ type BuildUIArgs = [Editor, BuildUIOptions?]
 export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true, gridControl = true } = {}]: BuildUIArgs): BoardUI {
   const root = editor.container
   const opts = { themeToggle: themeToggle !== false, gridControl: gridControl !== false }
-  const ui = el<HTMLDivElement>('div', 'qd-ui')
+  const ui = el<HTMLDivElement>('div', 'ic-ui')
   root.appendChild(ui)
 
   let popover: Popover | null = null
@@ -247,7 +247,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   const openPopover = (name: string, build: (p: HTMLDivElement) => void, anchor: HTMLElement): void => {
     if (popover?.name === name) return closePopover()
     closePopover()
-    const p = el<HTMLDivElement>('div', 'qd-popover')
+    const p = el<HTMLDivElement>('div', 'ic-popover')
     build(p)
     ui.appendChild(p)
     popover = { name, el: p }
@@ -274,9 +274,9 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   const geoTap = (b: HTMLButtonElement): void => {
     editor.setTool('geo')
     openPopover('geo', (p) => {
-      p.classList.add('qd-geo-pop')
+      p.classList.add('ic-geo-pop')
       for (const g of GEO_IDS) {
-        const gb = el<HTMLButtonElement>('button', 'qd-tool' + (editor.geoKind === g ? ' on' : ''))
+        const gb = el<HTMLButtonElement>('button', 'ic-tool' + (editor.geoKind === g ? ' on' : ''))
         gb.innerHTML = ICONS[g] || ''
         gb.title = g
         gb.addEventListener('click', (ev) => {
@@ -290,7 +290,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     }, b)
   }
 
-  const makeBtn = (name: string, onClick: (e: Event, b: HTMLButtonElement) => void, cls: string = 'qd-tool'): HTMLButtonElement => {
+  const makeBtn = (name: string, onClick: (e: Event, b: HTMLButtonElement) => void, cls: string = 'ic-tool'): HTMLButtonElement => {
     const b = el<HTMLButtonElement>('button', cls)
     b.dataset.name = name
     b.innerHTML = (ICONS as any)[name] || ''
@@ -303,7 +303,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     return b
   }
 
-  const dock = el<HTMLDivElement>('div', 'qd-dock')
+  const dock = el<HTMLDivElement>('div', 'ic-dock')
   ui.appendChild(dock)
 
   const dockBtns = new Map<string, HTMLButtonElement>()
@@ -315,7 +315,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     return b
   }
   const divider = (): void => {
-    const d = el<HTMLElement>('i', 'qd-div')
+    const d = el<HTMLElement>('i', 'ic-div')
     dock.appendChild(d)
     dividers.push(d)
   }
@@ -330,7 +330,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   divider()
   addBtn('line')
   addBtn('arrow')
-  addBtn('geo').classList.add('qd-geo-btn')
+  addBtn('geo').classList.add('ic-geo-btn')
   addBtn('text')
   addBtn('note')
   addBtn('image')
@@ -340,9 +340,9 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   dock.appendChild(toolsBtn)
 
   const styleBtn = makeBtn('styles', (e, b) => openPopover('styles', buildStyles, b))
-  styleBtn.classList.add('qd-style-btn')
+  styleBtn.classList.add('ic-style-btn')
   styleBtn.title = 'Color & style'
-  const styleDot = el<HTMLSpanElement>('span', 'qd-style-dot')
+  const styleDot = el<HTMLSpanElement>('span', 'ic-style-dot')
   styleBtn.appendChild(styleDot)
   dock.appendChild(styleBtn)
 
@@ -352,7 +352,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   const menuBtn = makeBtn('menu', (e, b) => openPopover('menu', buildMenu, b))
   dock.appendChild(menuBtn)
 
-  const actionBar = el<HTMLDivElement>('div', 'qd-actions')
+  const actionBar = el<HTMLDivElement>('div', 'ic-actions')
   ui.appendChild(actionBar)
   const actBtns = new Map<string, HTMLButtonElement>()
   const addAction = (name: string, fn: () => void): HTMLButtonElement => {
@@ -363,12 +363,12 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   }
   addAction('undo', () => editor.store.undo())
   addAction('redo', () => editor.store.redo())
-  actionBar.appendChild(el('i', 'qd-div'))
+  actionBar.appendChild(el('i', 'ic-div'))
   addAction('duplicate', () => editor.duplicateSelection())
   addAction('delete', () => editor.deleteSelection())
 
   function buildGrid(p: HTMLDivElement, names: string[]): void {
-    p.classList.add('qd-grid-pop')
+    p.classList.add('ic-grid-pop')
     for (const name of names) {
       const isTool = name !== 'image'
       const b = makeBtn(name, (e, b2) => run(name, b2))
@@ -380,17 +380,17 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
 
   const theme = () => THEMES[editor.theme.id as ThemeId]
   function buildStyles(p: HTMLDivElement): void {
-    p.classList.add('qd-style-pop')
+    p.classList.add('ic-style-pop')
     const cur = editor.currentStyles() as Record<string, string | null>
     const row = (cls: string): HTMLDivElement => {
-      const r = el<HTMLDivElement>('div', 'qd-row ' + cls)
+      const r = el<HTMLDivElement>('div', 'ic-row ' + cls)
       p.appendChild(r)
       return r
     }
 
-    const colors = row('qd-colors')
+    const colors = row('ic-colors')
     for (const c of COLOR_IDS) {
-      const b = el<HTMLButtonElement>('button', 'qd-dot' + (cur.color === c ? ' on' : ''))
+      const b = el<HTMLButtonElement>('button', 'ic-dot' + (cur.color === c ? ' on' : ''))
       b.style.setProperty('--dot', theme().colors[c].stroke)
       b.title = c
       b.addEventListener('click', (e) => {
@@ -400,11 +400,11 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
       })
       colors.appendChild(b)
     }
-    const sizes = row('qd-sizes')
+    const sizes = row('ic-sizes')
     SIZE_IDS.forEach((s, i) => {
-      const b = el<HTMLButtonElement>('button', 'qd-opt' + (cur.size === s ? ' on' : ''))
+      const b = el<HTMLButtonElement>('button', 'ic-opt' + (cur.size === s ? ' on' : ''))
       b.title = 'Size ' + s.toUpperCase()
-      b.innerHTML = `<span class="qd-size-pip" style="--pip:${4 + i * 3}px"></span>`
+      b.innerHTML = `<span class="ic-size-pip" style="--pip:${4 + i * 3}px"></span>`
       b.addEventListener('click', (e) => {
         e.stopPropagation()
         editor.setStyle('size', s)
@@ -412,9 +412,9 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
       })
       sizes.appendChild(b)
     })
-    const dashes = row('qd-dashes')
+    const dashes = row('ic-dashes')
     for (const d of DASH_IDS) {
-      const b = el<HTMLButtonElement>('button', 'qd-opt' + (cur.dash === d ? ' on' : ''))
+      const b = el<HTMLButtonElement>('button', 'ic-opt' + (cur.dash === d ? ' on' : ''))
       b.title = d === 'draw' ? 'hand-drawn' : d
       b.innerHTML = DASH_ICONS[d] || ''
       b.addEventListener('click', (e) => {
@@ -424,9 +424,9 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
       })
       dashes.appendChild(b)
     }
-    const fills = row('qd-fills')
+    const fills = row('ic-fills')
     for (const f of FILL_IDS) {
-      const b = el<HTMLButtonElement>('button', 'qd-opt' + (cur.fill === f ? ' on' : ''))
+      const b = el<HTMLButtonElement>('button', 'ic-opt' + (cur.fill === f ? ' on' : ''))
       b.title = 'fill: ' + f
       b.innerHTML = FILL_ICONS[f] || ''
       b.addEventListener('click', (e) => {
@@ -438,27 +438,27 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     }
     function restyle(): void {
       const c2 = editor.currentStyles() as Record<string, string | null>
-      colors.querySelectorAll('.qd-dot').forEach((b, i) => b.classList.toggle('on', COLOR_IDS[i] === c2.color))
-      sizes.querySelectorAll('.qd-opt').forEach((b, i) => b.classList.toggle('on', SIZE_IDS[i] === c2.size))
-      dashes.querySelectorAll('.qd-opt').forEach((b, i) => b.classList.toggle('on', DASH_IDS[i] === c2.dash))
-      fills.querySelectorAll('.qd-opt').forEach((b, i) => b.classList.toggle('on', FILL_IDS[i] === c2.fill))
+      colors.querySelectorAll('.ic-dot').forEach((b, i) => b.classList.toggle('on', COLOR_IDS[i] === c2.color))
+      sizes.querySelectorAll('.ic-opt').forEach((b, i) => b.classList.toggle('on', SIZE_IDS[i] === c2.size))
+      dashes.querySelectorAll('.ic-opt').forEach((b, i) => b.classList.toggle('on', DASH_IDS[i] === c2.dash))
+      fills.querySelectorAll('.ic-opt').forEach((b, i) => b.classList.toggle('on', FILL_IDS[i] === c2.fill))
       refresh()
     }
   }
 
   function buildMenu(p: HTMLDivElement): void {
-    p.classList.add('qd-menu-pop')
+    p.classList.add('ic-menu-pop')
     const item = (
       icon: string,
       label: string,
       key: string | null,
       fn: () => Promise<void> | void
     ): HTMLButtonElement => {
-      const b = el<HTMLButtonElement>('button', 'qd-menu-item')
-      b.innerHTML = `<span class="qd-mi-ico">${(ICONS as any)[icon] || ''}</span><span class="qd-mi-label"></span>`
-      ;(b.querySelector('.qd-mi-label') as HTMLElement).textContent = label
+      const b = el<HTMLButtonElement>('button', 'ic-menu-item')
+      b.innerHTML = `<span class="ic-mi-ico">${(ICONS as any)[icon] || ''}</span><span class="ic-mi-label"></span>`
+      ;(b.querySelector('.ic-mi-label') as HTMLElement).textContent = label
       if (key) {
-        const k = el<HTMLSpanElement>('span', 'qd-mi-key')
+        const k = el<HTMLSpanElement>('span', 'ic-mi-key')
         k.textContent = key
         b.appendChild(k)
       }
@@ -489,20 +489,20 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
         onPick: (id: T) => void
       }
     ): HTMLDivElement => {
-      const row = el<HTMLDivElement>('div', 'qd-menu-row')
-      const cap = el<HTMLSpanElement>('span', 'qd-mi-label')
+      const row = el<HTMLDivElement>('div', 'ic-menu-row')
+      const cap = el<HTMLSpanElement>('span', 'ic-mi-label')
       cap.textContent = label
       row.appendChild(cap)
-      const seg = el<HTMLDivElement>('div', 'qd-seg')
+      const seg = el<HTMLDivElement>('div', 'ic-seg')
       for (const id of ids) {
-        const b = el<HTMLButtonElement>('button', 'qd-seg-btn' + (current === id ? ' on' : ''))
+        const b = el<HTMLButtonElement>('button', 'ic-seg-btn' + (current === id ? ' on' : ''))
         b.innerHTML = icons[id]
         b.title = tips[id]
         b.setAttribute('aria-label', tips[id])
         b.addEventListener('click', (e) => {
           e.stopPropagation()
           onPick(id)
-          seg.querySelectorAll('.qd-seg-btn').forEach((x, i) => x.classList.toggle('on', ids[i] === id))
+          seg.querySelectorAll('.ic-seg-btn').forEach((x, i) => x.classList.toggle('on', ids[i] === id))
         })
         seg.appendChild(b)
       }
@@ -523,40 +523,40 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
       })
       if (blob) await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
     })
-    p.appendChild(el('i', 'qd-menu-div'))
+    p.appendChild(el('i', 'ic-menu-div'))
     if (hasSel) item('trash', 'Delete selection', '⌫', () => editor.deleteSelection())
     item('fit', 'Zoom to fit', '⇧1', () => editor.fitContent({ animate: 220 }))
     item('trash', 'Clear board', '⇧⌘⌫', () => editor.clearBoard())
 
-    if (opts.gridControl || opts.themeToggle) p.appendChild(el('i', 'qd-menu-div'))
+    if (opts.gridControl || opts.themeToggle) p.appendChild(el('i', 'ic-menu-div'))
     if (opts.gridControl) {
-      const row = el<HTMLDivElement>('div', 'qd-menu-item qd-has-sub')
+      const row = el<HTMLDivElement>('div', 'ic-menu-item ic-has-sub')
       row.setAttribute('role', 'button')
       ;(row as any).tabIndex = 0
       row.innerHTML =
-        `<span class="qd-mi-ico">${GRID_ICONS[editor.grid]}</span>` +
-        '<span class="qd-mi-label">Grid</span>' +
-        '<span class="qd-mi-value"></span>' +
-        `<span class="qd-mi-chev">${ICONS.chevronRight}</span>`
-      ;(row.querySelector('.qd-mi-value') as HTMLElement).textContent = GRID_LABELS[editor.grid]
+        `<span class="ic-mi-ico">${GRID_ICONS[editor.grid]}</span>` +
+        '<span class="ic-mi-label">Grid</span>' +
+        '<span class="ic-mi-value"></span>' +
+        `<span class="ic-mi-chev">${ICONS.chevronRight}</span>`
+      ;(row.querySelector('.ic-mi-value') as HTMLElement).textContent = GRID_LABELS[editor.grid]
 
-      const sub = el<HTMLDivElement>('div', 'qd-submenu')
+      const sub = el<HTMLDivElement>('div', 'ic-submenu')
       for (const id of GRID_IDS) {
-        const b = el<HTMLButtonElement>('button', 'qd-menu-item')
+        const b = el<HTMLButtonElement>('button', 'ic-menu-item')
         b.innerHTML =
-          `<span class="qd-mi-ico">${GRID_ICONS[id]}</span>` +
-          '<span class="qd-mi-label"></span>' +
-          `<span class="qd-mi-check">${editor.grid === id ? ICONS.check : ''}</span>`
-        ;(b.querySelector('.qd-mi-label') as HTMLElement).textContent = GRID_LABELS[id]
+          `<span class="ic-mi-ico">${GRID_ICONS[id]}</span>` +
+          '<span class="ic-mi-label"></span>' +
+          `<span class="ic-mi-check">${editor.grid === id ? ICONS.check : ''}</span>`
+        ;(b.querySelector('.ic-mi-label') as HTMLElement).textContent = GRID_LABELS[id]
         b.title = GRID_TIPS[id]
         b.addEventListener('click', (e) => {
           e.stopPropagation()
           editor.setGrid(id)
-          sub.querySelectorAll('.qd-mi-check').forEach((c, i) => {
+          sub.querySelectorAll('.ic-mi-check').forEach((c, i) => {
             ;(c as HTMLElement).innerHTML = GRID_IDS[i] === id ? ICONS.check : ''
           })
-          ;(row.querySelector('.qd-mi-ico') as HTMLElement).innerHTML = GRID_ICONS[id]
-          ;(row.querySelector('.qd-mi-value') as HTMLElement).textContent = GRID_LABELS[id]
+          ;(row.querySelector('.ic-mi-ico') as HTMLElement).innerHTML = GRID_ICONS[id]
+          ;(row.querySelector('.ic-mi-value') as HTMLElement).textContent = GRID_LABELS[id]
         })
         sub.appendChild(b)
       }
@@ -567,7 +567,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
         const rr = root.getBoundingClientRect()
         const br = row.getBoundingClientRect()
         const fitsRight = br.right + sub.offsetWidth + 12 <= rr.right
-        sub.classList.toggle('qd-sub-left', !fitsRight)
+        sub.classList.toggle('ic-sub-left', !fitsRight)
         const fitsDown = br.top - 7 + sub.offsetHeight <= rr.bottom - 8
         sub.style.top = fitsDown ? '' : 'auto'
         sub.style.bottom = fitsDown ? '' : '-7px'
@@ -603,7 +603,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download =
-      'quickdraw-' + new Date().toISOString().slice(0, 19).replaceAll(':', '.') + '.png'
+      'incantly-' + new Date().toISOString().slice(0, 19).replaceAll(':', '.') + '.png'
     a.click()
     setTimeout(() => URL.revokeObjectURL(a.href), 5000)
   }
@@ -641,7 +641,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
     for (const d of dividers) d.style.display = m === 'full' ? '' : 'none'
     toolsBtn.style.display = m === 'mini' ? '' : 'none'
     moreBtn.style.display = m === 'compact' ? '' : 'none'
-    dock.classList.toggle('qd-compact', m !== 'full')
+    dock.classList.toggle('ic-compact', m !== 'full')
     if (popover && ['more', 'tools', 'geo'].includes(popover.name)) closePopover()
     refresh()
   }
@@ -687,7 +687,7 @@ export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true
   }
   root.addEventListener('pointerdown', closeOnCanvas, { capture: true })
 
-  const setHidden = (h: boolean): void => { ui.classList.toggle('qd-hidden', !!h) }
+  const setHidden = (h: boolean): void => { ui.classList.toggle('ic-hidden', !!h) }
   setHidden(hidden)
   refresh()
 

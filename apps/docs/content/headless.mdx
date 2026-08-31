@@ -1,6 +1,6 @@
 ---
 title: Headless & custom UI
-description: Hide Quickdraw's toolbar and drive the editor from your own interface — every tool and style is reachable from the public API.
+description: Hide Incantly Canvas's toolbar and drive the editor from your own interface — every tool and style is reachable from the public API.
 ---
 
 # Headless & custom UI
@@ -9,12 +9,12 @@ The stock toolbar is built entirely on the public API — so anything it can
 do, your own UI can do. Pass `hideUi` and the canvas renders bare:
 
 ```jsx
-<Quickdraw ref={ref} hideUi />
+<Canvas ref={ref} hideUi />
 ```
 
 ```js
 // plain JS
-const board = createQuickdraw({ container, hideUi: true })
+const board = createCanvas({ container, hideUi: true })
 ```
 
 ## Tools
@@ -84,7 +84,7 @@ You don't have to go all-or-nothing. Keep the toolbar but drop the board
 menu's theme/grid switches (when your app owns those settings):
 
 ```js
-createQuickdraw({ container, themeToggle: false, gridControl: false })
+createCanvas({ container, themeToggle: false, gridControl: false })
 ```
 
 Or toggle the whole toolbar at runtime: `ui.setHidden(true)`.

@@ -191,18 +191,17 @@ export interface BuildUIOptions {
   gridControl?: boolean
 }
 
-export interface QuickdrawInstance {
+export interface CanvasInstance {
   editor: Editor
   ui: BoardUI
   destroy(): void
 }
 
-export interface CreateQuickdrawOptions extends EditorOptions {
+export interface CreateCanvasOptions extends EditorOptions {
   hideUi?: boolean
   onSave?: (blob: Blob, background: boolean) => void
   themeToggle?: boolean
   gridControl?: boolean
   watermark?: boolean
 }
-
 export type { EditorListenerMap }

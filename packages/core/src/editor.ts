@@ -328,12 +328,12 @@ export class Editor {
     this._themeFade = null;
     this._pendingFit = null;
 
-    container.classList.add("qd-root");
+    container.classList.add("ic-root");
     container.tabIndex = 0;
     this.canvas = document.createElement("canvas");
-    this.canvas.className = "qd-canvas";
+    this.canvas.className = "ic-canvas";
     this.overlay = document.createElement("canvas");
-    this.overlay.className = "qd-overlay";
+    this.overlay.className = "ic-overlay";
     container.prepend(this.overlay);
     container.prepend(this.canvas);
 
@@ -558,7 +558,7 @@ export class Editor {
     if (t === this.theme) return;
     this._crossfadeTheme();
     this.theme = t;
-    this.container.dataset.qdTheme = t.id;
+    this.container.dataset.icTheme = t.id;
     this.requestRender();
     this.emit("theme");
   }
@@ -577,7 +577,7 @@ export class Editor {
       snap.width = w;
       snap.height = h;
       snap.getContext("2d")!.drawImage(this.canvas, 0, 0);
-      snap.className = "qd-theme-fade";
+      snap.className = "ic-theme-fade";
       this._themeFade?.remove();
       this._themeFade = snap;
       this.overlay.after(snap);
@@ -1390,7 +1390,7 @@ export class Editor {
     if (!shape) return;
     if (!fresh) this.store.beginBatch();
     const ta = document.createElement("textarea");
-    ta.className = "qd-text-edit";
+    ta.className = "ic-text-edit";
     ta.value =
       field === "label"
         ? shape.type === "geo"
@@ -2002,7 +2002,7 @@ export class Editor {
     }
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ quickdraw: 1, shapes, assets }),
+        JSON.stringify({ incantly: 1, shapes, assets }),
       );
     } catch (e) {
       console.warn("board copy failed", e);
@@ -2027,7 +2027,7 @@ export class Editor {
     try {
       const text = await navigator.clipboard.readText();
       const data = JSON.parse(text);
-      if (data && data.quickdraw && Array.isArray(data.shapes))
+      if (data && (data.incantly || data.quickdraw) && Array.isArray(data.shapes))
         this._pasteShapes(data);
     } catch {}
   }
@@ -2619,7 +2619,7 @@ export class Editor {
     c.removeEventListener("blur", this._onBlur);
     this.canvas.remove();
     this.overlay.remove();
-    c.classList.remove("qd-root");
+    c.classList.remove("ic-root");
   }
 }
 

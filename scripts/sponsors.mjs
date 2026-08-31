@@ -15,7 +15,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-const LOGIN = process.env.SPONSORS_LOGIN ?? 'quickdrawjs'
+const LOGIN = process.env.SPONSORS_LOGIN ?? 'Incantly'
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs')
 
 const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN
@@ -56,7 +56,7 @@ const res = await fetch('https://api.github.com/graphql', {
   headers: {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
-    'User-Agent': 'quickdraw-sponsors',
+    'User-Agent': 'incantly-sponsors',
   },
   body: JSON.stringify({ query: QUERY, variables: { login: LOGIN } }),
 })

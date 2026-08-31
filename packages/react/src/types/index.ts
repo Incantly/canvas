@@ -10,14 +10,14 @@ import type {
   Store,
   Styles,
   ThemeId,
-} from '@quickdrawjs/core'
+} from '@incantly/canvas'
 
-export interface QuickdrawRef {
+export interface CanvasRef {
   readonly editor: Editor | null
   readonly ui: BoardUI | null
 }
 
-export interface QuickdrawProps {
+export interface CanvasProps {
   theme?: ThemeId | string
   grid?: GridId
   readonly?: boolean

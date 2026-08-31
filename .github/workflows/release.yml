@@ -29,8 +29,8 @@ jobs:
       - run: npm run typecheck
       # Skipped (not failed) when the NPM_TOKEN secret isn't configured yet.
       - if: env.NODE_AUTH_TOKEN != ''
-        run: npm publish --workspace=@quickdrawjs/core --provenance --access public
+        run: npm publish --workspace=@incantly/canvas --provenance --access public
       - if: env.NODE_AUTH_TOKEN != ''
-        run: npm publish --workspace=@quickdrawjs/react --provenance --access public
+        run: npm publish --workspace=@incantly/canvas-react --provenance --access public
       - if: env.NODE_AUTH_TOKEN != ''
-        run: npm publish --workspace=@quickdrawjs/react-native --provenance --access public
+        run: npm publish --workspace=@incantly/canvas-react-native --provenance --access public

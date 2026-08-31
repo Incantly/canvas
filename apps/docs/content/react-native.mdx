@@ -1,12 +1,12 @@
 ---
 title: React Native
-description: The Quickdraw React Native component — Apple Pencil pressure, palm rejection, Expo support, and the typed WebView bridge.
+description: The Incantly Canvas React Native component — Apple Pencil pressure, palm rejection, Expo support, and the typed WebView bridge.
 ---
 
 # React Native
 
 ```sh
-npm install @quickdrawjs/react-native react-native-webview
+npm install @incantly/canvas-react-native react-native-webview
 ```
 
 The engine ships *inside the package* as a single self-contained HTML page —
@@ -21,12 +21,12 @@ own.
 
 ```jsx
 import { useRef } from 'react'
-import { Quickdraw } from '@quickdrawjs/react-native'
+import { Canvas } from '@incantly/canvas-react-native'
 
 export default function Board() {
   const board = useRef(null)
   return (
-    <Quickdraw
+    <Canvas
       ref={board}
       theme="dark"
       grid="dots"

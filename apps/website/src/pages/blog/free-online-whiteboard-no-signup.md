@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Article.astro
 title: "A free online whiteboard with no sign-up (and no catch)"
-description: "Need a whiteboard right now? Quickdraw's web app opens straight to a canvas: no account, autosaves in your browser, exports to PNG, works with Apple Pencil. Here's what it does and how your data is handled."
+description: "Need a whiteboard right now? Incantly Canvas's web app opens straight to a canvas: no account, autosaves in your browser, exports to PNG, works with Apple Pencil. Here's what it does and how your data is handled."
 date: 2026-08-01
 ---
 
@@ -9,7 +9,7 @@ Sometimes you just need a surface to think on — a quick diagram in a call, a
 sketch to explain a bug, a plan drawn out loud. What you don't need is a
 sign-up wall, a workspace to name, and an onboarding tour.
 
-[app.tryquickdraw.com](https://app.tryquickdraw.com) opens straight
+[github.com/Incantly/canvas](https://github.com/Incantly/canvas) opens straight
 to a canvas. Draw. That's the product.
 
 ## What you get
@@ -41,7 +41,7 @@ browser data clears the board. For anything you'd be sad to lose, export.
 ## Why it's free
 
 The app is a demo that turned out to be useful. It runs on
-[Quickdraw](https://tryquickdraw.com), an MIT-licensed whiteboard SDK for
+[Incantly Canvas](https://github.com/Incantly/canvas), an MIT-licensed whiteboard SDK for
 developers — the app you draw in is the SDK, unmodified. Keeping the app
 free is how people find the project, the same way the small mark in the
 corner of embedded boards is.
@@ -49,11 +49,11 @@ corner of embedded boards is.
 If you're a developer and want this canvas inside your own product:
 
 ```bash
-npm install @quickdrawjs/react
+npm install @incantly/canvas-react
 ```
 
 The [docs](/docs/) take it from there, and the whole thing is
-[open source](https://github.com/quickdrawjs/quickdraw).
+[open source](https://github.com/Incantly/canvas).
 
 ## Keyboard shortcuts worth knowing
 
@@ -68,4 +68,4 @@ The [docs](/docs/) take it from there, and the whole thing is
 | <kbd>⇧1</kbd> | Zoom to fit |
 | <kbd>⌘Z</kbd> / <kbd>⇧⌘Z</kbd> | Undo / redo |
 
-[Open the whiteboard →](https://app.tryquickdraw.com)
+[Open the whiteboard →](https://github.com/Incantly/canvas)

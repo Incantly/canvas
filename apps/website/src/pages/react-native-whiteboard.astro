@@ -2,7 +2,7 @@
 import Landing from '../layouts/Landing.astro'
 import { GITHUB_URL, SITE_URL } from '../consts.js'
 
-const title = 'React Native whiteboard with Apple Pencil support | Quickdraw'
+const title = 'React Native whiteboard with Apple Pencil support | Incantly Canvas'
 const description =
   'A drawing and whiteboard component for React Native and Expo: Apple Pencil pressure, palm rejection, offline support, JSON snapshots, and PNG export. MIT licensed, free for commercial use.'
 
@@ -23,7 +23,7 @@ const jsonLd = {
           name: 'How do I add a whiteboard to a React Native app?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Install @quickdrawjs/react-native and react-native-webview, then render <Quickdraw style={{ flex: 1 }} />. The engine ships inside the package as a self-contained HTML page — no network needed, works offline.',
+            text: 'Install @incantly/canvas-react-native and react-native-webview, then render <Canvas style={{ flex: 1 }} />. The engine ships inside the package as a self-contained HTML page — no network needed, works offline.',
           },
         },
         {
@@ -52,7 +52,7 @@ const jsonLd = {
     <h1>A whiteboard for React Native</h1>
     <p class="lede">
       Real drawing on iOS and Android: Apple Pencil pressure, palm rejection,
-      an infinite canvas, and the full Quickdraw toolset — wrapped in one
+      an infinite canvas, and the full Incantly Canvas toolset — wrapped in one
       component with a typed bridge. Works in Expo, works offline.
     </p>
     <div class="actions">
@@ -63,11 +63,11 @@ const jsonLd = {
 
   <section>
     <h2>The whole integration</h2>
-    <pre><code>{`npm install @quickdrawjs/react-native react-native-webview
+    <pre><code>{`npm install @incantly/canvas-react-native react-native-webview
 
-import { Quickdraw } from '@quickdrawjs/react-native'
+import { Canvas } from '@incantly/canvas-react-native'
 
-<Quickdraw
+<Canvas
   ref={board}
   theme="dark"
   onChange={(diff) => sync(diff)}
@@ -82,7 +82,7 @@ const png = await board.current.exportPng({ scale: 2 })`}</code></pre>
   <section class="prose">
     <h2>How it works</h2>
     <p>
-      The package embeds the Quickdraw engine as a single self-contained HTML
+      The package embeds the Incantly Canvas engine as a single self-contained HTML
       string rendered in a WebView — no server, no network fetch, nothing to
       cache. A typed message bridge carries props in and events out, so from
       your app's side it behaves like any other component: props, callbacks,

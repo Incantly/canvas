@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>Quickdraw — free online whiteboard</title>
+  <title>Incantly Canvas — free online whiteboard</title>
   <meta name="description" content="A free online whiteboard. Draw with pressure ink, shapes, sticky notes, and arrows on an infinite canvas. No account, autosaved in your browser, exports to PNG. Open source." />
-  <link rel="canonical" href="https://app.tryquickdraw.com/" />
+  <link rel="canonical" href="https://github.com/Incantly/canvas" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Quickdraw — free online whiteboard" />
+  <meta property="og:title" content="Incantly Canvas — free online whiteboard" />
   <meta property="og:description" content="Draw instantly. No account, autosaved locally, open source." />
-  <meta property="og:image" content="https://tryquickdraw.com/og.png" />
+  <meta property="og:image" content="https://github.com/Incantly/canvas/raw/main/docs/star-history.svg" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="theme-color" content="#faf8f4" />
   <style>
@@ -46,7 +46,7 @@
       --del-hot-bg: rgba(255, 123, 107, 0.14);
       --current-dot: #6285f5;
     }
-    .qd-app-logo {
+    .ic-app-logo {
       position: fixed; left: 10px; top: 10px; z-index: 60;
       display: flex; align-items: center; gap: 8px;
       font: 700 15.5px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -61,11 +61,11 @@
       -webkit-tap-highlight-color: transparent;
       transition: background 320ms ease, color 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
     }
-    .qd-app-logo svg { width: 20px; height: 20px; display: block; }
-    .qd-app-logo:hover { background: var(--bar-hover); }
+    .ic-app-logo svg { width: 20px; height: 20px; display: block; }
+    .ic-app-logo:hover { background: var(--bar-hover); }
 
     /* File bar — files menu, new file, and the current file's name. */
-    .qd-filebar {
+    .ic-filebar {
       position: fixed; left: 152px; top: 10px; z-index: 60;
       display: flex; align-items: center; gap: 2px;
       padding: 4px 6px; border-radius: 999px;
@@ -78,25 +78,25 @@
       -webkit-backdrop-filter: blur(10px);
       transition: background 320ms ease, color 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
     }
-    .qd-file-btn {
+    .ic-file-btn {
       appearance: none; border: none; background: transparent; color: inherit;
       display: flex; align-items: center; justify-content: center;
       width: 30px; height: 30px; border-radius: 999px; cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       transition: background 140ms ease;
     }
-    .qd-file-btn svg { width: 17px; height: 17px; display: block; }
-    .qd-file-btn:hover { background: var(--bar-hover); }
-    .qd-file-name {
+    .ic-file-btn svg { width: 17px; height: 17px; display: block; }
+    .ic-file-btn:hover { background: var(--bar-hover); }
+    .ic-file-name {
       appearance: none; border: none; background: transparent; color: inherit;
       font: inherit; font-weight: 600; letter-spacing: -0.005em;
       margin-left: 2px; padding: 7px 10px; border-radius: 999px;
       min-width: 40px; max-width: 200px; cursor: text;
       transition: background 140ms ease;
     }
-    .qd-file-name:hover { background: var(--bar-hover); }
-    .qd-file-name:focus { outline: none; background: var(--bar-hover); }
-    .qd-files-menu {
+    .ic-file-name:hover { background: var(--bar-hover); }
+    .ic-file-name:focus { outline: none; background: var(--bar-hover); }
+    .ic-files-menu {
       position: fixed; left: 156px; top: 54px; z-index: 70;
       min-width: 230px; max-height: 60vh; overflow-y: auto;
       background: var(--menu-bg); color: var(--bar-ink);
@@ -107,58 +107,58 @@
       padding: 6px;
       transition: background 320ms ease, color 320ms ease, border-color 320ms ease, box-shadow 320ms ease;
     }
-    .qd-files-menu[hidden] { display: none; }
-    .qd-files-menu .qd-file-row {
+    .ic-files-menu[hidden] { display: none; }
+    .ic-files-menu .ic-file-row {
       display: flex; align-items: center; gap: 8px;
       padding: 8px 10px; border-radius: 8px; cursor: pointer;
       font: 500 14px/1.2 inherit;
     }
-    .qd-file-row:hover { background: var(--bar-hover); }
-    .qd-file-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .qd-file-row.current .name { font-weight: 700; }
-    .qd-file-row .dot { width: 6px; height: 6px; border-radius: 999px; background: transparent; flex: none; }
-    .qd-file-row.current .dot { background: var(--current-dot); }
-    .qd-file-row .del {
+    .ic-file-row:hover { background: var(--bar-hover); }
+    .ic-file-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ic-file-row.current .name { font-weight: 700; }
+    .ic-file-row .dot { width: 6px; height: 6px; border-radius: 999px; background: transparent; flex: none; }
+    .ic-file-row.current .dot { background: var(--current-dot); }
+    .ic-file-row .del {
       appearance: none; border: none; background: transparent; cursor: pointer;
       color: var(--del-ink); border-radius: 6px; flex: none;
       width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
       font: 600 14px/1 inherit; padding: 0;
     }
-    .qd-file-row .del:hover { color: var(--del-hot); background: var(--del-hot-bg); }
+    .ic-file-row .del:hover { color: var(--del-hot); background: var(--del-hot-bg); }
 
     @media (max-width: 560px) {
       /* the wordmark folds to its glyph so the file bar fits beside it */
-      .qd-app-logo { padding: 8px 11px; }
-      .qd-app-logo .logo-word { display: none; }
-      .qd-filebar { left: 60px; }
-      .qd-file-name { max-width: 110px; }
-      .qd-files-menu { left: 14px; }
+      .ic-app-logo { padding: 8px 11px; }
+      .ic-app-logo .logo-word { display: none; }
+      .ic-filebar { left: 60px; }
+      .ic-file-name { max-width: 110px; }
+      .ic-files-menu { left: 14px; }
     }
   </style>
 </head>
 <body>
   <div id="board"></div>
-  <a class="qd-app-logo" id="logo" href="https://tryquickdraw.com" rel="noopener" aria-label="Quickdraw home">
+  <a class="ic-app-logo" id="logo" href="https://github.com/Incantly/canvas" rel="noopener" aria-label="Incantly Canvas home">
     <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
       <path d="M7 21 C7 12, 13 6.5, 20 7.5 C26.5 8.5, 27.5 16, 22 18.8 C17.5 21, 13 19.5, 14 15" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/>
       <circle cx="24.5" cy="24.5" r="2.6" fill="#2f6fed"/>
     </svg>
-    <span class="logo-word">Quickdraw</span>
+    <span class="logo-word">Incantly</span>
   </a>
-  <div class="qd-filebar" id="filebar">
-    <button class="qd-file-btn" id="files-btn" type="button" title="Your files" aria-label="Your files" aria-haspopup="true" aria-expanded="false">
+  <div class="ic-filebar" id="filebar">
+    <button class="ic-file-btn" id="files-btn" type="button" title="Your files" aria-label="Your files" aria-haspopup="true" aria-expanded="false">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M2.5 5.5 A1.8 1.8 0 0 1 4.3 3.7 H7.4 L9.2 5.6 H15.7 A1.8 1.8 0 0 1 17.5 7.4 V14.5 A1.8 1.8 0 0 1 15.7 16.3 H4.3 A1.8 1.8 0 0 1 2.5 14.5 Z"/>
       </svg>
     </button>
-    <button class="qd-file-btn" id="new-file-btn" type="button" title="New file" aria-label="New file">
+    <button class="ic-file-btn" id="new-file-btn" type="button" title="New file" aria-label="New file">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
         <path d="M10 4.5 V15.5 M4.5 10 H15.5"/>
       </svg>
     </button>
-    <input class="qd-file-name" id="file-name" type="text" value="Untitled" spellcheck="false" autocomplete="off" aria-label="File name" />
+    <input class="ic-file-name" id="file-name" type="text" value="Untitled" spellcheck="false" autocomplete="off" aria-label="File name" />
   </div>
-  <div class="qd-files-menu" id="files-menu" hidden role="menu" aria-label="Files"></div>
+  <div class="ic-files-menu" id="files-menu" hidden role="menu" aria-label="Files"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -42,23 +42,23 @@ hardware-accelerated, handles thousands of strokes, and — crucially — gets
 
 ## Or: install the package that solved them
 
-[`@quickdrawjs/react-native`](https://www.npmjs.com/package/@quickdrawjs/react-native)
-wraps the MIT-licensed [Quickdraw](https://tryquickdraw.com) engine in exactly
+[`@incantly/canvas-react-native`](https://www.npmjs.com/package/@incantly/canvas-react-native)
+wraps the MIT-licensed [Incantly Canvas](https://github.com/Incantly/canvas) engine in exactly
 this architecture. The engine ships *inside the package* as one
 self-contained HTML string — no network, works offline, no asset pipeline.
 
 ```bash
-npm install @quickdrawjs/react-native react-native-webview
+npm install @incantly/canvas-react-native react-native-webview
 ```
 
 ```jsx
 import { useRef } from 'react'
-import { Quickdraw } from '@quickdrawjs/react-native'
+import { Canvas } from '@incantly/canvas-react-native'
 
 export default function Board() {
   const board = useRef(null)
   return (
-    <Quickdraw
+    <Canvas
       ref={board}
       theme="dark"
       onChange={(diff) => console.log('changed', diff)}
@@ -96,4 +96,4 @@ renderer (`@shopify/react-native-skia`) is the right tool — at the cost of
 building the whiteboard layer yourself. For a document-style whiteboard,
 notes app, or annotation feature, the WebView architecture is what ships.
 
-*Quickdraw is MIT-licensed and [open to contributions](https://github.com/quickdrawjs/quickdraw).*
+*Incantly Canvas is MIT-licensed and [open to contributions](https://github.com/Incantly/canvas).*

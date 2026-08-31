@@ -2,9 +2,9 @@
 import Landing from '../layouts/Landing.astro'
 import { APP_URL, GITHUB_URL, SITE_URL } from '../consts.js'
 
-const title = 'React whiteboard component — free & MIT licensed | Quickdraw'
+const title = 'React whiteboard component — free & MIT licensed | Incantly Canvas'
 const description =
-  'Add a whiteboard to your React app with one component: <Quickdraw />. Pressure ink, shapes, sticky notes, undo, dark mode, PNG export, and JSON persistence. MIT licensed, free for commercial use.'
+  'Add a whiteboard to your React app with one component: <Canvas />. Pressure ink, shapes, sticky notes, undo, dark mode, PNG export, and JSON persistence. MIT licensed, free for commercial use.'
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -23,7 +23,7 @@ const jsonLd = {
           name: 'What is the best free whiteboard component for React?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Quickdraw and Excalidraw are both MIT-licensed React whiteboard options. Quickdraw ships a single <Quickdraw /> component with pressure ink, shapes, undo, themes, and JSON persistence, plus React Native and framework-free packages.',
+            text: 'Incantly Canvas and Excalidraw are both MIT-licensed React whiteboard options. Incantly Canvas ships a single <Canvas /> component with pressure ink, shapes, undo, themes, and JSON persistence, plus React Native and framework-free packages.',
           },
         },
         {
@@ -31,7 +31,7 @@ const jsonLd = {
           name: 'How do I save a whiteboard drawing in React?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'With Quickdraw, editor.store.getSnapshot() returns the document as plain JSON. Save it anywhere; pass it back as the snapshot prop to restore.',
+            text: 'With Incantly Canvas, editor.store.getSnapshot() returns the document as plain JSON. Save it anywhere; pass it back as the snapshot prop to restore.',
           },
         },
         {
@@ -39,7 +39,7 @@ const jsonLd = {
           name: 'Can I build a collaborative whiteboard in React?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Yes. Quickdraw emits a JSON-safe diff on every change; send diffs over a WebSocket and apply remote ones with store.applyDiff(diff, "remote"). Remote changes never touch local undo.',
+            text: 'Yes. Incantly Canvas emits a JSON-safe diff on every change; send diffs over a WebSocket and apply remote ones with store.applyDiff(diff, "remote"). Remote changes never touch local undo.',
           },
         },
       ],
@@ -63,15 +63,15 @@ const jsonLd = {
 
   <section>
     <h2>The whole integration</h2>
-    <pre><code>{`npm install @quickdrawjs/react
+    <pre><code>{`npm install @incantly/canvas-react
 
-import { Quickdraw } from '@quickdrawjs/react'
-import '@quickdrawjs/core/quickdraw.css'
+import { Canvas } from '@incantly/canvas-react'
+import '@incantly/canvas/canvas.css'
 
 export default function Board() {
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Quickdraw theme="light" grid="dots" />
+      <Canvas theme="light" grid="dots" />
     </div>
   )
 }`}</code></pre>
@@ -83,7 +83,7 @@ export default function Board() {
       The document is plain JSON. <code>onChange</code> fires on every edit;
       <code>snapshot</code> restores a saved board:
     </p>
-    <pre><code>{`<Quickdraw
+    <pre><code>{`<Canvas
   snapshot={saved}
   autoFit
   onChange={(diff, source, editor) =>

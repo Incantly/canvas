@@ -13,9 +13,9 @@ import { createBridge, encodeDispatch } from './bridge.js'
 
 export { BOARD_HTML } from './board-html.generated.js'
 export { createBridge, encodeDispatch } from './bridge.js'
-export type { QuickdrawProps, QuickdrawRef } from './types/index.js'
+export type { CanvasProps, CanvasRef } from './types/index.js'
 
-import type { QuickdrawProps, QuickdrawRef } from './types/index.js'
+import type { CanvasProps, CanvasRef } from './types/index.js'
 
 type Bridge = ReturnType<typeof createBridge>
 
@@ -26,9 +26,9 @@ interface State {
   bridge: Bridge
 }
 
-export const Quickdraw = forwardRef(function Quickdraw(
-  props: QuickdrawProps,
-  ref: ForwardedRef<QuickdrawRef>,
+export const Canvas = forwardRef(function Canvas(
+  props: CanvasProps,
+  ref: ForwardedRef<CanvasRef>,
 ) {
   const {
     theme = 'light',
@@ -95,7 +95,7 @@ export const Quickdraw = forwardRef(function Quickdraw(
       case 'ready': {
         st.ready = true
         webRef.current?.injectJavaScript(
-          `window.__qdDispatch(${JSON.stringify({ type: 'init', ...initRef.current })}); true;`,
+          `window.__icDispatch(${JSON.stringify({ type: 'init', ...initRef.current })}); true;`,
         )
         for (const js of st.queue.splice(0)) webRef.current?.injectJavaScript(js)
         break

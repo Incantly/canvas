@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Quickdraw, useQuickdrawStore } from '@quickdrawjs/react'
-import type { QuickdrawRef } from '@quickdrawjs/react'
-import type { Editor, GridId, ThemeId } from '@quickdrawjs/core'
-import '@quickdrawjs/core/quickdraw.css'
+import { Canvas, useCanvasStore } from '@incantly/canvas-react'
+import type { CanvasRef } from '@incantly/canvas-react'
+import type { Editor, GridId, ThemeId } from '@incantly/canvas'
+import '@incantly/canvas/canvas.css'
 
-const STORAGE_KEY = 'quickdraw-react-demo'
+const STORAGE_KEY = 'incantly-react-demo'
+const LEGACY_STORAGE_KEY = 'quickdraw-react-demo'
 
-const load = (): Parameters<typeof useQuickdrawStore>[0] => {
+const load = (): Parameters<typeof useCanvasStore>[0] => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY)
     return raw ? JSON.parse(raw) : undefined
   } catch {
     return undefined
@@ -24,8 +25,8 @@ declare global {
 export default function App() {
   const [theme, setTheme] = useState<ThemeId>('light')
   const [grid, setGrid] = useState<GridId>('lines')
-  const boardRef = useRef<QuickdrawRef>(null)
-  const store = useQuickdrawStore(load())
+  const boardRef = useRef<CanvasRef>(null)
+  const store = useCanvasStore(load())
 
   useEffect(() => {
     let t = 0
@@ -43,7 +44,7 @@ export default function App() {
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Quickdraw
+      <Canvas
         ref={boardRef}
         store={store}
         theme={theme}

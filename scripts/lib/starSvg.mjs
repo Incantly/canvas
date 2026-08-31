@@ -68,10 +68,10 @@ export function renderStarSvg(chart, theme, meta) {
     })
     .join('')
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" font-family="${FONT}" role="img" aria-label="Quickdraw star history on GitHub — ${label}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" font-family="${FONT}" role="img" aria-label="Incantly Canvas star history on GitHub — ${label}">
   <!-- generated ${esc(meta.generatedAt)} by scripts/star-history.mjs — do not edit by hand -->
   <defs>
-    <linearGradient id="qd-star-fill" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="ic-star-fill" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${t.fillTop}"/>
       <stop offset="100%" stop-color="${t.fillBottom}"/>
     </linearGradient>
@@ -81,7 +81,7 @@ export function renderStarSvg(chart, theme, meta) {
   <text x="47" y="33" fill="${t.title}" font-size="15" font-weight="700">${label}</text>
   <text x="${w - 24}" y="33" fill="${t.ink}" font-size="13" text-anchor="end">${esc(meta.repo)}</text>
   ${grid}
-  <path d="${chart.area}" fill="url(#qd-star-fill)"/>
+  <path d="${chart.area}" fill="url(#ic-star-fill)"/>
   <path d="${chart.line}" fill="none" stroke="${t.line}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
   <circle cx="${chart.last.x}" cy="${chart.last.y}" r="8" fill="${t.line}" opacity="0.22"/>
   <circle cx="${chart.last.x}" cy="${chart.last.y}" r="4" fill="${t.line}"/>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { Editor, TOOLS } from '../src/editor.js'
-import { createQuickdraw } from '../src/index.js'
+import { createCanvas } from '../src/index.js'
 
 let pid = 1
 const ev = (x: number, y: number, over: any = {}) => ({
@@ -230,7 +230,7 @@ describe('text & notes', () => {
   it('placing text opens a textarea; typing commits; empty evaporates', () => {
     editor.setTool('text')
     drag(editor, [[50, 50]])
-    const ta = container.querySelector('textarea.qd-text-edit') as HTMLTextAreaElement
+    const ta = container.querySelector('textarea.ic-text-edit') as HTMLTextAreaElement
     expect(ta).toBeTruthy()
     ta.value = 'hello world'
     ta.dispatchEvent(new window.Event('input'))
@@ -250,7 +250,7 @@ describe('text & notes', () => {
     drag(editor, [[50, 50]])
     const note = editor.store.shapes().find((s: any) => s.type === 'note') as any
     expect(note.props.color).toBe('yellow')
-    const ta = container.querySelector('textarea.qd-text-edit') as HTMLTextAreaElement
+    const ta = container.querySelector('textarea.ic-text-edit') as HTMLTextAreaElement
     ta.value = 'sticky'
     ta.dispatchEvent(new window.Event('input'))
     ;(editor as any)._commitText()
@@ -296,7 +296,7 @@ describe('readonly & theme', () => {
   it('theme switches live and reflects on the container', () => {
     editor.setTheme('dark')
     expect(editor.theme.id).toBe('dark')
-    expect(container.dataset.qdTheme).toBe('dark')
+    expect(container.dataset.icTheme).toBe('dark')
   })
 })
 
@@ -455,21 +455,21 @@ describe('events & lifecycle', () => {
   it('destroy removes canvases and stops listening', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2 } as any)
-    expect(c2.querySelector('.qd-dock')).toBeTruthy()
+    const board = createCanvas({ container: c2 } as any)
+    expect(c2.querySelector('.ic-dock')).toBeTruthy()
     board.destroy()
     expect(c2.querySelector('canvas')).toBeNull()
-    expect(c2.querySelector('.qd-dock')).toBeNull()
+    expect(c2.querySelector('.ic-dock')).toBeNull()
     c2.remove()
   })
 })
 
-describe('createQuickdraw UI', () => {
+describe('createCanvas UI', () => {
   it('builds the dock with tool buttons that switch tools', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2 } as any)
-    const drawBtn = c2.querySelector('.qd-dock button[data-name="draw"]') as HTMLButtonElement
+    const board = createCanvas({ container: c2 } as any)
+    const drawBtn = c2.querySelector('.ic-dock button[data-name="draw"]') as HTMLButtonElement
     expect(drawBtn).toBeTruthy()
     drawBtn.click()
     expect(board.editor.tool).toBe('draw')
@@ -481,23 +481,23 @@ describe('createQuickdraw UI', () => {
   it('shows the watermark by default, linked to the site', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2 } as any)
-    const mark = c2.querySelector('.qd-watermark') as HTMLAnchorElement
+    const board = createCanvas({ container: c2 } as any)
+    const mark = c2.querySelector('.ic-watermark') as HTMLAnchorElement
     expect(mark).toBeTruthy()
-    expect(mark.href).toBe('https://tryquickdraw.com/')
+    expect(mark.href).toBe('https://github.com/Incantly/canvas')
     board.destroy()
-    expect(c2.querySelector('.qd-watermark')).toBeNull()
+    expect(c2.querySelector('.ic-watermark')).toBeNull()
     c2.remove()
   })
 
   it('watermark: false removes it; hideUi keeps it', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const bare = createQuickdraw({ container: c2, watermark: false } as any)
-    expect(c2.querySelector('.qd-watermark')).toBeNull()
+    const bare = createCanvas({ container: c2, watermark: false } as any)
+    expect(c2.querySelector('.ic-watermark')).toBeNull()
     bare.destroy()
-    const headless = createQuickdraw({ container: c2, hideUi: true } as any)
-    expect(c2.querySelector('.qd-watermark')).toBeTruthy()
+    const headless = createCanvas({ container: c2, hideUi: true } as any)
+    expect(c2.querySelector('.ic-watermark')).toBeTruthy()
     headless.destroy()
     c2.remove()
   })
@@ -505,8 +505,8 @@ describe('createQuickdraw UI', () => {
   it('undo/redo buttons track history through full gestures', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2 } as any)
-    const btn = (n: string) => c2.querySelector(`.qd-actions button[data-name="${n}"]`) as HTMLButtonElement
+    const board = createCanvas({ container: c2 } as any)
+    const btn = (n: string) => c2.querySelector(`.ic-actions button[data-name="${n}"]`) as HTMLButtonElement
     expect(btn('undo').disabled).toBe(true)
 
     board.editor.setTool('draw')
@@ -528,8 +528,8 @@ describe('createQuickdraw UI', () => {
   it('duplicate/delete light up with a selection and act on it', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2 } as any)
-    const btn = (n: string) => c2.querySelector(`.qd-actions button[data-name="${n}"]`) as HTMLButtonElement
+    const board = createCanvas({ container: c2 } as any)
+    const btn = (n: string) => c2.querySelector(`.ic-actions button[data-name="${n}"]`) as HTMLButtonElement
     expect(btn('duplicate').disabled).toBe(true)
     expect(btn('delete').disabled).toBe(true)
 
@@ -552,11 +552,11 @@ describe('createQuickdraw UI', () => {
   it('the board menu switches theme and grid', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2 } as any)
-    ;(c2.querySelector('.qd-dock button[data-name="menu"]') as HTMLButtonElement).click()
-    const seg = (label: string) => [...c2.querySelectorAll('.qd-menu-row')]
+    const board = createCanvas({ container: c2 } as any)
+    ;(c2.querySelector('.ic-dock button[data-name="menu"]') as HTMLButtonElement).click()
+    const seg = (label: string) => [...c2.querySelectorAll('.ic-menu-row')]
       .find((r: any) => r.textContent.trim().startsWith(label)) as HTMLElement
-    const btns = (label: string) => [...seg(label).querySelectorAll('.qd-seg-btn')] as HTMLElement[]
+    const btns = (label: string) => [...seg(label).querySelectorAll('.ic-seg-btn')] as HTMLElement[]
 
     expect((btns('Theme')[0] as any).classList.contains('on')).toBe(true)
     btns('Theme')[1].click()
@@ -564,15 +564,15 @@ describe('createQuickdraw UI', () => {
     expect((btns('Theme')[1] as any).classList.contains('on')).toBe(true)
 
     expect(board.editor.grid).toBe('lines')
-    const gridRow = c2.querySelector('.qd-has-sub') as HTMLElement
+    const gridRow = c2.querySelector('.ic-has-sub') as HTMLElement
     expect(gridRow.textContent).toContain('Grid')
     expect(gridRow.textContent).toContain('Lines')
     expect(gridRow.classList.contains('sub-open')).toBe(false)
     gridRow.click()
     expect(gridRow.classList.contains('sub-open')).toBe(true)
-    const options = [...gridRow.querySelectorAll('.qd-submenu .qd-menu-item')] as HTMLElement[]
+    const options = [...gridRow.querySelectorAll('.ic-submenu .ic-menu-item')] as HTMLElement[]
     expect(options.length).toBe(6)
-    expect((options[1].querySelector('.qd-mi-check') as HTMLElement).innerHTML).not.toBe('')
+    expect((options[1].querySelector('.ic-mi-check') as HTMLElement).innerHTML).not.toBe('')
     options[0].click()
     expect(board.editor.grid).toBe('none')
     options[3].click()
@@ -580,9 +580,9 @@ describe('createQuickdraw UI', () => {
     options[5].click()
     expect(board.editor.grid).toBe('iso')
     expect(gridRow.classList.contains('sub-open')).toBe(true)
-    expect((options[5].querySelector('.qd-mi-check') as HTMLElement).innerHTML).not.toBe('')
-    expect((options[1].querySelector('.qd-mi-check') as HTMLElement).innerHTML).toBe('')
-    expect((gridRow.querySelector('.qd-mi-value') as HTMLElement).textContent).toBe('Isometric')
+    expect((options[5].querySelector('.ic-mi-check') as HTMLElement).innerHTML).not.toBe('')
+    expect((options[1].querySelector('.ic-mi-check') as HTMLElement).innerHTML).toBe('')
+    expect((gridRow.querySelector('.ic-mi-value') as HTMLElement).textContent).toBe('Isometric')
     gridRow.click()
     expect(gridRow.classList.contains('sub-open')).toBe(false)
 
@@ -593,15 +593,15 @@ describe('createQuickdraw UI', () => {
   it('a host can drop the theme/grid switches', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2, themeToggle: false, gridControl: false } as any)
-    ;(c2.querySelector('.qd-dock button[data-name="menu"]') as HTMLButtonElement).click()
-    expect(c2.querySelectorAll('.qd-menu-row').length).toBe(0)
+    const board = createCanvas({ container: c2, themeToggle: false, gridControl: false } as any)
+    ;(c2.querySelector('.ic-dock button[data-name="menu"]') as HTMLButtonElement).click()
+    expect(c2.querySelectorAll('.ic-menu-row').length).toBe(0)
     board.ui.setOptions({ gridControl: true })
-    ;(c2.querySelector('.qd-dock button[data-name="menu"]') as HTMLButtonElement).click()
-    const gridRow = [...c2.querySelectorAll('.qd-menu-item')]
+    ;(c2.querySelector('.ic-dock button[data-name="menu"]') as HTMLButtonElement).click()
+    const gridRow = [...c2.querySelectorAll('.ic-menu-item')]
       .find((r: any) => r.textContent.trim().startsWith('Grid'))
     expect(gridRow).toBeTruthy()
-    expect(c2.querySelectorAll('.qd-menu-row').length).toBe(0)
+    expect(c2.querySelectorAll('.ic-menu-row').length).toBe(0)
     board.destroy()
     c2.remove()
   })
@@ -609,11 +609,11 @@ describe('createQuickdraw UI', () => {
   it('the menu clears the board', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2 } as any)
+    const board = createCanvas({ container: c2 } as any)
     board.editor.setTool('draw')
     drag(board.editor, [[10, 10], [40, 40]])
-    ;(c2.querySelector('.qd-dock button[data-name="menu"]') as HTMLButtonElement).click()
-    const clear = [...c2.querySelectorAll('.qd-menu-item')]
+    ;(c2.querySelector('.ic-dock button[data-name="menu"]') as HTMLButtonElement).click()
+    const clear = [...c2.querySelectorAll('.ic-menu-item')]
       .find((b: any) => b.textContent.includes('Clear board')) as HTMLElement
     expect(clear.textContent).toContain('⇧⌘⌫')
     clear.click()
@@ -625,8 +625,8 @@ describe('createQuickdraw UI', () => {
   it('hideUi hides the chrome; readonly does too', () => {
     const c2 = document.createElement('div')
     document.body.appendChild(c2)
-    const board = createQuickdraw({ container: c2, hideUi: true } as any)
-    expect((c2.querySelector('.qd-ui') as HTMLElement).classList.contains('qd-hidden')).toBe(true)
+    const board = createCanvas({ container: c2, hideUi: true } as any)
+    expect((c2.querySelector('.ic-ui') as HTMLElement).classList.contains('ic-hidden')).toBe(true)
     board.destroy()
     c2.remove()
   })

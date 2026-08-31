@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Article.astro
 title: "Real-time whiteboard sync with JSON diffs (no CRDT required)"
-description: "How Quickdraw's store makes multiplayer whiteboards simple: diff-emitting transactions, source-tagged changes, and collaborative undo that actually behaves."
+description: "How Incantly Canvas's store makes multiplayer whiteboards simple: diff-emitting transactions, source-tagged changes, and collaborative undo that actually behaves."
 date: 2026-08-01
 ---
 
@@ -11,12 +11,12 @@ its opinions. Roll your own and you usually discover too late that undo,
 persistence, and sync all wanted the same primitive — and you built three
 different ones.
 
-Quickdraw's answer is boring on purpose: **the diff is the wire format.** This
+Incantly Canvas's answer is boring on purpose: **the diff is the wire format.** This
 post explains the model and walks through a working sync setup.
 
 ## The data model
 
-A Quickdraw document is a flat map of immutable records — shapes, strokes,
+An Incantly Canvas document is a flat map of immutable records — shapes, strokes,
 notes, images. Every mutation happens in a transaction, and every transaction
 emits a diff:
 
@@ -102,8 +102,8 @@ audit trail of a board, stroke by stroke.
 
 ## Try it
 
-The [roadmap](https://github.com/quickdrawjs/quickdraw/issues/1) includes a
+The [roadmap](https://github.com/Incantly/canvas/issues/1) includes a
 runnable two-browser sync example, and
-[issue #4](https://github.com/quickdrawjs/quickdraw/issues/4) is open if you'd
-like to build it with us. Quickdraw is MIT-licensed:
-[github.com/quickdrawjs/quickdraw](https://github.com/quickdrawjs/quickdraw).
+[issue #4](https://github.com/Incantly/canvas/issues/4) is open if you'd
+like to build it with us. Incantly Canvas is MIT-licensed:
+[github.com/Incantly/canvas](https://github.com/Incantly/canvas).

@@ -1,7 +1,7 @@
 {
-  "name": "@quickdrawjs/react",
+  "name": "@incantly/canvas-react",
   "version": "0.2.0",
-  "description": "React component for Quickdraw — the MIT-licensed infinite-canvas whiteboard SDK.",
+  "description": "React component for Incantly Canvas — the MIT-licensed infinite-canvas whiteboard SDK.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -34,19 +34,19 @@
     "excalidraw-alternative"
   ],
   "dependencies": {
-    "@quickdrawjs/core": "0.2.0"
+    "@incantly/canvas": "0.2.0"
   },
   "peerDependencies": {
     "react": ">=17"
   },
   "license": "MIT",
-  "homepage": "https://tryquickdraw.com",
+  "homepage": "https://github.com/Incantly/canvas",
   "repository": {
     "type": "git",
-    "url": "https://github.com/quickdrawjs/quickdraw.git",
+    "url": "https://github.com/Incantly/canvas.git",
     "directory": "packages/react"
   },
-  "bugs": "https://github.com/quickdrawjs/quickdraw/issues",
+  "bugs": "https://github.com/Incantly/canvas/issues",
   "publishConfig": {
     "access": "public"
   }

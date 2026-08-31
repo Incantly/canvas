@@ -7,16 +7,16 @@ import {
   type CSSProperties,
   type ForwardedRef,
 } from 'react'
-import type { Editor, BoardUI } from '@quickdrawjs/core'
-import { Editor as EditorCtor, Store, buildUI, buildWatermark } from '@quickdrawjs/core'
-import type { QuickdrawProps, QuickdrawRef } from './types/index.js'
+import type { Editor, BoardUI } from '@incantly/canvas'
+import { Editor as EditorCtor, Store, buildUI, buildWatermark } from '@incantly/canvas'
+import type { CanvasProps, CanvasRef } from './types/index.js'
 
-export * from '@quickdrawjs/core'
-export type { QuickdrawProps, QuickdrawRef } from './types/index.js'
+export * from '@incantly/canvas'
+export type { CanvasProps, CanvasRef } from './types/index.js'
 
-export const Quickdraw = forwardRef(function Quickdraw(
-  props: QuickdrawProps,
-  ref: ForwardedRef<QuickdrawRef>,
+export const Canvas = forwardRef(function Canvas(
+  props: CanvasProps,
+  ref: ForwardedRef<CanvasRef>,
 ) {
   const {
     theme = 'light',
@@ -68,7 +68,7 @@ export const Quickdraw = forwardRef(function Quickdraw(
       camera,
       styles,
     } as any)
-    host.dataset.qdTheme = editor.theme.id
+    host.dataset.icTheme = editor.theme.id
     const ui = buildUI(editor, {
       hidden: hideUi || readonly,
       themeToggle,
@@ -78,7 +78,7 @@ export const Quickdraw = forwardRef(function Quickdraw(
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
         a.download =
-          'quickdraw-' +
+          'incantly-' +
           new Date().toISOString().slice(0, 19).replaceAll(':', '.') +
           '.png'
         a.click()
@@ -101,7 +101,7 @@ export const Quickdraw = forwardRef(function Quickdraw(
       cbRef.current.onSelectionChange?.([...editor.selection], editor)
     })
     const unsubTheme = editor.on('theme', () => {
-      host.dataset.qdTheme = editor.theme.id
+      host.dataset.icTheme = editor.theme.id
       cbRef.current.onThemeChange?.(editor.theme.id, editor)
     })
     const unsubGrid = editor.on('grid', () => {
@@ -138,7 +138,7 @@ export const Quickdraw = forwardRef(function Quickdraw(
     const editor = editorRef.current
     if (!editor) return
     editor.setTheme(theme)
-    if (hostRef.current) hostRef.current.dataset.qdTheme = editor.theme.id
+    if (hostRef.current) hostRef.current.dataset.icTheme = editor.theme.id
   }, [theme])
 
   useEffect(() => {
@@ -176,7 +176,7 @@ export const Quickdraw = forwardRef(function Quickdraw(
   })
 })
 
-export function useQuickdrawStore(snapshot?: Parameters<Store['loadSnapshot']>[0]): Store {
+export function useCanvasStore(snapshot?: Parameters<Store['loadSnapshot']>[0]): Store {
   const ref = useRef<Store | null>(null)
   if (!ref.current) {
     ref.current = new Store()

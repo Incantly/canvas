@@ -3,9 +3,9 @@ import Landing from '../layouts/Landing.astro'
 import CompareTable from '../components/CompareTable.astro'
 import { GITHUB_URL, SITE_URL } from '../consts.js'
 
-const title = 'tldraw vs Excalidraw (vs Quickdraw): which whiteboard SDK in 2026?'
+const title = 'tldraw vs Excalidraw (vs Incantly Canvas): which whiteboard SDK in 2026?'
 const description =
-  'tldraw vs Excalidraw compared for embedding a whiteboard: licensing, React requirements, React Native support, sync, and pricing — plus where Quickdraw fits as the MIT third option.'
+  'tldraw vs Excalidraw compared for embedding a whiteboard: licensing, React requirements, React Native support, sync, and pricing — plus where Incantly Canvas fits as the MIT third option.'
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -24,7 +24,7 @@ const jsonLd = {
           name: 'Is tldraw or Excalidraw better for embedding a whiteboard?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'tldraw offers deeper SDK polish under a custom license with a paid tier; Excalidraw is MIT and free but React-only with a smaller embedding API. Quickdraw is a third option: MIT, framework-free core, and React Native support.',
+            text: 'tldraw offers deeper SDK polish under a custom license with a paid tier; Excalidraw is MIT and free but React-only with a smaller embedding API. Incantly Canvas is a third option: MIT, framework-free core, and React Native support.',
           },
         },
         {
@@ -64,7 +64,7 @@ const jsonLd = {
     <ul>
       <li><strong>Pick tldraw</strong> if you want the deepest SDK on the market, you're in React, and the custom license (with its paid business tier) works for your budget.</li>
       <li><strong>Pick Excalidraw</strong> if you want MIT-licensed software with a big community, you're in React, and its hand-drawn style plus element set covers your needs.</li>
-      <li><strong>Pick Quickdraw</strong> if you want MIT licensing <em>and</em> need to run outside React — a plain web page, a custom framework, or React Native — or you want sync primitives without a dedicated server product.</li>
+      <li><strong>Pick Incantly Canvas</strong> if you want MIT licensing <em>and</em> need to run outside React — a plain web page, a custom framework, or React Native — or you want sync primitives without a dedicated server product.</li>
     </ul>
   </section>
 
@@ -93,7 +93,7 @@ const jsonLd = {
       built for React, and collaboration runs through its room server.
     </p>
     <p>
-      <strong>Quickdraw</strong> is MIT too, packages for React, React
+      <strong>Incantly Canvas</strong> is MIT too, packages for React, React
       Native, and the bare web, and keeps sync in the data model — every
       change is a JSON diff you can ship over any transport. It's the
       youngest of the three; what it has is complete, and it's
@@ -104,16 +104,16 @@ const jsonLd = {
   <section class="prose">
     <h2>Questions that decide it</h2>
     <ul>
-      <li><strong>Are you in React?</strong> No → tldraw and Excalidraw are out; Quickdraw's core is framework-free.</li>
-      <li><strong>Do you need mobile-native?</strong> Only Quickdraw ships a React Native package.</li>
-      <li><strong>Is the budget zero?</strong> Excalidraw and Quickdraw are MIT; tldraw has a paid tier you may eventually need.</li>
+      <li><strong>Are you in React?</strong> No → tldraw and Excalidraw are out; Incantly Canvas's core is framework-free.</li>
+      <li><strong>Do you need mobile-native?</strong> Only Incantly Canvas ships a React Native package.</li>
+      <li><strong>Is the budget zero?</strong> Excalidraw and Incantly Canvas are MIT; tldraw has a paid tier you may eventually need.</li>
       <li><strong>Do you need advanced canvas features today</strong> (frames, plugins, hosted sync)? tldraw is furthest ahead.</li>
     </ul>
     <p class="more-links">
       More: <a href="/tldraw-alternative/">tldraw alternative</a> ·
       <a href="/excalidraw-alternative/">Excalidraw alternative</a> ·
-      <a href="/blog/tldraw-vs-excalidraw-vs-quickdraw/">the long-form comparison</a> ·
-      <a href="/docs/">Quickdraw docs</a>
+      <a href="/blog/tldraw-vs-excalidraw-vs-incantly-canvas/">the long-form comparison</a> ·
+      <a href="/docs/">Incantly Canvas docs</a>
     </p>
   </section>
 </Landing>

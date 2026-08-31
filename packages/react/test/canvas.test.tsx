@@ -2,23 +2,23 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createRef } from 'react'
 import { render, act, cleanup } from '@testing-library/react'
-import { Quickdraw, useQuickdrawStore, Store, newId } from '../src/index.js'
+import { Canvas, useCanvasStore, Store, newId } from '../src/index.js'
 
 const rect = (id) => ({
   id, typeName: 'shape', type: 'geo', x: 0, y: 0, rot: 0, z: 1,
   props: { geo: 'rectangle', w: 50, h: 50, color: 'blue', size: 'm', dash: 'solid', fill: 'none', font: 'draw' },
 })
 
-describe('<Quickdraw />', () => {
+describe('<Canvas />', () => {
   it('mounts an editor with toolbar and cleans up on unmount', () => {
     const onMount = vi.fn()
-    const { container, unmount } = render(<Quickdraw onMount={onMount} />)
+    const { container, unmount } = render(<Canvas onMount={onMount} />)
     expect(onMount).toHaveBeenCalledTimes(1)
     const [editor, ui] = onMount.mock.calls[0]
     expect(editor.tool).toBe('draw')
     expect(ui.setHidden).toBeTypeOf('function')
     expect(container.querySelectorAll('canvas').length).toBe(2)
-    expect(container.querySelector('.qd-dock')).toBeTruthy()
+    expect(container.querySelector('.ic-dock, .qd-dock')).toBeTruthy()
     unmount()
     expect(container.querySelector('canvas')).toBeNull()
   })
@@ -28,7 +28,7 @@ describe('<Quickdraw />', () => {
     const onSelectionChange = vi.fn()
     let editor
     render(
-      <Quickdraw
+      <Canvas
         onMount={(e) => { editor = e }}
         onChange={onChange}
         onSelectionChange={onSelectionChange}
@@ -50,7 +50,7 @@ describe('<Quickdraw />', () => {
   it('loads a snapshot on mount', () => {
     const snap = { document: { store: { r1: rect('r1') } } }
     let editor
-    render(<Quickdraw snapshot={snap} onMount={(e) => { editor = e }} />)
+    render(<Canvas snapshot={snap} onMount={(e) => { editor = e }} />)
     expect(editor.store.size).toBe(1)
     expect(editor.store.get('r1').props.color).toBe('blue')
     expect(editor.store.canUndo).toBe(false)
@@ -61,19 +61,21 @@ describe('<Quickdraw />', () => {
     store.put(rect('r1'), 'remote')
     const ref = createRef()
     const { rerender, container } = render(
-      <Quickdraw ref={ref} store={store} theme="light" />
+      <Canvas ref={ref} store={store} theme="light" />
     )
     expect(ref.current.editor.store).toBe(store)
     expect(ref.current.editor.theme.id).toBe('light')
 
-    rerender(<Quickdraw ref={ref} store={store} theme="dark" readonly />)
+    rerender(<Canvas ref={ref} store={store} theme="dark" readonly />)
     expect(ref.current.editor.theme.id).toBe('dark')
     expect(ref.current.editor.readonly).toBe(true)
-    expect(container.querySelector('.qd-ui').classList.contains('qd-hidden')).toBe(true)
+    const ui = container.querySelector('.ic-ui, .qd-ui')
+    expect(ui?.classList.contains('ic-hidden') || ui?.classList.contains('qd-hidden')).toBe(true)
 
-    rerender(<Quickdraw ref={ref} store={store} theme="dark" />)
+    rerender(<Canvas ref={ref} store={store} theme="dark" />)
     expect(ref.current.editor.readonly).toBe(false)
-    expect(container.querySelector('.qd-ui').classList.contains('qd-hidden')).toBe(false)
+    const ui2 = container.querySelector('.ic-ui, .qd-ui')
+    expect(ui2?.classList.contains('ic-hidden') || ui2?.classList.contains('qd-hidden')).toBe(false)
   })
 
   it('drives the grid prop and reports in-board switches back', () => {
@@ -81,26 +83,28 @@ describe('<Quickdraw />', () => {
     const onGridChange = vi.fn()
     const ref = createRef()
     const { rerender, container } = render(
-      <Quickdraw ref={ref} grid="lines" onThemeChange={onThemeChange} onGridChange={onGridChange} />
+      <Canvas ref={ref} grid="lines" onThemeChange={onThemeChange} onGridChange={onGridChange} />
     )
     expect(ref.current.editor.grid).toBe('lines')
 
     rerender(
-      <Quickdraw ref={ref} grid="dots" onThemeChange={onThemeChange} onGridChange={onGridChange} />
+      <Canvas ref={ref} grid="dots" onThemeChange={onThemeChange} onGridChange={onGridChange} />
     )
     expect(ref.current.editor.grid).toBe('dots')
     expect(onGridChange).toHaveBeenCalledWith('dots', ref.current.editor)
 
     // the board menu's own switches report back so host state can follow
     act(() => {
-      container.querySelector('.qd-dock button[data-name="menu"]').click()
+      container.querySelector('.ic-dock button[data-name="menu"], .qd-dock button[data-name="menu"]').click()
     })
-    const themeBtns = [...container.querySelectorAll('.qd-menu-row')]
+    const themeBtns = [...container.querySelectorAll('.ic-menu-row, .qd-menu-row')]
       .find((r) => r.textContent.trim().startsWith('Theme'))
-      .querySelectorAll('.qd-seg-btn')
+      .querySelectorAll('.ic-seg-btn, .qd-seg-btn')
     act(() => { themeBtns[1].click() })
     expect(onThemeChange).toHaveBeenCalledWith('dark', ref.current.editor)
-    expect(container.firstChild.dataset.qdTheme).toBe('dark')
+    expect(
+      container.firstChild.dataset.icTheme || container.firstChild.dataset.qdTheme
+    ).toBe('dark')
   })
 
   it('two components sharing one store see the same document', () => {
@@ -108,8 +112,8 @@ describe('<Quickdraw />', () => {
     const a = createRef(), b = createRef()
     render(
       <div>
-        <Quickdraw ref={a} store={store} />
-        <Quickdraw ref={b} store={store} readonly />
+        <Canvas ref={a} store={store} />
+        <Canvas ref={b} store={store} readonly />
       </div>
     )
     act(() => {
@@ -118,10 +122,10 @@ describe('<Quickdraw />', () => {
     expect(b.current.editor.store.get('shared')).toBeTruthy()
   })
 
-  it('useQuickdrawStore keeps a stable, optionally-seeded store', () => {
+  it('useCanvasStore keeps a stable, optionally-seeded store', () => {
     let store1, store2
     function Probe() {
-      const s = useQuickdrawStore({ document: { store: { r1: rect('r1') } } })
+      const s = useCanvasStore({ document: { store: { r1: rect('r1') } } })
       store1 ||= s
       store2 = s
       return null
