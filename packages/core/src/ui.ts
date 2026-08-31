@@ -394,10 +394,14 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     actBtns.set(name, b)
     return b
   }
-  addAction('undo', () => editor.store.undo())
-  addAction('redo', () => editor.store.redo())
+  addAction('undo', () => editor.undo())
+  addAction('redo', () => editor.redo())
   actionBar.appendChild(el('i', 'ic-div'))
-  addAction('duplicate', () => editor.duplicateSelection())
+  const dupBtn = addAction('duplicate', () => {
+    if (isDocMode) void editor.copySelection()
+    else editor.duplicateSelection()
+  })
+  if (isDocMode) dupBtn.title = 'Copy — ⌘C'
   addAction('delete', () => editor.deleteSelection())
 
   const pagesBar = el<HTMLDivElement>('div', 'ic-pages')
@@ -801,8 +805,9 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     actBtns.get('undo')!.disabled = !editor.store.canUndo
     actBtns.get('redo')!.disabled = !editor.store.canRedo
     const hasSel = editor.selection.size > 0
-    actBtns.get('duplicate')!.disabled = !hasSel
-    actBtns.get('delete')!.disabled = !hasSel
+    const docTextSel = isDocMode && editor.hasDocumentTextSelection()
+    actBtns.get('duplicate')!.disabled = isDocMode ? !docTextSel : !hasSel
+    actBtns.get('delete')!.disabled = isDocMode ? !docTextSel && !hasSel : !hasSel
     toolsBtn.innerHTML =
       iconFor(editor.tool === 'geo' ? editor.geoKind : editor.tool) || iconFor('select')
     toolsBtn.classList.toggle('on', popover?.name === 'tools')
@@ -818,6 +823,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     editor.on('styles', refresh),
     editor.on('history', refresh),
     editor.on('selection', refresh),
+    editor.on('edit', refresh),
     editor.on('theme', refresh),
     editor.on('grid', refresh),
     editor.on('page', refreshPages),

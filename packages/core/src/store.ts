@@ -231,6 +231,7 @@ export class Store {
 
   put(rec: BoardRecord, source: DiffSource = 'user'): void {
     this.transact(() => {
+      if (rec.id === NOTEBOOK_ID) this._cachedNbBlocks = null
       const prev = this.records.get(rec.id)
       this.records.set(rec.id, rec)
       const d = this._tx!.diff
@@ -265,6 +266,7 @@ export class Store {
   remove(idList: string[], source: DiffSource = 'user'): void {
     this.transact(() => {
       for (const id of idList) {
+        if (id === NOTEBOOK_ID) this._cachedNbBlocks = null
         const prev = this.records.get(id)
         if (!prev) continue
         this.records.delete(id)

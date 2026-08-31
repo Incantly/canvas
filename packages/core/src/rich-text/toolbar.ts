@@ -1,5 +1,5 @@
 import { FONT_IDS } from '../palette.js'
-import { execFormat } from './dom.js'
+import { execFormat, applyInlineFontSize } from './dom.js'
 
 export interface RichTextToolbar {
   el: HTMLDivElement
@@ -96,8 +96,7 @@ export function createRichTextToolbar(
     sizeSel.appendChild(o)
   }
   sizeSel.addEventListener('change', () => {
-    execFormat('fontSize', '7')
-    document.execCommand('insertHTML', false, `<span style="font-size:${sizeSel.value}px"></span>`)
+    applyInlineFontSize(Number(sizeSel.value))
     onChange()
   })
   el.appendChild(sizeSel)

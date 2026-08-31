@@ -183,10 +183,10 @@ const handlers: Record<string, (m: any) => any> = {
     board!.editor.refreshPageDocument()
   },
   undo() {
-    board!.editor.store.undo()
+    board!.editor.undo()
   },
   redo() {
-    board!.editor.store.redo()
+    board!.editor.redo()
   },
   clear() {
     board!.editor.clearBoard()

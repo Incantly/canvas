@@ -274,6 +274,7 @@ interface EditorCtorOpts {
   documentMode?: boolean;
   documentBackground?: string | null;
   touchUi?: boolean;
+  documentUi?: import("./document-ui-config.js").DocumentUiOptions;
   promptLink?: () => Promise<string | null>;
   readClipboard?: () => Promise<string>;
 }
@@ -292,6 +293,7 @@ export class Editor {
   documentMode: boolean;
   private _documentBackground: string | null = null;
   private _touchUi?: boolean;
+  private _documentUi?: import("./document-ui-config.js").DocumentUiOptions;
   private _promptLink?: () => Promise<string | null>;
   private _readClipboard?: () => Promise<string>;
   tool: ToolId;
@@ -363,6 +365,7 @@ export class Editor {
       documentMode = false,
       documentBackground = null,
       touchUi,
+      documentUi,
       promptLink,
       readClipboard,
     }: EditorCtorOpts = {} as EditorCtorOpts,
@@ -378,6 +381,7 @@ export class Editor {
     this.geoKind = geoKind || "rectangle";
     this.documentMode = !!documentMode;
     this._touchUi = touchUi;
+    this._documentUi = documentUi;
     this._promptLink = promptLink;
     this._readClipboard = readClipboard;
     this.tool = this.documentMode ? "select" : "draw";
@@ -443,12 +447,19 @@ export class Editor {
       get touchUi() {
         return self._touchUi;
       },
+      get documentUi() {
+        return self._documentUi;
+      },
       promptLink: self._promptLink,
       readClipboard: self._readClipboard,
       currentPage: () => self.currentPage(),
       pageToScreen: (x: number, y: number) => self.pageToScreen(x, y),
       requestRender: () => self.requestRender(),
       emitEdit: () => self.emit("edit"),
+      undo: () => self.undo(),
+      redo: () => self.redo(),
+      copySelection: () => self.copySelection(),
+      pasteFromClipboard: () => self.pasteFromClipboard(),
     };
     this.pageDocUI = new PageDocumentUI(host);
     this.pageDocUI.setDocumentMode(this.documentMode);
@@ -1086,10 +1097,28 @@ export class Editor {
     }
     return b;
   }
+  undo(): void {
+    this.store.undo();
+    if (this.documentMode) {
+      this.pageDocUI?.syncFromStore();
+      this.requestRender();
+    }
+  }
+  redo(): void {
+    this.store.redo();
+    if (this.documentMode) {
+      this.pageDocUI?.syncFromStore();
+      this.requestRender();
+    }
+  }
+  hasDocumentTextSelection(): boolean {
+    return this.pageDocUI?.hasTextSelection() ?? false;
+  }
   deleteSelection(): void {
-    if (!this.selection.size) return;
-    this.store.remove([...this.selection]);
-    this.setSelection([]);
+    if (this.documentMode && this.pageDocUI?.deleteSelectedText()) return
+    if (!this.selection.size) return
+    this.store.remove([...this.selection])
+    this.setSelection([])
   }
   clearBoard(): void {
     if (!this._pageShapes().length) return;
@@ -1558,7 +1587,10 @@ export class Editor {
     this.pageDocUI?.blur();
     const page = this.currentPage();
     if (!page) return;
-    const rect = pageContentRect(page);
+    const paperH = this._notesPaperHeight();
+    const rect = this.documentMode
+      ? notesPageContentRect(page, paperH)
+      : pageContentRect(page);
     const blocks = this.store.notebookDocumentBlocks();
     const layout = layoutPageDocument(blocks, rect.w, this.theme);
     const target = findDrawingTarget(layout, blocks, cp.lx, cp.ly);
@@ -1580,7 +1612,10 @@ export class Editor {
         this.theme,
       );
       const drawEntry = layout2.entries.find((en) => en.index === blockIndex)!;
-      local = { x: cp.lx - drawEntry.x - DRAWING_BLOCK_PAD, y: 0 };
+      local = {
+        x: cp.lx - drawEntry.x - DRAWING_BLOCK_PAD,
+        y: Math.max(0, cp.ly - drawEntry.y - DRAWING_BLOCK_PAD),
+      };
     } else {
       this.pageDocUI?.clearInkRedirectHint();
       if (target.action === "ensure-end") {
@@ -1592,7 +1627,10 @@ export class Editor {
         this.theme,
       );
       const drawEntry = layout2.entries.find((en) => en.index === blockIndex)!;
-      local = { x: target.localX - drawEntry.x - DRAWING_BLOCK_PAD, y: 0 };
+      local = {
+        x: target.localX - drawEntry.x - DRAWING_BLOCK_PAD,
+        y: Math.max(0, cp.ly - drawEntry.y - DRAWING_BLOCK_PAD),
+      };
       } else {
       blockIndex = target.blockIndex;
       local = {
@@ -2573,7 +2611,7 @@ export class Editor {
     }
     if (meta && k === "z") {
       e.preventDefault();
-      e.shiftKey ? this.store.redo() : this.store.undo();
+      e.shiftKey ? this.redo() : this.undo();
       return;
     }
     if (meta && k === "a") {
@@ -2755,6 +2793,10 @@ export class Editor {
   }
 
   async copySelection(): Promise<void> {
+    if (this.documentMode) {
+      const copied = await this.pageDocUI?.copySelectedText();
+      if (copied) return;
+    }
     if (!this.selection.size) return;
     const shapes: ShapeRecord[] = [];
     const assets: Record<string, AssetRecord> = {};

@@ -9,6 +9,7 @@ import type {
 } from './models.js'
 import type { Diff, DiffSource, Snapshot } from './operations.js'
 import type { Theme } from './themes.js'
+import type { DocumentUiOptions } from '../document-ui-config.js'
 
 export interface EditorOptions {
   container: HTMLElement
@@ -25,6 +26,8 @@ export interface EditorOptions {
   documentBackground?: string | null
   /** Touch-first UI (mobile formatting bar). Defaults to ontouchstart detection. */
   touchUi?: boolean
+  /** Slash menu + selection toolbar for page document mode. Fully customizable. */
+  documentUi?: DocumentUiOptions
   /** Native link prompt (RN WebView); falls back to window.prompt on web. */
   promptLink?: () => Promise<string | null>
   /** Clipboard read for Cmd+V in non-secure contexts; falls back to navigator.clipboard. */
@@ -194,6 +197,9 @@ export interface Editor {
 
   setSelection(ids: string[]): void
   selectionBounds(): import('./base.js').Bounds | null
+  undo(): void
+  redo(): void
+  hasDocumentTextSelection(): boolean
   deleteSelection(): void
   clearBoard(): void
   selectAll(): void

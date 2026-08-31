@@ -139,6 +139,32 @@ export function execFormat(cmd: string, value?: string): void {
   document.execCommand(cmd, false, value)
 }
 
+/** Apply pixel font size to the current non-collapsed selection (page doc + shape editors). */
+export function applyInlineFontSize(px: number): boolean {
+  if (!Number.isFinite(px) || px <= 0) return false
+  const sel = window.getSelection()
+  if (!sel?.rangeCount || sel.isCollapsed) return false
+  const range = sel.getRangeAt(0)
+  if (!range.toString()) return false
+
+  const span = document.createElement('span')
+  span.style.fontSize = `${px}px`
+
+  try {
+    range.surroundContents(span)
+  } catch {
+    const fragment = range.extractContents()
+    if (!fragment.textContent && !fragment.childNodes.length) return false
+    span.appendChild(fragment)
+    range.insertNode(span)
+    sel.removeAllRanges()
+    const next = document.createRange()
+    next.selectNodeContents(span)
+    sel.addRange(next)
+  }
+  return true
+}
+
 export function getSelectionRect(): DOMRect | null {
   const sel = window.getSelection()
   if (!sel?.rangeCount) return null
