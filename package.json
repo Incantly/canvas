@@ -12,7 +12,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "npm run build --workspace=@incantly/canvas-react-native",
+    "build": "npm run build:packages",
     "build:packages": "npm run build --workspace=@incantly/canvas && npm run build --workspace=@incantly/canvas-react && npm run build --workspace=@incantly/canvas-react-native",
     "dev": "npm run dev --workspace=incantly-react-demo",
     "dev:playground": "npm run dev --workspace=incantly-playground",
