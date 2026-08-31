@@ -1,5 +1,5 @@
-import type { CanvasInstance } from '@incantly/canvas'
-import { createCanvas } from '@incantly/canvas'
+import type { CanvasInstance, DocumentVersion, VersionManager } from '@incantly/canvas'
+import { createCanvas, createVersionManager, MemoryVersionStorage } from '@incantly/canvas'
 import '@incantly/canvas/canvas.css'
 
 declare global {
@@ -29,7 +29,20 @@ const blobToDataUrl = (blob: Blob): Promise<string | null> =>
 
 const host = document.getElementById('board') as HTMLElement
 let board: CanvasInstance | null = null
+let versionManager: VersionManager | null = null
 let hideUi = false
+
+const versionSummary = (v: DocumentVersion) => ({
+  id: v.id,
+  createdAt: v.createdAt,
+  label: v.label,
+  kind: v.kind,
+})
+
+const disposeVersionManager = (): void => {
+  versionManager?.dispose()
+  versionManager = null
+}
 let pendingLink: ((url: string | null) => void) | null = null
 const pendingClipboard = new Map<string, (text: string) => void>()
 
@@ -61,6 +74,7 @@ const bindKeyboardReporter = (): void => {
 const handlers: Record<string, (m: any) => any> = {
   init(m: any) {
     if (board) board.destroy()
+    disposeVersionManager()
     hideUi = !!m.hideUi
     applySafeAreaInsets(m.safeAreaInsets)
     board = createCanvas({
@@ -101,6 +115,10 @@ const handlers: Record<string, (m: any) => any> = {
       board.editor.store.loadSnapshot(m.snapshot, 'remote')
       board.editor.setPage(board.editor.pages()[0]?.id ?? board.editor.currentPageId, { fit: true })
     }
+    versionManager = createVersionManager({
+      storage: new MemoryVersionStorage(),
+      store: board.editor.store,
+    })
     board.editor.store.listen((diff: any, source: any) => post({ type: 'change', diff, source }))
     board.editor.on('selection', () => post({ type: 'selection', ids: [...board!.editor.selection] }))
     board.editor.on('page', () =>
@@ -220,6 +238,29 @@ const handlers: Record<string, (m: any) => any> = {
   async exportPng(m: any) {
     const blob = await board!.editor.exportImage(m.opts || {})
     post({ type: 'export', id: m.id, dataUrl: blob ? await blobToDataUrl(blob) : null })
+  },
+  async listVersions(m: any) {
+    const versions = await versionManager!.list()
+    post({
+      type: 'versions',
+      id: m.id,
+      versions: versions.map(versionSummary),
+    })
+  },
+  async revertVersion(m: any) {
+    await versionManager!.revert(m.versionId)
+    post({ type: 'reverted', id: m.id, versionId: m.versionId })
+  },
+  async saveVersion(m: any) {
+    const saved = await versionManager!.checkpoint('manual', m.label)
+    post({
+      type: 'versionSaved',
+      id: m.id,
+      versionId: saved.id,
+      createdAt: saved.createdAt,
+      label: saved.label,
+      kind: saved.kind,
+    })
   },
 }
 

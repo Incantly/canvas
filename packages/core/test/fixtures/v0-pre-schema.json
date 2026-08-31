@@ -1,0 +1,52 @@
+{
+  "document": {
+    "store": {
+      "p1": {
+        "id": "p1",
+        "typeName": "page",
+        "index": 0,
+        "x": 0,
+        "y": 0,
+        "width": 816,
+        "height": 1056,
+        "name": "Page 1"
+      },
+      "n1": {
+        "id": "n1",
+        "typeName": "shape",
+        "type": "note",
+        "parentId": "p1",
+        "x": 40,
+        "y": 80,
+        "rot": 0,
+        "z": 1,
+        "props": {
+          "text": "Hello legacy",
+          "color": "yellow",
+          "size": "m",
+          "font": "sans"
+        }
+      },
+      "g1": {
+        "id": "g1",
+        "typeName": "shape",
+        "type": "geo",
+        "parentId": "p1",
+        "x": 200,
+        "y": 200,
+        "rot": 0,
+        "z": 0,
+        "props": {
+          "geo": "rectangle",
+          "w": 120,
+          "h": 80,
+          "color": "black",
+          "size": "m",
+          "dash": "draw",
+          "fill": "none",
+          "font": "draw"
+        }
+      }
+    }
+  }
+}

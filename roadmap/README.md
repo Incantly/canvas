@@ -48,6 +48,7 @@ Full implementation specs for the Incantly fork of Quickdraw. Each doc is the so
 | 10 | Deep links | `feat/deep-links` | [10-deep-links.md](./10-deep-links.md) |
 | 11 | Collaboration | `feat/collaboration` | [11-collaboration.md](./11-collaboration.md) |
 | 12 | AI presence (v2) | `feat/ai-presence` | [12-ai-presence.md](./12-ai-presence.md) |
+| 16 | Snapshot versioning | `feat/snapshot-versioning` | [16-snapshot-versioning.md](./16-snapshot-versioning.md) |
 
 ---
 
@@ -58,6 +59,7 @@ Full implementation specs for the Incantly fork of Quickdraw. Each doc is the so
   → 05 snapping + 06 smoothing → 07 handwriting → 08 latex
   → 09 grid + 10 deep links
   → 13 sync + 14 web + 15 mobile (parallel after 00)
+  → 16 snapshot-versioning (after 03)
   → 11 collaboration → 12 ai-presence
 ```
 

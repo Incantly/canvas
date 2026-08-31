@@ -14,7 +14,7 @@ import { createBridge, encodeDispatch } from './bridge.js'
 
 export { BOARD_HTML } from './board-html.generated.js'
 export { createBridge, encodeDispatch } from './bridge.js'
-export type { CanvasProps, CanvasRef, SafeAreaInsets } from './types/index.js'
+export type { CanvasProps, CanvasRef, SafeAreaInsets, VersionSummary } from './types/index.js'
 
 import type { CanvasProps, CanvasRef } from './types/index.js'
 
@@ -197,6 +197,20 @@ export const Canvas = forwardRef(function Canvas(
       case 'export':
         st.bridge.settle(m.id, m.dataUrl)
         break
+      case 'versions':
+        st.bridge.settle(m.id, m.versions)
+        break
+      case 'reverted':
+        st.bridge.settle(m.id, undefined)
+        break
+      case 'versionSaved':
+        st.bridge.settle(m.id, {
+          id: m.versionId,
+          createdAt: m.createdAt,
+          label: m.label,
+          kind: m.kind,
+        })
+        break
       case 'error':
         cbRef.current.onError?.(m.message)
         break
@@ -246,6 +260,9 @@ export const Canvas = forwardRef(function Canvas(
       removePage: (pageId) => st.bridge.post({ type: 'removePage', pageId }),
       getSnapshot: () => st.bridge.request({ type: 'getSnapshot' }),
       exportPng: (opts) => st.bridge.request({ type: 'exportPng', opts }),
+      listVersions: () => st.bridge.request({ type: 'listVersions' }),
+      revertVersion: (versionId) => st.bridge.request({ type: 'revertVersion', versionId }),
+      saveVersion: (label) => st.bridge.request({ type: 'saveVersion', label }),
     }),
     [],
   )

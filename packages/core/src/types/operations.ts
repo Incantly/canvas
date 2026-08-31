@@ -1,4 +1,5 @@
 import type { BoardRecord } from './models.js'
+import type { SerializedSchema } from './schema.js'
 
 export type DiffSource = 'user' | 'remote' | 'all'
 
@@ -9,5 +10,6 @@ export interface Diff {
 }
 
 export interface Snapshot {
+  schema?: SerializedSchema
   document: { store: Record<string, BoardRecord> }
 }

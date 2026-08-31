@@ -12,7 +12,15 @@ import type {
   Styles,
   ThemeId,
   ToolId,
+  VersionKind,
 } from '@incantly/canvas'
+
+export interface VersionSummary {
+  id: string
+  createdAt: number
+  label?: string
+  kind: VersionKind
+}
 
 export interface SafeAreaInsets {
   top?: number
@@ -39,6 +47,9 @@ export interface CanvasRef {
   removePage(pageId?: string): void
   getSnapshot(): Promise<Snapshot>
   exportPng(opts?: { background?: boolean; scale?: number; margin?: number }): Promise<string | null>
+  listVersions(): Promise<VersionSummary[]>
+  revertVersion(versionId: string): Promise<void>
+  saveVersion(label?: string): Promise<VersionSummary>
 }
 
 export interface CanvasProps {

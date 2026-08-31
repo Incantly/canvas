@@ -1,0 +1,46 @@
+{
+  "schema": {
+    "schemaVersion": 1,
+    "sequences": {
+      "com.incantly.store": 1,
+      "com.incantly.shape.text": 1,
+      "com.incantly.page.document": 2,
+      "com.incantly.notebook.document": 2
+    }
+  },
+  "document": {
+    "store": {
+      "notebook:main": {
+        "id": "notebook:main",
+        "typeName": "notebook",
+        "pageLayout": "vertical",
+        "document": {
+          "blocks": [
+            { "type": "paragraph", "content": [{ "text": "Photo below" }] },
+            {
+              "type": "image",
+              "src": "data:image/png;base64,iVBORw0KGgo=",
+              "alt": "Valid photo",
+              "width": 400,
+              "height": 300
+            },
+            { "type": "image", "src": "" },
+            { "type": "image", "src": "   " },
+            { "type": "image" },
+            { "type": "paragraph", "content": [{ "text": "After images" }] }
+          ]
+        }
+      },
+      "p1": {
+        "id": "p1",
+        "typeName": "page",
+        "index": 0,
+        "x": 0,
+        "y": 0,
+        "width": 816,
+        "height": 1056,
+        "name": "Page 1"
+      }
+    }
+  }
+}
