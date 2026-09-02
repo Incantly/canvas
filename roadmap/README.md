@@ -27,6 +27,8 @@ Full implementation specs for the Incantly fork of Quickdraw. Each doc is the so
 | 13 | Sync package | `feat/sync-package` | [13-sync-package.md](./13-sync-package.md) |
 | 14 | Web product shell | `feat/apps-web-shell` | [14-apps-web-shell.md](./14-apps-web-shell.md) |
 | 15 | Mobile product shell | `feat/apps-mobile-shell` | [15-apps-mobile-shell.md](./15-apps-mobile-shell.md) |
+| 17 | Native RN renderer | `feat/native-rn-renderer` | [17-native-rn-renderer.md](./17-native-rn-renderer.md) |
+| 17 | Native RN renderer | `feat/native-rn-renderer` | [17-native-rn-renderer.md](./17-native-rn-renderer.md) |
 
 ## Core model
 
@@ -60,6 +62,7 @@ Full implementation specs for the Incantly fork of Quickdraw. Each doc is the so
   → 09 grid + 10 deep links
   → 13 sync + 14 web + 15 mobile (parallel after 00)
   → 16 snapshot-versioning (after 03)
+  → 17 native-rn-renderer (after 15 + 16)
   → 11 collaboration → 12 ai-presence
 ```
 
@@ -67,6 +70,6 @@ Full implementation specs for the Incantly fork of Quickdraw. Each doc is the so
 
 - Layers, frames, templates
 - Full document import/export beyond PNG/SVG/PDF
-- Native Skia renderer (unless WebView perf fails)
+- Native Skia renderer beyond [17-native-rn-renderer.md](./17-native-rn-renderer.md) v1 scope (freeform whiteboard, images, LaTeX on native)
 - DSL compiler (separate repo)
 - Heavy cloud OCR / MyScript in v1

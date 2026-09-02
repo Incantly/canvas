@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Incantly Native RN Demo",
+    "slug": "incantly-native-rn-demo",
+    "scheme": "incantly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.incantly.nativern.demo",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.incantly.nativern.demo"
+    }
+  }
+}

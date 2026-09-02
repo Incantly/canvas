@@ -14,6 +14,8 @@ import type {
   ToolId,
   VersionKind,
 } from '@incantly/canvas'
+import type { FormatBarConfig } from '../document/format-bar-config.js'
+import type { VersionStorage } from '@incantly/canvas/headless'
 
 export interface VersionSummary {
   id: string
@@ -66,7 +68,6 @@ export interface CanvasProps {
   documentMode?: boolean
   documentBackground?: string | null
   documentPaperColor?: string | null
-  documentPaperColor?: string | null
   uiTools?: ToolId[]
   uiIcons?: Partial<Record<string, string>>
   hidePagesBar?: boolean
@@ -83,6 +84,20 @@ export interface CanvasProps {
   onError?: (message: string) => void
   onPromptLink?: (respond: (url: string | null) => void) => void
   onReadClipboard?: (respond: (text: string) => void) => void
+  /**
+   * Customize document format-bar labels and icons per item.
+   * Keys: `paragraph`, `heading1`…`heading3`, `bulletList`, `numberedList`,
+   * `quote`, `codeBlock`, `divider`, `bold`, `italic`, `underline`,
+   * `strikethrough`, `inlineCode`, `link`.
+   */
+  formatBar?: FormatBarConfig
+  /**
+   * Persistent version history. Host should pass `createSqliteVersionStorage(...)`.
+   * Defaults to in-memory (lost when the component unmounts).
+   */
+  versionStorage?: VersionStorage
+  /** Scopes version rows. Defaults to the core notebook id. */
+  notebookId?: string
   style?: any
   webviewProps?: Record<string, any>
 }

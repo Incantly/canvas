@@ -33,6 +33,29 @@ function drag(editor: Editor, pts: number[][], over: any = {}) {
   ;(editor as any)._pointerUp({ ...ev(xn, yn, over), target: (editor as any).canvas })
 }
 
+function focusBlockCaret(pageDoc: HTMLElement, block: HTMLElement, atEnd = true): void {
+  pageDoc.focus()
+  const range = document.createRange()
+  const textNode = [...block.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)
+  if (textNode) {
+    const len = textNode.textContent?.length ?? 0
+    range.setStart(textNode, atEnd ? len : 0)
+    range.collapse(true)
+  } else {
+    range.selectNodeContents(block)
+    range.collapse(!atEnd)
+  }
+  const sel = window.getSelection()!
+  sel.removeAllRanges()
+  sel.addRange(range)
+}
+
+function pressEnter(pageDoc: HTMLElement): void {
+  pageDoc.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+  )
+}
+
 let container: HTMLDivElement, editor: Editor
 
 beforeEach(() => {
@@ -288,6 +311,40 @@ describe('document mode drawing', () => {
     const blocks = docEditor.store.notebookDocumentBlocks()
     expect(blocks.some((b) => b.type === 'paragraph' && b.content[0]?.text?.includes('Pasted line'))).toBe(true)
     expect(docEditor.store.shapes().length).toBe(0)
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('Enter on list item adds another item; Enter on empty item exits list', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.store.setNotebookDocument([{ type: 'bulletList', content: [{ text: 'first' }] }])
+    ;(docEditor as any).pageDocUI.syncFromStore()
+
+    const pageDoc = docContainer.querySelector('.ic-page-doc') as HTMLDivElement
+    const first = pageDoc.querySelector('[data-block="bulletList"]') as HTMLElement
+    focusBlockCaret(pageDoc, first, true)
+    pressEnter(pageDoc)
+
+    let blocks = docEditor.store.notebookDocumentBlocks()
+    expect(blocks).toHaveLength(2)
+    expect(blocks[0]?.type).toBe('bulletList')
+    expect(blocks[1]?.type).toBe('bulletList')
+    if (blocks[0]?.type === 'bulletList') expect(blocks[0].content[0]?.text).toBe('first')
+    if (blocks[1]?.type === 'bulletList') expect(blocks[1].content[0]?.text).toBe('')
+
+    ;(docEditor as any).pageDocUI.syncFromStore()
+    const second = pageDoc.querySelector('[data-doc-index="1"][data-block]') as HTMLElement
+    focusBlockCaret(pageDoc, second, true)
+    pressEnter(pageDoc)
+
+    blocks = docEditor.store.notebookDocumentBlocks()
+    expect(blocks).toHaveLength(2)
+    expect(blocks[0]?.type).toBe('bulletList')
+    expect(blocks[1]?.type).toBe('paragraph')
+
     docEditor.destroy()
     docContainer.remove()
   })

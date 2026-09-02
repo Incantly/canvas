@@ -16,6 +16,7 @@
     "build:packages": "npm run build --workspace=@incantly/canvas && npm run build --workspace=@incantly/canvas-react && npm run build --workspace=@incantly/canvas-react-native",
     "dev": "npm run dev --workspace=incantly-react-demo",
     "dev:playground": "npm run dev --workspace=incantly-playground",
+    "dev:mobile": "npm run build:packages && npm --prefix examples/native-rn-demo start",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "typecheck:packages": "npm run typecheck --workspace=@incantly/canvas && npm run typecheck --workspace=@incantly/canvas-react && npm run typecheck --workspace=@incantly/canvas-react-native",
     "star-history": "node scripts/star-history.mjs",

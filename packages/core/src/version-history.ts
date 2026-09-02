@@ -3,6 +3,7 @@ import type { SerializedSchema } from './types/schema.js'
 import { CURRENT_SCHEMA } from './types/schema.js'
 import { NOTEBOOK_ID } from './pages.js'
 import { newId } from './utils/id.js'
+import { snapshotFingerprint } from './utils/snapshot/fingerprint.js'
 
 export type VersionKind = 'autosave' | 'manual' | 'revert' | 'import'
 
@@ -55,14 +56,6 @@ export interface VersionManager {
 const DEFAULT_AUTOSAVE_MS = 45_000
 const DEFAULT_MAX_VERSIONS = 15
 const DEFAULT_MAX_STORAGE_MB = 50
-
-function snapshotFingerprint(snap: Snapshot): string {
-  try {
-    return JSON.stringify(snap.document?.store ?? {})
-  } catch {
-    return String(Date.now())
-  }
-}
 
 function estimateVersionBytes(version: DocumentVersion): number {
   try {

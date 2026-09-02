@@ -582,6 +582,107 @@ export class PageDocumentUI {
     sel?.addRange(range)
   }
 
+  private isListBlockType(type: string): type is 'bulletList' | 'numberedList' {
+    return type === 'bulletList' || type === 'numberedList'
+  }
+
+  private blockElementFromSelection(): HTMLElement | null {
+    const sel = window.getSelection()
+    if (!sel?.anchorNode) return null
+    let node: Node | null = sel.anchorNode
+    while (node && node !== this.el) {
+      if (node instanceof HTMLElement && node.dataset.block) return node
+      node = node.parentNode
+    }
+    return null
+  }
+
+  private caretOffsetInBlock(block: HTMLElement): number {
+    const sel = window.getSelection()
+    if (!sel?.rangeCount || !sel.isCollapsed) return block.textContent?.length ?? 0
+    const range = sel.getRangeAt(0)
+    if (!block.contains(range.startContainer)) return block.textContent?.length ?? 0
+    const pre = document.createRange()
+    pre.selectNodeContents(block)
+    pre.setEnd(range.startContainer, range.startOffset)
+    return pre.toString().length
+  }
+
+  private setCaretInBlock(block: HTMLElement, offset: number): void {
+    const sel = window.getSelection()
+    if (!sel) return
+    const range = document.createRange()
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT)
+    let remaining = offset
+    let textNode = walker.nextNode() as Text | null
+    while (textNode) {
+      const len = textNode.length
+      if (remaining <= len) {
+        range.setStart(textNode, remaining)
+        range.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(range)
+        return
+      }
+      remaining -= len
+      textNode = walker.nextNode() as Text | null
+    }
+    range.selectNodeContents(block)
+    range.collapse(offset > 0)
+    sel.removeAllRanges()
+    sel.addRange(range)
+  }
+
+  /** Enter in a list: split or add item; empty item becomes a paragraph (exit list). */
+  private handleListEnter(e: KeyboardEvent): boolean {
+    const blockEl = this.blockElementFromSelection()
+    if (!blockEl) return false
+    const type = blockEl.dataset.block ?? 'paragraph'
+    if (!this.isListBlockType(type)) return false
+
+    const sel = window.getSelection()
+    if (!sel?.isCollapsed) return false
+
+    const docIndexRaw = blockEl.dataset.docIndex
+    const docIndex =
+      docIndexRaw !== undefined ? Number(docIndexRaw) : this._caretBlockIndex()
+    if (docIndex === null || Number.isNaN(docIndex)) return false
+
+    const full = blockEl.textContent ?? ''
+    const offset = this.caretOffsetInBlock(blockEl)
+    const before = full.slice(0, offset)
+    const after = full.slice(offset)
+
+    e.preventDefault()
+    this.flushSyncToStore()
+
+    const blocks = this.blocks().slice()
+    const current = blocks[docIndex]
+    if (!current || !isTextBlock(current)) return true
+
+    this.host.store.beginBatch()
+    if (!before.trim() && !after.trim()) {
+      blocks[docIndex] = { type: 'paragraph', content: [{ text: '' }] }
+    } else {
+      blocks[docIndex] = { type, content: [{ text: before }] }
+      blocks.splice(docIndex + 1, 0, { type, content: [{ text: after }] })
+    }
+    this.host.store.setNotebookDocument(blocks)
+    this.host.store.endBatch()
+    this.syncFromStore()
+
+    if (!before.trim() && !after.trim()) {
+      this.focusTextBlock(docIndex, false)
+    } else {
+      const nextBlock = this.el.querySelector(
+        `[data-doc-index="${docIndex + 1}"][data-block]`,
+      ) as HTMLElement | null
+      this.el.focus({ preventScroll: true })
+      if (nextBlock) this.setCaretInBlock(nextBlock, 0)
+    }
+    return true
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
     e.stopPropagation()
     const meta = e.metaKey || e.ctrlKey
@@ -627,6 +728,8 @@ export class PageDocumentUI {
         e.preventDefault()
         this.hideSlashMenu()
       }
+    } else if (e.key === 'Enter' && !meta && !e.shiftKey && this.handleListEnter(e)) {
+      return
     } else if (e.key === ' ') {
       this.applyLineMarkdownToBlock()
       this.syncToStore()

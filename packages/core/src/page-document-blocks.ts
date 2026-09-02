@@ -14,7 +14,7 @@ import { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
 import { emptyParagraph, validateBlocks } from './rich-text/document.js'
 import { layoutRichText, drawRichTextLayout } from './rich-text/layout.js'
 import { blocksToHtml, htmlToBlocks } from './rich-text/dom.js'
-import { PAGE_DOC_FONT_SIZE, pageContentRect, notesPageContentRect } from './page-document.js'
+import { PAGE_DOC_FONT_SIZE, pageContentRect, notesPageContentRect } from './page-document-layout.js'
 
 export const DRAWING_BLOCK_MIN_HEIGHT = 120
 export const DRAWING_BLOCK_GAP = 10
