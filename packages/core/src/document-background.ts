@@ -1,7 +1,12 @@
 import type { ThemeId } from './types/base.js'
 
 export function defaultDocumentBackground(themeId: ThemeId): string {
-  return themeId === 'dark' ? '#191713' : '#ffffff'
+  return themeId === 'dark' ? '#191713' : '#e8e4dc'
+}
+
+/** Page sheet color in document mode (distinct from the viewport canvas). */
+export function defaultDocumentPaperColor(themeId: ThemeId): string {
+  return themeId === 'dark' ? '#252219' : '#ffffff'
 }
 
 /** Accept hex, rgb/rgba, hsl, and named CSS colors. */

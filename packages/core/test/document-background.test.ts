@@ -2,14 +2,20 @@ import { describe, expect, it } from 'vitest'
 import {
   contrastDocumentText,
   defaultDocumentBackground,
+  defaultDocumentPaperColor,
   normalizeCssColor,
   parseCssColorRgb,
 } from '../src/document-background.js'
 
 describe('document-background', () => {
   it('defaultDocumentBackground follows theme', () => {
-    expect(defaultDocumentBackground('light')).toBe('#ffffff')
+    expect(defaultDocumentBackground('light')).toBe('#e8e4dc')
     expect(defaultDocumentBackground('dark')).toBe('#191713')
+  })
+
+  it('defaultDocumentPaperColor follows theme', () => {
+    expect(defaultDocumentPaperColor('light')).toBe('#ffffff')
+    expect(defaultDocumentPaperColor('dark')).toBe('#252219')
   })
 
   it('normalizeCssColor accepts hex and rgb', () => {

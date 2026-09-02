@@ -35,6 +35,7 @@ export interface CanvasRef {
   setTool(tool: ToolId): void
   setStyle(key: keyof Styles, value: ColorId | SizeId | DashId | FillId | FontId): void
   setDocumentBackground(color: string | null): void
+  setDocumentPaperColor(color: string | null): void
   setGrid(grid: GridId): void
   undo(): void
   redo(): void
@@ -64,6 +65,8 @@ export interface CanvasProps {
   styles?: Partial<Styles>
   documentMode?: boolean
   documentBackground?: string | null
+  documentPaperColor?: string | null
+  documentPaperColor?: string | null
   uiTools?: ToolId[]
   uiIcons?: Partial<Record<string, string>>
   hidePagesBar?: boolean

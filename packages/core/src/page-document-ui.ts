@@ -16,7 +16,6 @@ import {
   parseSingleBlockFromDom,
   layoutPageDocument,
   textBlocksFromDocument,
-  DRAWING_BLOCK_TOP_GAP,
 } from './page-document-blocks.js'
 import { drawPageDocumentBlocks } from './page-document-blocks.js'
 import type { DocumentBlock, ImageBlock } from './rich-text/types.js'
@@ -76,7 +75,6 @@ export class PageDocumentUI {
   private slashFilter = ''
   private slashIndex = 0
   private slashBlock: HTMLElement | null = null
-  private hintBlockIndex: number | null = null
   private _renderedBlocks: DocumentBlock[] = []
   private _syncRaf: number | null = null
 
@@ -150,7 +148,6 @@ export class PageDocumentUI {
 
   private bind(): void {
     this.el.addEventListener('input', () => {
-      this.clearDocHints()
       this.checkSlashTrigger()
       this.scheduleSyncToStore()
     })
@@ -234,7 +231,6 @@ export class PageDocumentUI {
 
   destroy(): void {
     if (this._syncRaf !== null) cancelAnimationFrame(this._syncRaf)
-    if (this._hintTimer) clearTimeout(this._hintTimer)
     document.removeEventListener('selectionchange', this.onSelectionChange)
     if (typeof window !== 'undefined' && window.visualViewport) {
       window.visualViewport.removeEventListener('resize', this._onViewportResize)
@@ -466,22 +462,7 @@ export class PageDocumentUI {
     this.el.style.fontSize = `${PAGE_DOC_FONT_SIZE * z}px`
     this.el.style.lineHeight = `${PAGE_DOC_FONT_SIZE * 1.45 * z}px`
     const layout = layoutPageDocument(this.blocks(), rect.w, this.host.theme)
-    const blocks = this.blocks()
-    const lastTextIdx = (() => {
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        if (isTextBlock(blocks[i]!)) return i
-      }
-      return -1
-    })()
-    const hasDrawingBlock = blocks.some(isDrawingBlock)
     for (const child of Array.from(this.el.children)) {
-      if (child instanceof HTMLElement && child.dataset.block) {
-        const idx = Number(child.dataset.docIndex)
-        child.style.marginBottom =
-          idx === lastTextIdx && hasDrawingBlock
-            ? `${DRAWING_BLOCK_TOP_GAP * z}px`
-            : ''
-      }
       if (!(child instanceof HTMLElement) || !child.classList.contains('ic-drawing-slot')) continue
       const idx = Number(child.dataset.docIndex)
       const entry = layout.entries.find((e) => e.index === idx)
@@ -557,35 +538,12 @@ export class PageDocumentUI {
 
   blur(): void {
     this.el.blur()
-  }
-
-  private _hintTimer: ReturnType<typeof setTimeout> | null = null;
-  inkZoneDividerVisible = false;
-
-  flashInkHint(textBlockIndex: number): void {
-    this.showDocHint(textBlockIndex)
-    this.showInkZoneDivider()
-    if (this._hintTimer) clearTimeout(this._hintTimer)
-    this._hintTimer = setTimeout(() => {
-      this.clearDocHints()
-      this._hintTimer = null
-    }, 600)
-  }
-
-  showInkZoneDivider(): void {
-    this.inkZoneDividerVisible = true
-    this.host.requestRender()
-  }
-
-  hideInkZoneDivider(): void {
-    if (!this.inkZoneDividerVisible) return
-    this.inkZoneDividerVisible = false
-    this.host.requestRender()
-  }
-
-  clearInkRedirectHint(): void {
-    this.clearDocHints()
-    this.hideInkZoneDivider()
+    if (!this.focused) return
+    this.focused = false
+    this.wrap.classList.remove('ic-page-doc-focused')
+    this.hideSlashMenu()
+    this.selectionToolbar?.hide()
+    if (this.formatBar) this.formatBar.hidden = true
   }
 
   private lastTextBlockIndex(before = this.blocks().length): number {
@@ -598,22 +556,7 @@ export class PageDocumentUI {
 
   redirectTypingFromDrawing(_drawingIndex: number): void {
     const textIdx = this.lastTextBlockIndex()
-    this.showDocHint(textIdx)
     this.focusTextBlock(textIdx, true)
-  }
-
-  private showDocHint(textBlockIndex: number): void {
-    this.clearDocHints()
-    this.hintBlockIndex = textBlockIndex
-    const block = this.el.querySelector(
-      `[data-doc-index="${textBlockIndex}"][data-block]`,
-    )
-    if (block instanceof HTMLElement) block.classList.add('ic-ink-hint')
-  }
-
-  private clearDocHints(): void {
-    this.hintBlockIndex = null
-    this.el.querySelectorAll('.ic-ink-hint').forEach((el) => el.classList.remove('ic-ink-hint'))
   }
 
   private focusTextBlock(docIndex: number, atEnd: boolean): void {

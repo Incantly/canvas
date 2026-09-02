@@ -22,8 +22,10 @@ export interface EditorOptions {
   geoKind?: GeoId
   /** Apple Notes / OpenNote style: page body is the primary surface; pen only when draw tool active. */
   documentMode?: boolean
-  /** Seamless notes canvas color (documentMode). Falls back to theme default when omitted. */
+  /** Viewport/canvas color around the page sheet (documentMode). */
   documentBackground?: string | null
+  /** Page sheet color behind rich text (documentMode). */
+  documentPaperColor?: string | null
   /** Touch-first UI (mobile formatting bar). Defaults to ontouchstart detection. */
   touchUi?: boolean
   /** Slash menu + selection toolbar for page document mode. Fully customizable. */
@@ -170,6 +172,8 @@ export interface Editor {
 
   documentBackgroundColor(): string
   setDocumentBackground(color: string | null): void
+  documentPaperColor(): string
+  setDocumentPaperColor(color: string | null): void
 
   pages(): PageRecord[]
   currentPage(): PageRecord | null
@@ -283,8 +287,10 @@ export interface CreateCanvasOptions extends EditorOptions {
   uiIcons?: Partial<Record<string, string>>
   /** Hide page bar in notes mode (default true when documentMode). */
   hidePagesBar?: boolean
-  /** Seamless notes canvas color (documentMode). */
+  /** Viewport/canvas color around the page sheet (documentMode). */
   documentBackground?: string | null
+  /** Page sheet color behind rich text (documentMode). */
+  documentPaperColor?: string | null
   touchUi?: boolean
   promptLink?: () => Promise<string | null>
   readClipboard?: () => Promise<string>

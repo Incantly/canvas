@@ -513,7 +513,7 @@ export class Store {
     this.setNotebookDocument(blocks, source)
   }
 
-  /** Single trailing drawing block for Apple Notes ink (end of body only). */
+  /** Trailing drawing block for page-absolute ink overlay. */
   ensureEndDrawingBlock(_pageId: string, source: DiffSource = 'user'): number {
     let blocks = consolidateDocumentBlocks(this.notebookDocumentBlocks())
     const last = blocks[blocks.length - 1]

@@ -59,6 +59,16 @@ export function pointInNotesContent(
   return lx >= r.x && lx <= r.x + r.w && ly >= r.y && ly <= r.y + r.h
 }
 
+/** Full page sheet — ink may use margins outside the text column. */
+export function pointInNotesPaper(
+  page: PageRecord,
+  lx: number,
+  ly: number,
+  paperH: number,
+): boolean {
+  return lx >= 0 && ly >= 0 && lx <= page.width && ly <= paperH
+}
+
 /** Merge legacy text shapes on a page into the page document body. */
 export function mergeTextShapesIntoPage(
   page: PageRecord,

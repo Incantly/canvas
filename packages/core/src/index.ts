@@ -38,6 +38,7 @@ export {
   pointInPageContent,
   notesPageContentRect,
   pointInNotesContent,
+  pointInNotesPaper,
 } from './page-document.js'
 export {
   NOTES_MIN_BODY_HEIGHT,
@@ -67,6 +68,7 @@ export {
 export { applyInlineFontSize } from './rich-text/dom.js'
 export {
   defaultDocumentBackground,
+  defaultDocumentPaperColor,
   normalizeCssColor,
   contrastDocumentText,
 } from './document-background.js'

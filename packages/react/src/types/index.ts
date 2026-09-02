@@ -40,8 +40,10 @@ export interface CanvasProps {
   uiIcons?: Partial<Record<string, string>>
   /** Hide page navigation bar (default true when documentMode). */
   hidePagesBar?: boolean
-  /** Seamless notes canvas background (documentMode). */
+  /** Viewport/canvas color around the page sheet (documentMode). */
   documentBackground?: string | null
+  /** Page sheet color behind rich text (documentMode). */
+  documentPaperColor?: string | null
   /** Touch-first formatting bar (default: auto-detect). Set false on desktop web. */
   touchUi?: boolean
   /** Slash menu and selection toolbar for document mode (fully customizable). */

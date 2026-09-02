@@ -68,20 +68,21 @@ import {
   type RichTextToolbar,
 } from "./rich-text/index.js";
 import { PageDocumentUI, drawPageDocument, type PageDocumentHost } from "./page-document-ui.js";
-import { pointInPageContent, pageContentRect, pointInNotesContent, notesPageContentRect } from "./page-document.js";
+import { pointInPageContent, pageContentRect, pointInNotesContent, pointInNotesPaper, notesPageContentRect } from "./page-document.js";
 import {
   findDrawingTarget,
   hitDocumentStroke,
   removeDocumentStroke,
   layoutPageDocument,
   drawPageDocumentBlocks,
-  DRAWING_BLOCK_PAD,
+  drawDocumentInkOverlay,
 } from "./page-document-blocks.js";
 import type { DocumentBlock } from "./rich-text/types.js";
 import { notesPaperHeight, notesPaperBounds } from "./notebook-document.js";
 import {
   contrastDocumentText,
   defaultDocumentBackground,
+  defaultDocumentPaperColor,
   normalizeCssColor,
 } from "./document-background.js";
 import {
@@ -273,6 +274,7 @@ interface EditorCtorOpts {
   geoKind?: GeoId;
   documentMode?: boolean;
   documentBackground?: string | null;
+  documentPaperColor?: string | null;
   touchUi?: boolean;
   documentUi?: import("./document-ui-config.js").DocumentUiOptions;
   promptLink?: () => Promise<string | null>;
@@ -292,6 +294,7 @@ export class Editor {
   geoKind: GeoId;
   documentMode: boolean;
   private _documentBackground: string | null = null;
+  private _documentPaperColor: string | null = null;
   private _touchUi?: boolean;
   private _documentUi?: import("./document-ui-config.js").DocumentUiOptions;
   private _promptLink?: () => Promise<string | null>;
@@ -364,6 +367,7 @@ export class Editor {
       geoKind,
       documentMode = false,
       documentBackground = null,
+      documentPaperColor = null,
       touchUi,
       documentUi,
       promptLink,
@@ -390,6 +394,11 @@ export class Editor {
       const norm = normalizeCssColor(documentBackground);
       if (!norm) throw new Error(`Invalid document background color: ${documentBackground}`);
       this._documentBackground = norm;
+    }
+    if (documentPaperColor != null) {
+      const norm = normalizeCssColor(documentPaperColor);
+      if (!norm) throw new Error(`Invalid document paper color: ${documentPaperColor}`);
+      this._documentPaperColor = norm;
     }
     this._applyDocumentSurface();
     this.selection = new Set();
@@ -934,6 +943,8 @@ export class Editor {
       this.tool === "eraser" ||
       this.tool === "laser";
     this.pageDocUI.setInkPassThrough(ink);
+    this.container.classList.toggle("ic-ink-active", ink);
+    if (ink) this.pageDocUI.blur();
   }
   setGeoKind(kind: GeoId): void {
     if (GEO_IDS.includes(kind)) {
@@ -969,11 +980,30 @@ export class Editor {
     this.requestRender();
   }
 
+  documentPaperColor(): string {
+    if (this._documentPaperColor) return this._documentPaperColor;
+    return defaultDocumentPaperColor(this.theme.id);
+  }
+
+  setDocumentPaperColor(color: string | null): void {
+    if (color === null) {
+      this._documentPaperColor = null;
+    } else {
+      const norm = normalizeCssColor(color);
+      if (!norm) throw new Error(`Invalid document paper color: ${color}`);
+      this._documentPaperColor = norm;
+    }
+    this._applyDocumentSurface();
+    this.requestRender();
+  }
+
   _applyDocumentSurface(): void {
     if (!this.documentMode) return;
-    const bg = this.documentBackgroundColor();
-    const fg = contrastDocumentText(bg);
-    this.container.style.setProperty("--ic-doc-bg", bg);
+    const canvasBg = this.documentBackgroundColor();
+    const paperBg = this.documentPaperColor();
+    const fg = contrastDocumentText(paperBg);
+    this.container.style.setProperty("--ic-doc-bg", canvasBg);
+    this.container.style.setProperty("--ic-doc-paper", paperBg);
     this.container.style.setProperty("--ic-doc-fg", fg);
   }
   _crossfadeThemeFn(): void {
@@ -1562,38 +1592,28 @@ export class Editor {
     return { lx: loc.lx - rect.x, ly: loc.ly - rect.y };
   }
 
-  _blockLocalFromContent(
-    cp: { lx: number; ly: number },
-    blockIndex: number,
-  ): XY | null {
-    const page = this.currentPage();
-    if (!page) return null;
-    const rect = this.documentMode
-      ? notesPageContentRect(page, this._notesPaperHeight())
-      : pageContentRect(page);
-    const blocks = this.store.notebookDocumentBlocks();
-    const layout = layoutPageDocument(blocks, rect.w, this.theme);
-    const entry = layout.entries.find((en) => en.index === blockIndex);
-    if (!entry) return null;
-    return {
-      x: cp.lx - entry.x - DRAWING_BLOCK_PAD,
-      y: cp.ly - entry.y - DRAWING_BLOCK_PAD,
-    };
+  /** Page-local coordinates for document ink (full sheet including margins). */
+  _paperPointFromPage(p: XY): { px: number; py: number } | null {
+    const loc = this._localPagePoint(p);
+    if (!loc) return null;
+    const paperH = this._notesPaperHeight();
+    if (!pointInNotesPaper(loc.page, loc.lx, loc.ly, paperH)) return null;
+    return { px: loc.lx, py: loc.ly };
+  }
+
+  _blockLocalFromPaper(cp: { px: number; py: number }): XY {
+    return { x: cp.px, y: cp.py };
   }
 
   _beginDocDraw(e: PointerEvent, p: XY): void {
-    const cp = this._contentPointFromPage(p);
-    if (!cp) return;
+    const pp = this._paperPointFromPage(p);
+    if (!pp) return;
     this.pageDocUI?.blur();
     const page = this.currentPage();
     if (!page) return;
     const paperH = this._notesPaperHeight();
-    const rect = this.documentMode
-      ? notesPageContentRect(page, paperH)
-      : pageContentRect(page);
     const blocks = this.store.notebookDocumentBlocks();
-    const layout = layoutPageDocument(blocks, rect.w, this.theme);
-    const target = findDrawingTarget(layout, blocks, cp.lx, cp.ly);
+    const target = findDrawingTarget(blocks, pp.px, pp.py, page.width, paperH);
     if (target.action === "reject") return;
 
     const kind: "draw" | "highlight" = this.tool === "highlight" ? "highlight" : "draw";
@@ -1602,42 +1622,13 @@ export class Editor {
     let local: XY;
     let inserted = false;
 
-    if (target.action === "hint-on-text") {
-      this.pageDocUI?.flashInkHint(target.textBlockIndex);
+    if (target.action === "ensure-end") {
       blockIndex = this.store.ensureEndDrawingBlock(page.id);
       inserted = true;
-      const layout2 = layoutPageDocument(
-        this.store.pageDocumentBlocks(page.id),
-        rect.w,
-        this.theme,
-      );
-      const drawEntry = layout2.entries.find((en) => en.index === blockIndex)!;
-      local = {
-        x: cp.lx - drawEntry.x - DRAWING_BLOCK_PAD,
-        y: Math.max(0, cp.ly - drawEntry.y - DRAWING_BLOCK_PAD),
-      };
+      local = { x: target.localX, y: target.localY };
     } else {
-      this.pageDocUI?.clearInkRedirectHint();
-      if (target.action === "ensure-end") {
-      blockIndex = this.store.ensureEndDrawingBlock(page.id);
-      inserted = true;
-      const layout2 = layoutPageDocument(
-        this.store.pageDocumentBlocks(page.id),
-        rect.w,
-        this.theme,
-      );
-      const drawEntry = layout2.entries.find((en) => en.index === blockIndex)!;
-      local = {
-        x: target.localX - drawEntry.x - DRAWING_BLOCK_PAD,
-        y: Math.max(0, cp.ly - drawEntry.y - DRAWING_BLOCK_PAD),
-      };
-      } else {
       blockIndex = target.blockIndex;
-      local = {
-        x: target.localX - DRAWING_BLOCK_PAD,
-        y: target.localY - DRAWING_BLOCK_PAD,
-      };
-      }
+      local = { x: target.localX, y: target.localY };
     }
     const stroke = {
       pts: [local.x, local.y, e.pressure || 0.5],
@@ -1662,10 +1653,9 @@ export class Editor {
 
   _extendDocDraw(e: PointerEvent, p: XY): void {
     const ss = this.session as SessionDocDrawing;
-    const cp = this._contentPointFromPage(p);
-    if (!cp) return;
-    const local = this._blockLocalFromContent(cp, ss.blockIndex);
-    if (!local) return;
+    const pp = this._paperPointFromPage(p);
+    if (!pp) return;
+    const local = this._blockLocalFromPaper(pp);
     const minD = 1.25 / this.camera.z;
     if (Math.hypot(local.x - ss.lastLocal.x, local.y - ss.lastLocal.y) < minD)
       return;
@@ -1677,11 +1667,10 @@ export class Editor {
       : [e];
     for (const ce of evs.length ? evs : [e]) {
       const r = this._evPoint(ce);
-      const pp = this._pointerPagePoint(r.x, r.y);
-      const ccp = this._contentPointFromPage(pp);
-      if (!ccp) continue;
-      const loc = this._blockLocalFromContent(ccp, ss.blockIndex);
-      if (!loc) continue;
+      const ppp = this._pointerPagePoint(r.x, r.y);
+      const cpp = this._paperPointFromPage(ppp);
+      if (!cpp) continue;
+      const loc = this._blockLocalFromPaper(cpp);
       this.store.extendDocumentDrawingStroke(
         page.id,
         ss.blockIndex,
@@ -1697,7 +1686,6 @@ export class Editor {
   _endDocDraw(): void {
     this.store.endBatch();
     this.session = null;
-    this.pageDocUI?.clearInkRedirectHint();
     this.pageDocUI?.syncFromStore();
     this.requestRender();
   }
@@ -1743,17 +1731,11 @@ export class Editor {
     if (hit) (this.session as SessionErasing).hits.add(hit.id);
   }
   _eraseDocStrokeAt(p: XY): void {
-    const cp = this._contentPointFromPage(p);
-    if (!cp) return;
-    const page = this.currentPage();
-    if (!page) return;
-    const rect = this.documentMode
-      ? notesPageContentRect(page, this._notesPaperHeight())
-      : pageContentRect(page);
+    const pp = this._paperPointFromPage(p);
+    if (!pp) return;
     const blocks = this.store.notebookDocumentBlocks();
-    const layout = layoutPageDocument(blocks, rect.w, this.theme);
     const tol = 10 / this.camera.z;
-    const hit = hitDocumentStroke(layout, blocks, cp.lx, cp.ly, tol);
+    const hit = hitDocumentStroke(blocks, pp.px, pp.py, tol);
     if (hit) {
       const next = removeDocumentStroke(blocks, hit.blockIndex, hit.strokeIndex);
       this.store.setNotebookDocument(next);
@@ -3083,10 +3065,10 @@ export class Editor {
     )
       return;
     if (background) {
-      const docBg = this.documentBackgroundColor();
+      const paperBg = this.documentPaperColor();
       ctx.save();
       ctx.translate(pg.x, pg.y);
-      ctx.fillStyle = docBg;
+      ctx.fillStyle = paperBg;
       ctx.fillRect(0, 0, pg.width, paperH);
       ctx.restore();
     }
@@ -3097,13 +3079,12 @@ export class Editor {
     if (skipDom) {
       drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
         drawingOnly: true,
+        skipInk: true,
         paperHeight: paperH,
-        showDrawingDivider: !!this.pageDocUI?.inkZoneDividerVisible,
       });
     } else {
       drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
         paperHeight: paperH,
-        showDrawingDivider: !!this.pageDocUI?.inkZoneDividerVisible,
       });
     }
     ctx.restore();
@@ -3214,6 +3195,7 @@ export class Editor {
       if (skipDom) {
         drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
           drawingOnly: true,
+          skipInk: true,
         });
       } else {
         drawPageDocumentBlocks(ctx, pg, blocks, this.theme);
@@ -3517,6 +3499,26 @@ export class Editor {
     ctx.scale(dpr, dpr);
     const cam = this.camera;
     const t = this.theme;
+
+    if (this.documentMode && this.pageDocUI && !this.pageDocUI.wrap.hidden) {
+      const pg = this.currentPage();
+      if (pg) {
+        const paperH = this._notesPaperHeight();
+        const blocks = this.store.notebookDocumentBlocks();
+        ctx.save();
+        ctx.setTransform(
+          cam.z * dpr,
+          0,
+          0,
+          cam.z * dpr,
+          cam.x * cam.z * dpr,
+          cam.y * cam.z * dpr,
+        );
+        ctx.translate(pg.x, pg.y);
+        drawDocumentInkOverlay(ctx, blocks, this.theme);
+        ctx.restore();
+      }
+    }
 
     if (this.tool === "select" && this.selection.size && !this.editing) {
       const one =

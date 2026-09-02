@@ -146,6 +146,75 @@ describe('document mode drawing', () => {
     docContainer.remove()
   })
 
+  it('draw tool blurs focused page document and enables ink pass-through', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    const wrap = docContainer.querySelector('.ic-page-doc-wrap')!
+    wrap.classList.add('ic-page-doc-focused')
+    docEditor.pageDocUI.focused = true
+    docEditor.setTool('draw')
+    expect(wrap.classList.contains('ic-page-doc-focused')).toBe(false)
+    expect(wrap.classList.contains('ic-page-doc-ink-pass')).toBe(true)
+    expect(docContainer.classList.contains('ic-ink-active')).toBe(true)
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('draw tool stores ink over text in page document', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.pageDocUI.focus()
+    docEditor.setTool('draw')
+    const page = docEditor.currentPage()!
+    const paperH = notesPaperHeight(page, docEditor.store.notebookDocumentBlocks(), docEditor.theme)
+    const rect = notesPageContentRect(page, paperH)
+    const inkY = page.y + rect.y + 40
+    const inkX = page.x + rect.x + 80
+    const start = docEditor.pageToScreen(inkX, inkY)
+    const end = docEditor.pageToScreen(inkX + 60, inkY + 40)
+    drag(docEditor, [[start.x, start.y], [end.x, end.y]])
+    const blocks = docEditor.store.pageDocumentBlocks(page.id)
+    const drawing = blocks.find((b) => b.type === 'drawing')
+    expect(drawing?.type).toBe('drawing')
+    if (drawing?.type === 'drawing') {
+      expect(drawing.strokes.length).toBeGreaterThanOrEqual(1)
+      const y0 = drawing.strokes[0]!.pts[1]!
+      expect(y0).toBeGreaterThan(rect.y + 20)
+      expect(y0).toBeLessThan(rect.y + 120)
+    }
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('draw tool stores ink in page side margins', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.setTool('draw')
+    const page = docEditor.currentPage()!
+    const start = docEditor.pageToScreen(page.x + 24, page.y + 120)
+    const end = docEditor.pageToScreen(page.x + 64, page.y + 180)
+    drag(docEditor, [[start.x, start.y], [end.x, end.y]])
+    const drawing = docEditor.store
+      .pageDocumentBlocks(page.id)
+      .find((b) => b.type === 'drawing')
+    expect(drawing?.type).toBe('drawing')
+    if (drawing?.type === 'drawing') {
+      expect(drawing.strokes[0]!.pts[0]!).toBeLessThan(72)
+    }
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
   it('documentMode ignores zoomAt', () => {
     const docContainer = document.createElement('div')
     document.body.appendChild(docContainer)
@@ -165,14 +234,22 @@ describe('document mode drawing', () => {
       container: docContainer,
       documentMode: true,
       documentBackground: '#e8f4ff',
+      documentPaperColor: '#fff8e7',
     })
     expect(docEditor.documentBackgroundColor()).toBe('#e8f4ff')
+    expect(docEditor.documentPaperColor()).toBe('#fff8e7')
     expect(docContainer.style.getPropertyValue('--ic-doc-bg')).toBe('#e8f4ff')
+    expect(docContainer.style.getPropertyValue('--ic-doc-paper')).toBe('#fff8e7')
     docEditor.setDocumentBackground('#1a1a2e')
+    docEditor.setDocumentPaperColor('#ffffff')
     expect(docEditor.documentBackgroundColor()).toBe('#1a1a2e')
+    expect(docEditor.documentPaperColor()).toBe('#ffffff')
     docEditor.setDocumentBackground(null)
-    expect(docEditor.documentBackgroundColor()).toBe('#ffffff')
+    docEditor.setDocumentPaperColor(null)
+    expect(docEditor.documentBackgroundColor()).toBe('#e8e4dc')
+    expect(docEditor.documentPaperColor()).toBe('#ffffff')
     expect(() => docEditor.setDocumentBackground('bad-color')).toThrow()
+    expect(() => docEditor.setDocumentPaperColor('bad-color')).toThrow()
     docEditor.destroy()
     docContainer.remove()
   })

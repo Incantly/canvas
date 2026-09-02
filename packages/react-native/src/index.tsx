@@ -43,6 +43,7 @@ export const Canvas = forwardRef(function Canvas(
     styles,
     documentMode = false,
     documentBackground,
+    documentPaperColor,
     uiTools,
     uiIcons,
     hidePagesBar,
@@ -121,6 +122,7 @@ export const Canvas = forwardRef(function Canvas(
       styles,
       documentMode,
       documentBackground,
+    documentPaperColor,
       uiTools,
       uiIcons,
       hidePagesBar,
@@ -231,6 +233,12 @@ export const Canvas = forwardRef(function Canvas(
       st.bridge.post({ type: 'setDocumentBackground', color: documentBackground })
     }
   }, [documentBackground])
+
+  useEffect(() => {
+    if (documentPaperColor !== undefined) {
+      st.bridge.post({ type: 'setDocumentPaperColor', color: documentPaperColor })
+    }
+  }, [documentPaperColor])
   useEffect(() => () => st.bridge.dispose(), [])
 
   useImperativeHandle(
@@ -242,6 +250,8 @@ export const Canvas = forwardRef(function Canvas(
       setStyle: (key, value) => st.bridge.post({ type: 'setStyle', key, value }),
       setDocumentBackground: (color) =>
         st.bridge.post({ type: 'setDocumentBackground', color }),
+      setDocumentPaperColor: (color) =>
+        st.bridge.post({ type: 'setDocumentPaperColor', color }),
       setGrid: (g) => st.bridge.post({ type: 'setGrid', grid: g }),
       undo: () => st.bridge.post({ type: 'undo' }),
       redo: () => st.bridge.post({ type: 'redo' }),

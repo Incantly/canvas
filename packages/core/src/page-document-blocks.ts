@@ -173,10 +173,8 @@ function computeLayout(
       entries.push({ index, block, x: 0, y, w: contentW, h })
       y += h + 4
     } else {
-      y += DRAWING_BLOCK_TOP_GAP
-      const h = drawingBlockHeight(block)
-      entries.push({ index, block, x: 0, y, w: contentW, h })
-      y += h + DRAWING_BLOCK_GAP
+      // Overlay ink: strokes use page-absolute coordinates and do not affect layout flow.
+      entries.push({ index, block, x: 0, y: 0, w: contentW, h: 0 })
     }
     index++
   }
@@ -207,11 +205,10 @@ export function invalidateLayoutCache(): void {
 
 export type DrawingTarget =
   | { action: 'draw'; blockIndex: number; localX: number; localY: number }
-  | { action: 'hint-on-text'; textBlockIndex: number }
-  | { action: 'ensure-end'; localX: number }
+  | { action: 'ensure-end'; localX: number; localY: number }
   | { action: 'reject' }
 
-/** One ink region at the end of the body — Apple Notes style. */
+/** One ink region at the end of the body — strokes use page-absolute coordinates. */
 export function consolidateDocumentBlocks(blocks: DocumentBlock[]): DocumentBlock[] {
   const validated = validateDocumentBlocks(blocks)
   const body = validated.filter((b) => !isDrawingBlock(b))
@@ -230,86 +227,48 @@ export function consolidateDocumentBlocks(blocks: DocumentBlock[]): DocumentBloc
   return [...base, merged]
 }
 
-function isEmptyTextBlock(b: DocumentBlock): boolean {
-  if (!isTextBlock(b)) return false
-  return b.content.length === 0 || (b.content.length === 1 && !b.content[0]!.text)
-}
-
-function allTextBlocksEmpty(blocks: DocumentBlock[]): boolean {
-  const textBlocks = blocks.filter(isTextBlock)
-  return textBlocks.length === 0 || textBlocks.every(isEmptyTextBlock)
-}
-
 export function findDrawingTarget(
-  layout: PageDocumentLayout,
   blocks: DocumentBlock[],
-  lx: number,
-  ly: number,
+  px: number,
+  py: number,
+  paperW: number,
+  paperH: number,
 ): DrawingTarget {
-  const bodyEmpty = allTextBlocksEmpty(blocks)
-
-  for (const e of layout.entries) {
-    if (!isTextBlock(e.block)) continue
-    if (ly >= e.y && ly < e.y + e.h && lx >= e.x && lx <= e.x + e.w) {
-      if (bodyEmpty) return { action: 'ensure-end', localX: lx }
-      return { action: 'hint-on-text', textBlockIndex: e.index }
-    }
+  if (px < 0 || py < 0 || px > paperW || py > paperH) {
+    return { action: 'reject' }
   }
 
-  for (let i = 0; i < layout.entries.length - 1; i++) {
-    const a = layout.entries[i]!
-    const b = layout.entries[i + 1]!
-    if (isTextBlock(a.block) && isTextBlock(b.block)) {
-      if (ly >= a.y + a.h && ly < b.y) {
-        if (bodyEmpty) return { action: 'ensure-end', localX: lx }
-        return { action: 'reject' }
-      }
-    }
-  }
-
-  const lastBlock = blocks[blocks.length - 1]
-  const lastEntry = layout.entries[layout.entries.length - 1]
-  const lastTextEntry = [...layout.entries].reverse().find((e) => isTextBlock(e.block))
-
-  if (lastBlock && isDrawingBlock(lastBlock) && lastEntry && isDrawingBlock(lastEntry.block)) {
-    const tailEnd = lastEntry.y + lastEntry.h + 4096
-    if (ly >= lastEntry.y && ly < tailEnd && lx >= lastEntry.x && lx <= lastEntry.x + lastEntry.w) {
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    if (isDrawingBlock(blocks[i]!)) {
       return {
         action: 'draw',
-        blockIndex: lastEntry.index,
-        localX: lx - lastEntry.x,
-        localY: Math.max(DRAWING_BLOCK_PAD, ly - lastEntry.y),
+        blockIndex: i,
+        localX: px,
+        localY: py,
       }
     }
   }
 
-  if (lastTextEntry && ly >= lastTextEntry.y + lastTextEntry.h) {
-    return { action: 'ensure-end', localX: lx }
-  }
-
-  if (bodyEmpty) return { action: 'ensure-end', localX: lx }
-  return { action: 'reject' }
+  return { action: 'ensure-end', localX: px, localY: py }
 }
 
 export function hitDocumentStroke(
-  layout: PageDocumentLayout,
   blocks: DocumentBlock[],
-  lx: number,
-  ly: number,
+  px: number,
+  py: number,
   tolerance: number,
 ): { blockIndex: number; strokeIndex: number } | null {
-  for (const entry of layout.entries) {
-    if (!isDrawingBlock(entry.block)) continue
-    const rx = lx - entry.x - DRAWING_BLOCK_PAD
-    const ry = ly - entry.y - DRAWING_BLOCK_PAD
-    for (let si = entry.block.strokes.length - 1; si >= 0; si--) {
-      const stroke = entry.block.strokes[si]
+  for (let bi = 0; bi < blocks.length; bi++) {
+    const block = blocks[bi]
+    if (!block || !isDrawingBlock(block)) continue
+    for (let si = block.strokes.length - 1; si >= 0; si--) {
+      const stroke = block.strokes[si]!
       const pts = stroke.pts
       for (let i = 0; i < pts.length - 2; i += 3) {
-        const dx = pts[i] - rx
-        const dy = pts[i + 1] - ry
+        const dx = pts[i]! - px
+        const dy = pts[i + 1]! - py
         if (dx * dx + dy * dy <= tolerance * tolerance) {
-          return { blockIndex: entry.index, strokeIndex: si }
+          return { blockIndex: bi, strokeIndex: si }
         }
       }
     }
@@ -403,48 +362,18 @@ function drawStrokeInBlock(
   ctx.restore()
 }
 
-function drawInkZoneDividerLine(
+/** Paper-local ink layer — rendered above text in document mode. */
+export function drawDocumentInkOverlay(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
+  blocks: DocumentBlock[],
   theme: Theme,
 ): void {
-  ctx.save()
-  ctx.strokeStyle = theme.id === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(60, 50, 30, 0.22)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(x, y)
-  ctx.lineTo(x + w, y)
-  ctx.stroke()
-  ctx.fillStyle = theme.id === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(60, 50, 30, 0.35)'
-  ctx.beginPath()
-  ctx.moveTo(x + 4, y + 5)
-  ctx.lineTo(x + 10, y + 9)
-  ctx.lineTo(x + 4, y + 13)
-  ctx.closePath()
-  ctx.fill()
-  ctx.restore()
-}
-
-/** Transient “write ink here” marker below the last text block. */
-export function drawInkZoneHintDivider(
-  ctx: CanvasRenderingContext2D,
-  layout: PageDocumentLayout,
-  theme: Theme,
-  contentW: number,
-): void {
-  let lastText: LayoutBlockEntry | undefined
-  for (let i = layout.entries.length - 1; i >= 0; i--) {
-    const entry = layout.entries[i]!
-    if (isTextBlock(entry.block)) {
-      lastText = entry
-      break
+  for (const block of blocks) {
+    if (!isDrawingBlock(block)) continue
+    for (const stroke of block.strokes) {
+      drawStrokeInBlock(ctx, stroke, theme, false)
     }
   }
-  if (!lastText) return
-  const y = lastText.y + lastText.h + DRAWING_BLOCK_TOP_GAP
-  drawInkZoneDividerLine(ctx, 0, y, contentW, theme)
 }
 
 export function drawDrawingBlockRegion(
@@ -455,23 +384,9 @@ export function drawDrawingBlockRegion(
   w: number,
   h: number,
   theme: Theme,
-  opts?: { ghost?: boolean; showDivider?: boolean },
+  opts?: { ghost?: boolean },
 ): void {
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(x, y, w, h)
-  ctx.clip()
-  for (const stroke of block.strokes) {
-    ctx.save()
-    ctx.translate(x + DRAWING_BLOCK_PAD, y + DRAWING_BLOCK_PAD)
-    drawStrokeInBlock(ctx, stroke, theme, !!opts?.ghost)
-    ctx.restore()
-  }
-  ctx.restore()
-
-  if (opts?.showDivider !== false) {
-    drawInkZoneDividerLine(ctx, x, y, w, theme)
-  }
+  drawDocumentInkOverlay(ctx, [block], theme)
 }
 
 const _imageCache = new Map<string, HTMLImageElement>()
@@ -516,8 +431,8 @@ export function drawPageDocumentBlocks(
     drawingOnly?: boolean
     skipDrawingIndices?: Set<number>
     paperHeight?: number
-    /** Transient divider when ink is redirected off text (Apple Notes hint). */
-    showDrawingDivider?: boolean
+    /** When true, ink is drawn on the editor overlay above the DOM text layer. */
+    skipInk?: boolean
   },
 ): PageDocumentLayout {
   const rect =
@@ -547,29 +462,18 @@ export function drawPageDocumentBlocks(
     } else if (isImageBlock(entry.block)) {
       if (opts?.drawingOnly) continue
       drawImageBlockRegion(ctx, entry.block, 0, entry.y, entry.w, entry.h)
-    } else if (!opts?.textOnly && !opts?.skipDrawingIndices?.has(entry.index)) {
-      drawDrawingBlockRegion(
-        ctx,
-        entry.block,
-        entry.x,
-        entry.y,
-        entry.w,
-        entry.h,
-        theme,
-        { showDivider: false },
-      )
     }
   }
-  if (opts?.showDrawingDivider) {
-    drawInkZoneHintDivider(ctx, layout, theme, rect.w)
-  }
   ctx.restore()
+  if (!opts?.textOnly && !opts?.skipInk) {
+    drawDocumentInkOverlay(ctx, blocks, theme)
+  }
   return layout
 }
 
 export function documentBlockToDomHtml(block: DocumentBlock, index: number): string {
   if (isDrawingBlock(block)) {
-    return `<div class="ic-drawing-slot" data-doc-index="${index}" contenteditable="false" aria-label="Drawing area"></div>`
+    return `<div class="ic-drawing-slot ic-drawing-overlay" data-doc-index="${index}" hidden aria-hidden="true"></div>`
   }
   if (isImageBlock(block)) {
     const alt = block.alt ? ` alt="${escapeHtmlAttr(block.alt)}"` : ''
