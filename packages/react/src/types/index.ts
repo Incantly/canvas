@@ -3,6 +3,7 @@ import type {
   Camera,
   Diff,
   DiffSource,
+  DocumentUiOptions,
   Editor,
   BoardUI,
   GridId,
@@ -43,6 +44,8 @@ export interface CanvasProps {
   documentBackground?: string | null
   /** Touch-first formatting bar (default: auto-detect). Set false on desktop web. */
   touchUi?: boolean
+  /** Slash menu and selection toolbar for document mode (fully customizable). */
+  documentUi?: DocumentUiOptions
   onMount?: (editor: Editor, ui: BoardUI) => void
   onChange?: (diff: Diff, source: DiffSource, editor: Editor) => void
   onSelectionChange?: (ids: string[], editor: Editor) => void

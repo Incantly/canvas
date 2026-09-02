@@ -64,11 +64,27 @@ export {
   layoutRichText,
   drawRichTextLayout,
 } from './rich-text/index.js'
+export { applyInlineFontSize } from './rich-text/dom.js'
 export {
   defaultDocumentBackground,
   normalizeCssColor,
   contrastDocumentText,
 } from './document-background.js'
+export {
+  type DocumentUiOptions,
+  type DocumentEditorApi,
+  type SlashCommand,
+  type SelectionToolbarOptions,
+  type SelectionToolbarAction,
+  type SelectionToolbarHandle,
+  type SlashMenuRenderContext,
+  DEFAULT_SLASH_COMMANDS,
+  DEFAULT_SELECTION_ACTIONS,
+  createDefaultSelectionToolbar,
+  createDocumentEditorApi,
+  defaultSelectionToolbarPosition,
+  defaultSlashMenuPosition,
+} from './document-ui-config.js'
 export type { DiffSource, Diff, Snapshot } from './types/operations.js'
 export type { SerializedSchema } from './types/schema.js'
 export { CURRENT_SCHEMA } from './types/schema.js'

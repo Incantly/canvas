@@ -230,15 +230,28 @@ export function consolidateDocumentBlocks(blocks: DocumentBlock[]): DocumentBloc
   return [...base, merged]
 }
 
+function isEmptyTextBlock(b: DocumentBlock): boolean {
+  if (!isTextBlock(b)) return false
+  return b.content.length === 0 || (b.content.length === 1 && !b.content[0]!.text)
+}
+
+function allTextBlocksEmpty(blocks: DocumentBlock[]): boolean {
+  const textBlocks = blocks.filter(isTextBlock)
+  return textBlocks.length === 0 || textBlocks.every(isEmptyTextBlock)
+}
+
 export function findDrawingTarget(
   layout: PageDocumentLayout,
   blocks: DocumentBlock[],
   lx: number,
   ly: number,
 ): DrawingTarget {
+  const bodyEmpty = allTextBlocksEmpty(blocks)
+
   for (const e of layout.entries) {
     if (!isTextBlock(e.block)) continue
     if (ly >= e.y && ly < e.y + e.h && lx >= e.x && lx <= e.x + e.w) {
+      if (bodyEmpty) return { action: 'ensure-end', localX: lx }
       return { action: 'hint-on-text', textBlockIndex: e.index }
     }
   }
@@ -247,7 +260,10 @@ export function findDrawingTarget(
     const a = layout.entries[i]!
     const b = layout.entries[i + 1]!
     if (isTextBlock(a.block) && isTextBlock(b.block)) {
-      if (ly >= a.y + a.h && ly < b.y) return { action: 'reject' }
+      if (ly >= a.y + a.h && ly < b.y) {
+        if (bodyEmpty) return { action: 'ensure-end', localX: lx }
+        return { action: 'reject' }
+      }
     }
   }
 
@@ -271,6 +287,7 @@ export function findDrawingTarget(
     return { action: 'ensure-end', localX: lx }
   }
 
+  if (bodyEmpty) return { action: 'ensure-end', localX: lx }
   return { action: 'reject' }
 }
 

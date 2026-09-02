@@ -1,0 +1,251 @@
+/* Playground-only Notion-style document UI (dark). Scoped under .pg-rich-text-panel */
+
+.pg-rich-text-panel .ic-slash-menu {
+  min-width: 280px;
+  max-width: 320px;
+  padding: 6px 8px 8px;
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 10px;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.pg-slash-section {
+  font: 600 11px/1.2 system-ui, -apple-system, sans-serif;
+  color: #8a8a8a;
+  padding: 6px 10px 4px;
+  letter-spacing: 0.02em;
+}
+
+.pg-slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #ececec;
+  font: 14px/1.25 system-ui, -apple-system, sans-serif;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pg-slash-item:hover,
+.pg-slash-item-active {
+  background: #37373a;
+}
+
+.pg-slash-icon {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #bdbdbd;
+  font: 600 12px/1 system-ui, sans-serif;
+}
+
+.pg-slash-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.pg-slash-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.pg-slash-shortcut {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: 11px/1 system-ui, sans-serif;
+  color: #8a8a8a;
+}
+
+.pg-slash-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #333337;
+  color: #a8a8a8;
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* Selection toolbar */
+
+.pg-selection-toolbar {
+  position: fixed;
+  z-index: 56;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #2b2b2b;
+  border: 1px solid #3f3f3f;
+  border-radius: 10px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  font: 13px/1.2 system-ui, -apple-system, sans-serif;
+  color: #e6e6e6;
+  user-select: none;
+}
+
+.pg-selection-toolbar[hidden] {
+  display: none !important;
+}
+
+.pg-sel-divider {
+  width: 1px;
+  height: 22px;
+  background: #444;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.pg-sel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #e0e0e0;
+  font: inherit;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pg-sel-btn:hover {
+  background: #383838;
+}
+
+.pg-sel-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.pg-sel-icon-only {
+  padding: 6px;
+  min-width: 32px;
+}
+
+.pg-sel-green {
+  color: #4ade80;
+}
+
+.pg-sel-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  background: #222;
+  border-radius: 8px;
+}
+
+.pg-sel-group .pg-sel-btn {
+  min-width: 30px;
+  padding: 5px 7px;
+  font-weight: 600;
+}
+
+.pg-sel-group .pg-sel-btn[data-active='true'] {
+  background: #404040;
+  color: #fff;
+}
+
+.pg-sel-dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #333;
+  border: none;
+  color: #e8e8e8;
+  font: 13px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.pg-sel-dropdown:hover {
+  background: #3a3a3a;
+}
+
+.pg-sel-dropdown svg.chevron {
+  width: 10px;
+  height: 10px;
+  opacity: 0.65;
+}
+
+.pg-sel-menu {
+  position: fixed;
+  z-index: 57;
+  min-width: 140px;
+  padding: 4px;
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.pg-sel-menu[hidden] {
+  display: none !important;
+}
+
+.pg-sel-menu-item {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #ececec;
+  font: 13px/1.3 system-ui, sans-serif;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.pg-sel-menu-item:hover,
+.pg-sel-menu-item-active {
+  background: #37373a;
+}
+
+.pg-sel-color-bar {
+  display: block;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+  background: #e8e8e8;
+  margin-top: 1px;
+}
+
+.pg-sel-color-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.pg-sel-color-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}

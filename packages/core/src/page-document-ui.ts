@@ -21,6 +21,17 @@ import {
 import { drawPageDocumentBlocks } from './page-document-blocks.js'
 import type { DocumentBlock, ImageBlock } from './rich-text/types.js'
 import { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
+import {
+  type DocumentUiOptions,
+  type SelectionToolbarHandle,
+  DEFAULT_SLASH_COMMANDS,
+  createDefaultSelectionToolbar,
+  createDocumentEditorApi,
+  defaultSlashMenuPosition,
+} from './document-ui-config.js'
+
+export type { SlashCommand } from './document-ui-config.js'
+export { DEFAULT_SLASH_COMMANDS as SLASH_COMMANDS } from './document-ui-config.js'
 
 export interface PageDocumentHost {
   readonly readonly: boolean
@@ -31,38 +42,35 @@ export interface PageDocumentHost {
   theme: Theme
   documentMode: boolean
   touchUi?: boolean
+  documentUi?: DocumentUiOptions
   promptLink?: () => Promise<string | null>
   readClipboard?: () => Promise<string>
   currentPage(): PageRecord | null
   pageToScreen(x: number, y: number): { x: number; y: number }
   requestRender(): void
   emitEdit(): void
+  undo(): void
+  redo(): void
+  copySelection?(): Promise<void>
+  pasteFromClipboard?(): Promise<void>
 }
 
-export interface SlashCommand {
-  id: BlockType | 'divider'
-  label: string
-  hint?: string
+function resolveTouchUi(hostTouchUi: boolean | undefined): boolean {
+  if (hostTouchUi === true) return true
+  if (hostTouchUi === false) return false
+  return typeof window !== 'undefined' && 'ontouchstart' in window
 }
-
-export const SLASH_COMMANDS: SlashCommand[] = [
-  { id: 'paragraph', label: 'Text', hint: 'Plain paragraph' },
-  { id: 'heading1', label: 'Heading 1' },
-  { id: 'heading2', label: 'Heading 2' },
-  { id: 'heading3', label: 'Heading 3' },
-  { id: 'bulletList', label: 'Bullet list' },
-  { id: 'numberedList', label: 'Numbered list' },
-  { id: 'quote', label: 'Quote' },
-  { id: 'codeBlock', label: 'Code block' },
-  { id: 'divider', label: 'Divider' },
-]
 
 export class PageDocumentUI {
   private host: PageDocumentHost
   wrap: HTMLDivElement
   el: HTMLDivElement
   slashMenu: HTMLDivElement
-  formatBar: HTMLDivElement
+  formatBar: HTMLDivElement | null
+  private overlayMount: HTMLElement
+  private selectionToolbar: SelectionToolbarHandle | null = null
+  private slashCommands = DEFAULT_SLASH_COMMANDS
+  private customSlashRenderer: DocumentUiOptions['renderSlashMenu']
   focused = false
   private touchUi = false
   private slashFilter = ''
@@ -72,10 +80,17 @@ export class PageDocumentUI {
   private _renderedBlocks: DocumentBlock[] = []
   private _syncRaf: number | null = null
 
-  private onSelectionChange = (): void => this.guardSelectionInDrawing()
+  private onSelectionChange = (): void => {
+    this.guardSelectionInDrawing()
+    this.updateSelectionToolbar()
+  }
 
   constructor(host: PageDocumentHost) {
     this.host = host
+    const docUi = host.documentUi
+    if (docUi?.slashCommands?.length) this.slashCommands = docUi.slashCommands
+    this.customSlashRenderer = docUi?.renderSlashMenu
+    this.overlayMount = host.container.ownerDocument?.body ?? document.body
     this.wrap = document.createElement('div')
     this.wrap.className = 'ic-page-doc-wrap'
     this.el = document.createElement('div')
@@ -87,22 +102,38 @@ export class PageDocumentUI {
     this.slashMenu = document.createElement('div')
     this.slashMenu.className = 'ic-slash-menu'
     this.slashMenu.hidden = true
-    this.formatBar = document.createElement('div')
-    this.formatBar.className = 'ic-mobile-format-bar'
-    this.formatBar.hidden = true
-    this.formatBar.innerHTML =
-      `<button type="button" data-fmt="bold" aria-label="Bold">B</button>` +
-      `<button type="button" data-fmt="italic" aria-label="Italic">I</button>` +
-      `<button type="button" data-fmt="underline" aria-label="Underline">U</button>` +
-      `<button type="button" data-fmt="link" aria-label="Link">Link</button>` +
-      `<button type="button" data-fmt="undo" aria-label="Undo">Undo</button>` +
-      `<button type="button" data-fmt="redo" aria-label="Redo">Redo</button>`
+    this.touchUi = resolveTouchUi(host.touchUi)
+    this.formatBar = null
+    if (this.touchUi) {
+      const bar = document.createElement('div')
+      bar.className = 'ic-mobile-format-bar'
+      bar.hidden = true
+      bar.innerHTML =
+        `<button type="button" data-fmt="bold" aria-label="Bold">B</button>` +
+        `<button type="button" data-fmt="italic" aria-label="Italic">I</button>` +
+        `<button type="button" data-fmt="underline" aria-label="Underline">U</button>` +
+        `<button type="button" data-fmt="link" aria-label="Link">Link</button>` +
+        `<button type="button" data-fmt="undo" aria-label="Undo">Undo</button>` +
+        `<button type="button" data-fmt="redo" aria-label="Redo">Redo</button>`
+      this.formatBar = bar
+      host.container.appendChild(bar)
+    }
     host.container.appendChild(this.wrap)
-    host.container.appendChild(this.slashMenu)
-    host.container.appendChild(this.formatBar)
-    this.touchUi =
-      host.touchUi ??
-      (typeof window !== 'undefined' && 'ontouchstart' in window)
+    this.overlayMount.appendChild(this.slashMenu)
+
+    const editorApi = createDocumentEditorApi({
+      promptLink: host.promptLink,
+      sync: () => this.syncToStore(),
+      undo: () => host.undo(),
+      redo: () => host.redo(),
+    })
+    if (docUi?.selectionToolbar !== false) {
+      const opts = docUi?.selectionToolbar ?? {}
+      this.selectionToolbar = opts.create
+        ? opts.create(editorApi)
+        : createDefaultSelectionToolbar(opts, editorApi, this.overlayMount)
+    }
+
     this.bind()
     this.syncFromStore()
   }
@@ -134,15 +165,23 @@ export class PageDocumentUI {
       this.hideSlashMenu()
       this.focused = false
       this.wrap.classList.remove('ic-page-doc-focused')
-      this.formatBar.hidden = true
+      this.selectionToolbar?.hide()
+      this.formatBar && (this.formatBar.hidden = true)
       this.flushSyncToStore()
       this.host.emitEdit()
     })
     this.el.addEventListener('pointerdown', (e) => this.onPointerDown(e))
     this.el.addEventListener('mousedown', (e) => this.onPointerDown(e))
     this.el.addEventListener('paste', (e) => void this.onPaste(e))
-    this.formatBar.addEventListener('mousedown', (e) => e.preventDefault())
-    this.formatBar.addEventListener('click', (e) => void this.onFormatBarClick(e))
+    this.el.addEventListener('keyup', () => {
+      this.checkSlashTrigger()
+      this.updateSelectionToolbar()
+    })
+    this.el.addEventListener('mouseup', () => this.updateSelectionToolbar())
+    if (this.formatBar) {
+      this.formatBar.addEventListener('mousedown', (e) => e.preventDefault())
+      this.formatBar.addEventListener('click', (e) => void this.onFormatBarClick(e))
+    }
     this.slashMenu.addEventListener('mousedown', (e) => {
       e.preventDefault()
       const btn = (e.target as HTMLElement).closest('[data-slash-id]') as HTMLElement | null
@@ -203,7 +242,9 @@ export class PageDocumentUI {
     }
     this.wrap.remove()
     this.slashMenu.remove()
-    this.formatBar.remove()
+    this.selectionToolbar?.destroy()
+    this.selectionToolbar = null
+    this.formatBar?.remove()
   }
 
   /** Re-sync DOM from store after tab/panel return. */
@@ -350,6 +391,7 @@ export class PageDocumentUI {
   }
 
   private scheduleSyncToStore(): void {
+    if (!this.slashMenu.hidden) return
     if (this._syncRaf !== null) return
     this._syncRaf = requestAnimationFrame(() => {
       this._syncRaf = null
@@ -484,6 +526,35 @@ export class PageDocumentUI {
     this.focusAtEnd()
   }
 
+  private _lastTextSelection = false
+
+  hasTextSelection(): boolean {
+    const sel = window.getSelection()
+    if (!sel?.rangeCount || sel.isCollapsed) return false
+    const range = sel.getRangeAt(0)
+    return this.el.contains(range.commonAncestorContainer) && !!sel.toString()
+  }
+
+  async copySelectedText(): Promise<boolean> {
+    if (!this.hasTextSelection()) return false
+    const text = window.getSelection()?.toString() ?? ''
+    if (!text) return false
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  deleteSelectedText(): boolean {
+    if (!this.hasTextSelection()) return false
+    this.el.focus({ preventScroll: true })
+    document.execCommand('delete')
+    this.syncToStore()
+    return true
+  }
+
   blur(): void {
     this.el.blur()
   }
@@ -586,19 +657,28 @@ export class PageDocumentUI {
     } else if (meta && e.key === 'k') {
       e.preventDefault()
       void this.applyLink()
+    } else if (meta && e.key === 'z') {
+      e.preventDefault()
+      if (e.shiftKey) this.host.redo()
+      else this.host.undo()
+    } else if (meta && e.key === 'c') {
+      e.preventDefault()
+      void this.host.copySelection?.()
     } else if (this.slashMenu.hidden === false) {
+      const cmds = this.visibleSlashCommands()
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        this.slashIndex = (this.slashIndex + 1) % this.visibleSlashCommands().length
+        if (!cmds.length) return
+        this.slashIndex = (this.slashIndex + 1) % cmds.length
         this.renderSlashMenu()
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
-        const n = this.visibleSlashCommands().length
+        const n = cmds.length
+        if (!n) return
         this.slashIndex = (this.slashIndex - 1 + n) % n
         this.renderSlashMenu()
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        const cmds = this.visibleSlashCommands()
         if (cmds[this.slashIndex]) this.applySlashCommand(cmds[this.slashIndex].id)
       } else if (e.key === 'Escape') {
         e.preventDefault()
@@ -662,12 +742,21 @@ export class PageDocumentUI {
     this.showSlashMenu()
   }
 
-  private visibleSlashCommands(): SlashCommand[] {
-    if (!this.slashFilter) return SLASH_COMMANDS
-    return SLASH_COMMANDS.filter((c) => c.label.toLowerCase().includes(this.slashFilter))
+  private visibleSlashCommands() {
+    if (!this.slashFilter) return this.slashCommands
+    return this.slashCommands.filter((c) =>
+      c.label.toLowerCase().includes(this.slashFilter) ||
+      c.id.toLowerCase().includes(this.slashFilter),
+    )
   }
 
   private showSlashMenu(): void {
+    this.selectionToolbar?.hide()
+    const cmds = this.visibleSlashCommands()
+    if (!cmds.length) {
+      this.slashMenu.hidden = true
+      return
+    }
     this.renderSlashMenu()
     this.slashMenu.hidden = false
     this.positionSlashMenu()
@@ -678,34 +767,61 @@ export class PageDocumentUI {
     if (!sel?.rangeCount) return
     const range = sel.getRangeAt(0)
     const rect = range.getBoundingClientRect()
-    const cr = this.host.container.getBoundingClientRect()
-    const menuH = this.slashMenu.offsetHeight || 200
-    const viewportH = window.visualViewport?.height ?? window.innerHeight
-    const topBelow = rect.bottom - cr.top + 6
-    const maxTop = viewportH - cr.top - menuH - 8
-    this.slashMenu.style.left = `${rect.left - cr.left}px`
-    this.slashMenu.style.top = `${Math.min(topBelow, maxTop)}px`
+    defaultSlashMenuPosition(rect, this.slashMenu)
+  }
+
+  private updateSelectionToolbar(): void {
+    if (
+      !this.selectionToolbar ||
+      !this.focused ||
+      this.host.readonly ||
+      !this.slashMenu.hidden
+    ) {
+      this.selectionToolbar?.hide()
+      this.notifyTextSelectionChange()
+      return
+    }
+    const sel = window.getSelection()
+    if (!sel?.rangeCount || sel.isCollapsed) {
+      this.selectionToolbar.hide()
+      this.notifyTextSelectionChange()
+      return
+    }
+    const range = sel.getRangeAt(0)
+    if (!this.el.contains(range.commonAncestorContainer)) {
+      this.selectionToolbar.hide()
+      this.notifyTextSelectionChange()
+      return
+    }
+    const rect = range.getBoundingClientRect()
+    this.selectionToolbar.show(rect)
+    this.notifyTextSelectionChange()
+  }
+
+  private notifyTextSelectionChange(): void {
+    const hasSel = this.hasTextSelection()
+    if (hasSel !== this._lastTextSelection) {
+      this._lastTextSelection = hasSel
+      this.host.emitEdit()
+    }
   }
 
   private updateFormatBarVisibility(): void {
-    if (!this.touchUi || this.host.readonly) {
-      this.formatBar.hidden = true
-      return
-    }
+    if (!this.formatBar || !this.touchUi || this.host.readonly) return
     this.formatBar.hidden = false
     this.layoutFormatBar()
   }
 
   private layoutFormatBar(): void {
-    if (this.formatBar.hidden) return
+    const bar = this.formatBar
+    if (!bar || bar.hidden) return
     const cr = this.host.container.getBoundingClientRect()
     const viewportH = window.visualViewport?.height ?? window.innerHeight
-    const barH = this.formatBar.offsetHeight || 44
     const bottomInset = Math.max(0, window.innerHeight - viewportH)
-    this.formatBar.style.left = `${cr.left}px`
-    this.formatBar.style.width = `${cr.width}px`
-    this.formatBar.style.bottom = `${bottomInset}px`
-    this.formatBar.style.top = 'auto'
+    bar.style.left = `${cr.left}px`
+    bar.style.width = `${cr.width}px`
+    bar.style.bottom = `${bottomInset}px`
+    bar.style.top = 'auto'
   }
 
   private async onFormatBarClick(e: Event): Promise<void> {
@@ -729,14 +845,10 @@ export class PageDocumentUI {
         await this.applyLink()
         break
       case 'undo':
-        this.host.store.undo()
-        this.syncFromStore()
-        this.host.requestRender()
+        this.host.undo()
         break
       case 'redo':
-        this.host.store.redo()
-        this.syncFromStore()
-        this.host.requestRender()
+        this.host.redo()
         break
     }
   }
@@ -756,27 +868,41 @@ export class PageDocumentUI {
 
   private renderSlashMenu(): void {
     const cmds = this.visibleSlashCommands()
+    if (this.customSlashRenderer) {
+      const custom = this.customSlashRenderer({
+        commands: cmds,
+        activeIndex: this.slashIndex,
+        filter: this.slashFilter,
+        select: (id) => this.applySlashCommand(id),
+      })
+      if (custom) {
+        this.slashMenu.replaceChildren(custom)
+        return
+      }
+    }
     this.slashMenu.innerHTML =
-      `<div class="ic-slash-menu-title">Basic editing</div>` +
+      `<div class="ic-slash-menu-title">Turn into</div>` +
       cmds
         .map(
           (c, i) =>
-            `<button type="button" class="ic-slash-item${i === this.slashIndex ? ' ic-slash-item-active' : ''}" data-slash-id="${c.id}">${c.label}</button>`,
+            `<button type="button" class="ic-slash-item${i === this.slashIndex ? ' ic-slash-item-active' : ''}" data-slash-id="${c.id}">${c.label}${c.hint ? `<span class="ic-slash-hint">${c.hint}</span>` : ''}</button>`,
         )
         .join('')
   }
 
   private hideSlashMenu(): void {
+    const wasOpen = !this.slashMenu.hidden
     this.slashMenu.hidden = true
     this.slashBlock = null
     this.slashFilter = ''
+    if (wasOpen) this.flushSyncToStore()
   }
 
   private applySlashCommand(id: BlockType | 'divider'): void {
     const block = this.slashBlock
     this.hideSlashMenu()
     if (!block) return
-    const text = (block.textContent ?? '').replace(/\/\w*$/, '').trimEnd()
+    const text = (block.textContent ?? '').replace(/(^|\s)\/\w*$/, '$1').trimEnd()
     if (id === 'divider') {
       block.setAttribute('data-block', 'divider')
       block.className = 'ic-rt-block ic-rt-divider'

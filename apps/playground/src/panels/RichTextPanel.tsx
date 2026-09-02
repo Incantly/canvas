@@ -1,7 +1,101 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Canvas } from '@incantly/canvas-react'
 import type { Editor, Store, TextBlock } from '@incantly/canvas'
 import '@incantly/canvas/canvas.css'
+import './playground-document-ui.css'
+import { playgroundDocumentUi } from './playground-document-ui'
+
+const PLAYGROUND_DOCUMENT_UI = playgroundDocumentUi()
+
+function DocumentActionBar({ editor }: { editor: Editor | null }) {
+  const [, refresh] = useState(0)
+
+  useEffect(() => {
+    if (!editor) return
+    const bump = () => refresh((n) => n + 1)
+    const offHistory = editor.store.listenHistory(bump)
+    const offEdit = editor.on('edit', bump)
+    const offSelection = editor.on('selection', bump)
+    return () => {
+      offHistory()
+      offEdit()
+      offSelection()
+    }
+  }, [editor])
+
+  const canUndo = editor?.store.canUndo ?? false
+  const canRedo = editor?.store.canRedo ?? false
+  const canCopy = editor?.hasDocumentTextSelection() ?? false
+
+  return (
+    <div style={actionBarStyles.wrap} role="toolbar" aria-label="Document actions">
+      <button
+        type="button"
+        style={{ ...actionBarStyles.btn, ...(!canUndo ? actionBarStyles.btnDisabled : {}) }}
+        disabled={!canUndo}
+        title="Undo — ⌘Z"
+        onClick={() => editor?.undo()}
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        style={{ ...actionBarStyles.btn, ...(!canRedo ? actionBarStyles.btnDisabled : {}) }}
+        disabled={!canRedo}
+        title="Redo — ⇧⌘Z"
+        onClick={() => editor?.redo()}
+      >
+        Redo
+      </button>
+      <span style={actionBarStyles.div} aria-hidden />
+      <button
+        type="button"
+        style={{ ...actionBarStyles.btn, ...(!canCopy ? actionBarStyles.btnDisabled : {}) }}
+        disabled={!canCopy}
+        title="Copy selection — ⌘C"
+        onClick={() => void editor?.copySelection()}
+      >
+        Copy
+      </button>
+      <button
+        type="button"
+        style={{ ...actionBarStyles.btn, ...(!canCopy ? actionBarStyles.btnDisabled : {}) }}
+        disabled={!canCopy}
+        title="Delete selection"
+        onClick={() => editor?.deleteSelection()}
+      >
+        Delete
+      </button>
+    </div>
+  )
+}
+
+const actionBarStyles: Record<string, React.CSSProperties> = {
+  wrap: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  btn: {
+    padding: '6px 10px',
+    fontSize: 12,
+    border: '1px solid #ccc',
+    borderRadius: 6,
+    background: '#fff',
+    cursor: 'pointer',
+  },
+  btnDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+  },
+  div: {
+    width: 1,
+    height: 20,
+    background: '#ddd',
+    margin: '0 2px',
+  },
+}
 
 const SAMPLE_BLOCKS: TextBlock[] = [
   { type: 'heading1', content: [{ text: 'Page document' }] },
@@ -30,6 +124,7 @@ interface RichTextPanelProps {
 
 export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
   const editorRef = useRef<Editor | null>(null)
+  const [editor, setEditor] = useState<Editor | null>(null)
   const [documentBackground, setDocumentBackground] = useState('#fff8e7')
 
   const insertSample = () => {
@@ -45,17 +140,20 @@ export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
   }
 
   return (
-    <div style={styles.wrap}>
+    <div className="pg-rich-text-panel" style={styles.wrap}>
       <header style={styles.header}>
         <div>
           <strong>03 — Rich text (page document)</strong>
           <p style={styles.hint}>
             One continuous note — scroll down as you type. No page 1 / page 2 chrome.
             Press <strong>/</strong> for headings, lists, divider, code.
+            Select text for the formatting bubble (bold, italic, link…).
+            Undo/redo in the header or left dock reverses text and pen strokes together.
             Draw (D) only at the <strong>bottom</strong> ink zone — not on text or between paragraphs.
           </p>
         </div>
         <div style={styles.actions}>
+          <DocumentActionBar editor={editor} />
           <label style={styles.colorLabel}>
             Canvas
             <input
@@ -84,11 +182,13 @@ export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
           touchUi={false}
           grid="none"
           documentBackground={documentBackground}
-            onMount={(editor) => {
-              editorRef.current = editor
-              onEditorReady(editor)
-              editor.fitDocumentView({ animate: 0 })
-            }}
+          documentUi={PLAYGROUND_DOCUMENT_UI}
+          onMount={(ed) => {
+            editorRef.current = ed
+            setEditor(ed)
+            onEditorReady(ed)
+            ed.fitDocumentView({ animate: 0 })
+          }}
         />
       </div>
     </div>

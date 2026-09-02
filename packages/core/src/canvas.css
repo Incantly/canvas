@@ -727,8 +727,8 @@
 }
 
 .ic-slash-menu {
-  position: absolute;
-  z-index: 45;
+  position: fixed;
+  z-index: 55;
   min-width: 200px;
   max-width: 280px;
   background: var(--ic-pop-bg);
@@ -738,6 +738,10 @@
   padding: 6px;
   max-height: 280px;
   overflow: auto;
+}
+
+.ic-slash-menu[hidden] {
+  display: none !important;
 }
 
 .ic-slash-menu-title {
@@ -764,6 +768,48 @@
 .ic-slash-item:hover,
 .ic-slash-item-active {
   background: var(--ic-hover);
+}
+
+.ic-slash-hint {
+  float: right;
+  font-size: 11px;
+  color: var(--ic-ink-soft);
+  font-weight: 400;
+}
+
+.ic-doc-selection-toolbar {
+  position: fixed;
+  z-index: 56;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--ic-pop-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: 8px;
+  box-shadow: var(--ic-pop-shadow);
+}
+
+.ic-doc-selection-toolbar[hidden] {
+  display: none !important;
+}
+
+.ic-doc-selection-btn {
+  border: none;
+  background: transparent;
+  color: var(--ic-ink-strong);
+  font: 600 13px/1.2 system-ui, sans-serif;
+  min-width: 32px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ic-doc-selection-btn:hover {
+  background: var(--ic-hover);
+}
+
+.ic-mobile-format-bar[hidden] {
+  display: none !important;
 }
 
 .ic-mobile-format-bar {
