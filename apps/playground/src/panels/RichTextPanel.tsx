@@ -112,7 +112,7 @@ const SAMPLE_BLOCKS: TextBlock[] = [
     ],
   },
   { type: 'bulletList', content: [{ text: 'Type / for block menu' }] },
-  { type: 'bulletList', content: [{ text: 'Press D — ink goes in a drawing block below text' }] },
+  { type: 'bulletList', content: [{ text: 'Press D — draw anywhere on the page, including over text' }] },
   { type: 'divider', content: [{ text: '' }] },
   { type: 'paragraph', content: [{ text: 'Snapshot stores notebook.document.blocks[] — not HTML.' }] },
 ]
@@ -125,7 +125,8 @@ interface RichTextPanelProps {
 export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
   const editorRef = useRef<Editor | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [documentBackground, setDocumentBackground] = useState('#fff8e7')
+  const [documentBackground, setDocumentBackground] = useState('#e8e4dc')
+  const [documentPaperColor, setDocumentPaperColor] = useState('#fff8e7')
 
   const insertSample = () => {
     const editor = editorRef.current
@@ -149,7 +150,7 @@ export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
             Press <strong>/</strong> for headings, lists, divider, code.
             Select text for the formatting bubble (bold, italic, link…).
             Undo/redo in the header or left dock reverses text and pen strokes together.
-            Draw (D) only at the <strong>bottom</strong> ink zone — not on text or between paragraphs.
+            Draw (D) anywhere on the page — ink overlays text and images.
           </p>
         </div>
         <div style={styles.actions}>
@@ -158,13 +159,26 @@ export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
             Canvas
             <input
               type="color"
-              value={documentBackground.startsWith('#') && documentBackground.length >= 7 ? documentBackground.slice(0, 7) : '#fff8e7'}
+              value={documentBackground.startsWith('#') && documentBackground.length >= 7 ? documentBackground.slice(0, 7) : '#e8e4dc'}
               onChange={(e) => {
                 const next = e.target.value
                 setDocumentBackground(next)
                 editorRef.current?.setDocumentBackground(next)
               }}
-              aria-label="Document background color"
+              aria-label="Canvas background color"
+            />
+          </label>
+          <label style={styles.colorLabel}>
+            Paper
+            <input
+              type="color"
+              value={documentPaperColor.startsWith('#') && documentPaperColor.length >= 7 ? documentPaperColor.slice(0, 7) : '#fff8e7'}
+              onChange={(e) => {
+                const next = e.target.value
+                setDocumentPaperColor(next)
+                editorRef.current?.setDocumentPaperColor(next)
+              }}
+              aria-label="Page paper color"
             />
           </label>
           <button type="button" style={styles.btn} onClick={insertSample}>
@@ -182,6 +196,7 @@ export function RichTextPanel({ store, onEditorReady }: RichTextPanelProps) {
           touchUi={false}
           grid="none"
           documentBackground={documentBackground}
+          documentPaperColor={documentPaperColor}
           documentUi={PLAYGROUND_DOCUMENT_UI}
           onMount={(ed) => {
             editorRef.current = ed

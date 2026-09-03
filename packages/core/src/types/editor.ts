@@ -22,8 +22,10 @@ export interface EditorOptions {
   geoKind?: GeoId
   /** Apple Notes / OpenNote style: page body is the primary surface; pen only when draw tool active. */
   documentMode?: boolean
-  /** Seamless notes canvas color (documentMode). Falls back to theme default when omitted. */
+  /** Viewport/canvas color around the page sheet (documentMode). */
   documentBackground?: string | null
+  /** Page sheet color behind rich text (documentMode). */
+  documentPaperColor?: string | null
   /** Touch-first UI (mobile formatting bar). Defaults to ontouchstart detection. */
   touchUi?: boolean
   /** Slash menu + selection toolbar for page document mode. Fully customizable. */
@@ -170,11 +172,28 @@ export interface Editor {
 
   documentBackgroundColor(): string
   setDocumentBackground(color: string | null): void
+  documentPaperColor(): string
+  setDocumentPaperColor(color: string | null): void
 
   pages(): PageRecord[]
   currentPage(): PageRecord | null
   setPage(id: string, opts?: { fit?: boolean; animate?: number; preserveZoom?: boolean }): void
-  addPage(opts?: { width?: number; height?: number; name?: string }): PageRecord
+  addPage(opts?: {
+    width?: number
+    height?: number
+    name?: string
+    paperStyle?: import('./base.js').PaperStyleId
+    paperSize?: import('./base.js').PaperSizeId
+  }): PageRecord
+  setPagePaper(
+    pageId: string,
+    opts: {
+      width?: number
+      height?: number
+      paperStyle?: import('./base.js').PaperStyleId
+      paperSize?: import('./base.js').PaperSizeId
+    },
+  ): boolean
   removePage(id: string): boolean
   pageLayout(): import('./base.js').PageLayout
   setPageLayout(layout: import('./base.js').PageLayout): void
@@ -261,7 +280,7 @@ export interface BuildUIOptions {
   tools?: ToolId[]
   /** Custom SVG inner HTML per tool or chrome icon key. */
   icons?: Partial<Record<string, string>>
-  /** Hide page navigation bar (default true in documentMode). */
+  /** Hide page navigation bar (default false). */
   hidePagesBar?: boolean
 }
 
@@ -281,10 +300,12 @@ export interface CreateCanvasOptions extends EditorOptions {
   uiTools?: ToolId[]
   /** Custom dock icons (see BuildUIOptions.icons). */
   uiIcons?: Partial<Record<string, string>>
-  /** Hide page bar in notes mode (default true when documentMode). */
+  /** Hide page bar (default false). */
   hidePagesBar?: boolean
-  /** Seamless notes canvas color (documentMode). */
+  /** Viewport/canvas color around the page sheet (documentMode). */
   documentBackground?: string | null
+  /** Page sheet color behind rich text (documentMode). */
+  documentPaperColor?: string | null
   touchUi?: boolean
   promptLink?: () => Promise<string | null>
   readClipboard?: () => Promise<string>

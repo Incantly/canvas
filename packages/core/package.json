@@ -16,6 +16,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./headless": {
+      "types": "./dist/headless.d.ts",
+      "default": "./dist/headless.js"
+    },
     "./canvas.css": "./src/canvas.css",
     "./styles.css": "./src/canvas.css",
     "./package.json": "./package.json"

@@ -62,16 +62,16 @@ export interface ImageBlock {
 
 export type DocumentBlock = TextBlock | DrawingBlock | ImageBlock
 
-export function isDrawingBlock(b: DocumentBlock): b is DrawingBlock {
-  return b.type === 'drawing'
+export function isDrawingBlock(b: DocumentBlock | null | undefined): b is DrawingBlock {
+  return !!b && b.type === 'drawing'
 }
 
-export function isImageBlock(b: DocumentBlock): b is ImageBlock {
-  return b.type === 'image'
+export function isImageBlock(b: DocumentBlock | null | undefined): b is ImageBlock {
+  return !!b && b.type === 'image'
 }
 
-export function isTextBlock(b: DocumentBlock): b is TextBlock {
-  return b.type !== 'drawing' && b.type !== 'image'
+export function isTextBlock(b: DocumentBlock | null | undefined): b is TextBlock {
+  return !!b && b.type !== 'drawing' && b.type !== 'image'
 }
 
 export interface RichTextDocument {

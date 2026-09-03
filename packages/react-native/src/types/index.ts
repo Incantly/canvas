@@ -13,7 +13,11 @@ import type {
   ThemeId,
   ToolId,
   VersionKind,
+  PaperSizeId,
+  PaperStyleId,
 } from '@incantly/canvas'
+import type { FormatBarConfig } from '../document/format-bar-config.js'
+import type { VersionStorage } from '@incantly/canvas/headless'
 
 export interface VersionSummary {
   id: string
@@ -35,6 +39,7 @@ export interface CanvasRef {
   setTool(tool: ToolId): void
   setStyle(key: keyof Styles, value: ColorId | SizeId | DashId | FillId | FontId): void
   setDocumentBackground(color: string | null): void
+  setDocumentPaperColor(color: string | null): void
   setGrid(grid: GridId): void
   undo(): void
   redo(): void
@@ -43,7 +48,22 @@ export interface CanvasRef {
   focusPageDocument(): void
   refreshPageDocument(): void
   setPage(pageId: string, opts?: { fit?: boolean; animate?: number }): void
-  addPage(opts?: { width?: number; height?: number; name?: string }): void
+  addPage(opts?: {
+    width?: number
+    height?: number
+    name?: string
+    paperSize?: PaperSizeId
+    paperStyle?: PaperStyleId
+  }): void
+  setPagePaper(
+    pageId: string,
+    opts: {
+      width?: number
+      height?: number
+      paperSize?: PaperSizeId
+      paperStyle?: PaperStyleId
+    },
+  ): void
   removePage(pageId?: string): void
   getSnapshot(): Promise<Snapshot>
   exportPng(opts?: { background?: boolean; scale?: number; margin?: number }): Promise<string | null>
@@ -64,6 +84,7 @@ export interface CanvasProps {
   styles?: Partial<Styles>
   documentMode?: boolean
   documentBackground?: string | null
+  documentPaperColor?: string | null
   uiTools?: ToolId[]
   uiIcons?: Partial<Record<string, string>>
   hidePagesBar?: boolean
@@ -80,6 +101,20 @@ export interface CanvasProps {
   onError?: (message: string) => void
   onPromptLink?: (respond: (url: string | null) => void) => void
   onReadClipboard?: (respond: (text: string) => void) => void
+  /**
+   * Customize document format-bar labels and icons per item.
+   * Keys: `paragraph`, `heading1`…`heading3`, `bulletList`, `numberedList`,
+   * `quote`, `codeBlock`, `divider`, `bold`, `italic`, `underline`,
+   * `strikethrough`, `inlineCode`, `link`.
+   */
+  formatBar?: FormatBarConfig
+  /**
+   * Persistent version history. Host should pass `createSqliteVersionStorage(...)`.
+   * Defaults to in-memory (lost when the component unmounts).
+   */
+  versionStorage?: VersionStorage
+  /** Scopes version rows. Defaults to the core notebook id. */
+  notebookId?: string
   style?: any
   webviewProps?: Record<string, any>
 }

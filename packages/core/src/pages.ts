@@ -1,9 +1,16 @@
-import type { GridId, PageGapPreset, PageLayout } from './types/base.js'
+import type {
+  GridId,
+  PageGapPreset,
+  PageLayout,
+  PaperSizeId,
+  PaperStyleId,
+} from './types/base.js'
 import type { NotebookRecord, PageRecord, ShapeRecord } from './types/models.js'
 import { emptyDocument } from './rich-text/document.js'
 import { newId } from './utils/id.js'
 
 export const NOTEBOOK_ID = 'notebook:main'
+/** US Letter @ 96dpi */
 export const DEFAULT_PAGE_WIDTH = 816
 export const DEFAULT_PAGE_HEIGHT = 1056
 export const DEFAULT_PAGE_GAP = 48
@@ -15,20 +22,66 @@ export const PAGE_GAP_PRESETS: Record<PageGapPreset, number> = {
   wide: 96,
 }
 
-export function createPage(
-  index: number,
-  opts: { x?: number; y?: number; width?: number; height?: number; name?: string; grid?: GridId } = {},
-): PageRecord {
+/** Paper size presets (CSS px @ 96dpi). */
+export const PAPER_SIZE_PRESETS: Record<PaperSizeId, { width: number; height: number }> = {
+  letter: { width: 816, height: 1056 },
+  a4: { width: 794, height: 1123 },
+}
+
+export function paperSizePreset(id: PaperSizeId): { width: number; height: number } {
+  return { ...PAPER_SIZE_PRESETS[id] }
+}
+
+export function validatePaperStyle(v: unknown): v is PaperStyleId {
+  return v === 'plain' || v === 'ruled' || v === 'grid' || v === 'dots'
+}
+
+export function validatePaperSizeId(v: unknown): v is PaperSizeId {
+  return v === 'letter' || v === 'a4'
+}
+
+/** Map document paper style to the existing page-grid kind used for rendering. */
+export function paperStyleToGridId(style: PaperStyleId | undefined): GridId {
+  if (style === 'ruled') return 'ruled'
+  if (style === 'grid') return 'lines'
+  if (style === 'dots') return 'dots'
+  return 'none'
+}
+
+export function inferPaperSizeId(width: number, height: number): PaperSizeId | null {
+  for (const id of Object.keys(PAPER_SIZE_PRESETS) as PaperSizeId[]) {
+    const p = PAPER_SIZE_PRESETS[id]
+    if (p.width === width && p.height === height) return id
+  }
+  return null
+}
+
+export type CreatePageOpts = {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  name?: string
+  grid?: GridId
+  paperStyle?: PaperStyleId
+  paperSize?: PaperSizeId
+}
+
+export function createPage(index: number, opts: CreatePageOpts = {}): PageRecord {
+  const size = opts.paperSize ? paperSizePreset(opts.paperSize) : null
   return {
     id: newId('page'),
     typeName: 'page',
     index,
     x: opts.x ?? 0,
     y: opts.y ?? 0,
-    width: opts.width ?? DEFAULT_PAGE_WIDTH,
-    height: opts.height ?? DEFAULT_PAGE_HEIGHT,
+    width: opts.width ?? size?.width ?? DEFAULT_PAGE_WIDTH,
+    height: opts.height ?? size?.height ?? DEFAULT_PAGE_HEIGHT,
     name: opts.name ?? `Page ${index + 1}`,
     ...(opts.grid ? { grid: opts.grid } : {}),
+    ...(opts.paperStyle && validatePaperStyle(opts.paperStyle)
+      ? { paperStyle: opts.paperStyle }
+      : {}),
     document: { blocks: emptyDocument() },
   }
 }

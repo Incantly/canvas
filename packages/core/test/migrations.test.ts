@@ -21,6 +21,13 @@ function storeJson(snap: Snapshot): string {
   return JSON.stringify(snap.document.store)
 }
 
+function firstPageBlocks(store: Record<string, any>): any[] {
+  const pages = Object.values(store)
+    .filter((r): r is any => !!r && r.typeName === 'page')
+    .sort((a, b) => a.index - b.index || (a.id < b.id ? -1 : 1))
+  return pages[0]?.document?.blocks ?? []
+}
+
 describe('migrateSnapshot', () => {
   describe('pre-schema loading', () => {
     it('migrates pre-schema snapshot through full migration chain', () => {
@@ -56,10 +63,10 @@ describe('migrateSnapshot', () => {
       expect(steps.some((s) => s.sequenceId === 'com.incantly.store')).toBe(false)
       expect(steps.some((s) => s.sequenceId === 'com.incantly.shape.text')).toBe(false)
       expect(steps.filter((s) => s.sequenceId === 'com.incantly.page.document').map((s) => s.version)).toEqual([
-        1, 2,
+        1, 2, 3,
       ])
       expect(steps.filter((s) => s.sequenceId === 'com.incantly.notebook.document').map((s) => s.version)).toEqual([
-        1, 2, 3,
+        1, 2, 3, 4,
       ])
     })
 
@@ -69,8 +76,10 @@ describe('migrateSnapshot', () => {
       const result = migrateSnapshot(input)
 
       expect(result.schema).toEqual(CURRENT_SCHEMA)
-      const nb = result.document.store[NOTEBOOK_ID] as any
-      expect(nb?.document?.blocks?.length).toBeGreaterThan(0)
+      const pages = Object.values(result.document.store).filter((r: any) => r?.typeName === 'page') as any[]
+      pages.sort((a, b) => a.index - b.index)
+      expect(pages[0]?.document?.blocks?.length).toBeGreaterThan(0)
+      expect((result.document.store[NOTEBOOK_ID] as any)?.document).toBeUndefined()
       expect(result.document.store.t1).toBeUndefined()
       expect(JSON.parse(beforeStore).t1).toBeDefined()
     })
@@ -119,8 +128,7 @@ describe('migrateSnapshot', () => {
   describe('ImageBlock v3', () => {
     it('preserves ImageBlock with valid src', () => {
       const result = migrateSnapshot(loadFixture('v2-with-image-block.json'))
-      const nb = result.document.store[NOTEBOOK_ID] as any
-      const images = nb.document.blocks.filter((b: any) => b.type === 'image')
+      const images = firstPageBlocks(result.document.store).filter((b: any) => b.type === 'image')
       expect(images).toHaveLength(1)
       expect(images[0].src).toBe('data:image/png;base64,iVBORw0KGgo=')
       expect(images[0].alt).toBe('Valid photo')
@@ -130,8 +138,7 @@ describe('migrateSnapshot', () => {
 
     it('strips ImageBlock with empty or missing src in v3 migration', () => {
       const result = migrateSnapshot(loadFixture('v2-with-image-block.json'))
-      const nb = result.document.store[NOTEBOOK_ID] as any
-      const blocks = nb.document.blocks
+      const blocks = firstPageBlocks(result.document.store)
       expect(blocks.every((b: any) => b.type !== 'image' || b.src.trim().length > 0)).toBe(true)
       expect(blocks.filter((b: any) => b.type === 'image')).toHaveLength(1)
     })
@@ -166,7 +173,8 @@ describe('migrateSnapshot', () => {
 
       const result = migrateSnapshot(input)
       expect(result.document.store[NOTEBOOK_ID]).toBeDefined()
-      expect((result.document.store[NOTEBOOK_ID] as any).document?.blocks?.length).toBeGreaterThan(0)
+      expect((result.document.store[NOTEBOOK_ID] as any).document).toBeUndefined()
+      expect(firstPageBlocks(result.document.store).length).toBeGreaterThan(0)
     })
 
     it('SEQUENCE_ORDER places store before notebook.document in registered steps', () => {
@@ -263,7 +271,7 @@ describe('migrateSnapshot', () => {
         },
       }
       const result = migrateSnapshot(input)
-      const blocks = (result.document.store[NOTEBOOK_ID] as any).document.blocks
+      const blocks = firstPageBlocks(result.document.store)
       expect(blocks.some((b: any) => b.type === 'paragraph' && b.content[0]?.text === 'Keep me')).toBe(true)
       const drawings = blocks.filter((b: any) => b.type === 'drawing')
       expect(drawings.length).toBe(1)

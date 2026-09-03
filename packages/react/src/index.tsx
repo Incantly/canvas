@@ -35,6 +35,7 @@ export const Canvas = forwardRef(function Canvas(
     uiIcons,
     hidePagesBar,
     documentBackground,
+    documentPaperColor,
     touchUi = false,
     documentUi,
     autoFit = false,
@@ -76,6 +77,7 @@ export const Canvas = forwardRef(function Canvas(
       styles,
       documentMode,
       documentBackground: documentBackground ?? undefined,
+      documentPaperColor: documentPaperColor ?? undefined,
       touchUi,
       documentUi,
     } as any)
@@ -153,6 +155,12 @@ export const Canvas = forwardRef(function Canvas(
     if (!editor || documentBackground === undefined) return
     editor.setDocumentBackground(documentBackground)
   }, [documentBackground])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || documentPaperColor === undefined) return
+    editor.setDocumentPaperColor(documentPaperColor)
+  }, [documentPaperColor])
 
   useEffect(() => {
     const editor = editorRef.current

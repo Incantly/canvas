@@ -24,6 +24,8 @@ export const ROADMAP_FEATURES: FeatureEntry[] = [
   { id: '14', title: 'Web product shell', status: 'coming-soon' },
   { id: '15', title: 'Mobile product shell', status: 'coming-soon' },
   { id: '16', title: 'Snapshot versioning', status: 'active' },
+  { id: '17', title: 'Native RN renderer', status: 'active' },
+  { id: '18', title: 'Document paper pages', status: 'active' },
 ]
 
 const STATUS_LABEL: Record<FeatureStatus, string> = {

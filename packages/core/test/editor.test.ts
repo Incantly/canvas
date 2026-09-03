@@ -33,6 +33,29 @@ function drag(editor: Editor, pts: number[][], over: any = {}) {
   ;(editor as any)._pointerUp({ ...ev(xn, yn, over), target: (editor as any).canvas })
 }
 
+function focusBlockCaret(pageDoc: HTMLElement, block: HTMLElement, atEnd = true): void {
+  pageDoc.focus()
+  const range = document.createRange()
+  const textNode = [...block.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)
+  if (textNode) {
+    const len = textNode.textContent?.length ?? 0
+    range.setStart(textNode, atEnd ? len : 0)
+    range.collapse(true)
+  } else {
+    range.selectNodeContents(block)
+    range.collapse(!atEnd)
+  }
+  const sel = window.getSelection()!
+  sel.removeAllRanges()
+  sel.addRange(range)
+}
+
+function pressEnter(pageDoc: HTMLElement): void {
+  pageDoc.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+  )
+}
+
 let container: HTMLDivElement, editor: Editor
 
 beforeEach(() => {
@@ -146,14 +169,85 @@ describe('document mode drawing', () => {
     docContainer.remove()
   })
 
-  it('documentMode ignores zoomAt', () => {
+  it('draw tool blurs focused page document and enables ink pass-through', () => {
     const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    const wrap = docContainer.querySelector('.ic-page-doc-wrap')!
+    wrap.classList.add('ic-page-doc-focused')
+    docEditor.pageDocUI.focused = true
+    docEditor.setTool('draw')
+    expect(wrap.classList.contains('ic-page-doc-focused')).toBe(false)
+    expect(wrap.classList.contains('ic-page-doc-ink-pass')).toBe(true)
+    expect(docContainer.classList.contains('ic-ink-active')).toBe(true)
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('draw tool stores ink over text in page document', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.pageDocUI.focus()
+    docEditor.setTool('draw')
+    const page = docEditor.currentPage()!
+    const paperH = notesPaperHeight(page, docEditor.store.notebookDocumentBlocks(), docEditor.theme)
+    const rect = notesPageContentRect(page, paperH)
+    const inkY = page.y + rect.y + 40
+    const inkX = page.x + rect.x + 80
+    const start = docEditor.pageToScreen(inkX, inkY)
+    const end = docEditor.pageToScreen(inkX + 60, inkY + 40)
+    drag(docEditor, [[start.x, start.y], [end.x, end.y]])
+    const blocks = docEditor.store.pageDocumentBlocks(page.id)
+    const drawing = blocks.find((b) => b.type === 'drawing')
+    expect(drawing?.type).toBe('drawing')
+    if (drawing?.type === 'drawing') {
+      expect(drawing.strokes.length).toBeGreaterThanOrEqual(1)
+      const y0 = drawing.strokes[0]!.pts[1]!
+      expect(y0).toBeGreaterThan(rect.y + 20)
+      expect(y0).toBeLessThan(rect.y + 120)
+    }
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('draw tool stores ink in page side margins', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.setTool('draw')
+    const page = docEditor.currentPage()!
+    const start = docEditor.pageToScreen(page.x + 24, page.y + 120)
+    const end = docEditor.pageToScreen(page.x + 64, page.y + 180)
+    drag(docEditor, [[start.x, start.y], [end.x, end.y]])
+    const drawing = docEditor.store
+      .pageDocumentBlocks(page.id)
+      .find((b) => b.type === 'drawing')
+    expect(drawing?.type).toBe('drawing')
+    if (drawing?.type === 'drawing') {
+      expect(drawing.strokes[0]!.pts[0]!).toBeLessThan(72)
+    }
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('documentMode allows zoomAt around the page stack', () => {
+    const docContainer = document.createElement('div')
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
     document.body.appendChild(docContainer)
     const docEditor = new Editor({ container: docContainer, documentMode: true })
     docEditor.fitDocumentView()
     const z0 = docEditor.camera.z
     docEditor.zoomAt(100, 100, 2)
-    expect(docEditor.camera.z).toBeCloseTo(z0)
+    expect(docEditor.camera.z).toBeGreaterThan(z0)
     docEditor.destroy()
     docContainer.remove()
   })
@@ -165,14 +259,22 @@ describe('document mode drawing', () => {
       container: docContainer,
       documentMode: true,
       documentBackground: '#e8f4ff',
+      documentPaperColor: '#fff8e7',
     })
     expect(docEditor.documentBackgroundColor()).toBe('#e8f4ff')
+    expect(docEditor.documentPaperColor()).toBe('#fff8e7')
     expect(docContainer.style.getPropertyValue('--ic-doc-bg')).toBe('#e8f4ff')
+    expect(docContainer.style.getPropertyValue('--ic-doc-paper')).toBe('#fff8e7')
     docEditor.setDocumentBackground('#1a1a2e')
+    docEditor.setDocumentPaperColor('#ffffff')
     expect(docEditor.documentBackgroundColor()).toBe('#1a1a2e')
+    expect(docEditor.documentPaperColor()).toBe('#ffffff')
     docEditor.setDocumentBackground(null)
-    expect(docEditor.documentBackgroundColor()).toBe('#ffffff')
+    docEditor.setDocumentPaperColor(null)
+    expect(docEditor.documentBackgroundColor()).toBe('#e8e4dc')
+    expect(docEditor.documentPaperColor()).toBe('#ffffff')
     expect(() => docEditor.setDocumentBackground('bad-color')).toThrow()
+    expect(() => docEditor.setDocumentPaperColor('bad-color')).toThrow()
     docEditor.destroy()
     docContainer.remove()
   })
@@ -211,6 +313,40 @@ describe('document mode drawing', () => {
     const blocks = docEditor.store.notebookDocumentBlocks()
     expect(blocks.some((b) => b.type === 'paragraph' && b.content[0]?.text?.includes('Pasted line'))).toBe(true)
     expect(docEditor.store.shapes().length).toBe(0)
+    docEditor.destroy()
+    docContainer.remove()
+  })
+
+  it('Enter on list item adds another item; Enter on empty item exits list', () => {
+    const docContainer = document.createElement('div')
+    document.body.appendChild(docContainer)
+    const docEditor = new Editor({ container: docContainer, documentMode: true })
+    docEditor.render()
+    docEditor.store.setNotebookDocument([{ type: 'bulletList', content: [{ text: 'first' }] }])
+    ;(docEditor as any).pageDocUI.syncFromStore()
+
+    const pageDoc = docContainer.querySelector('.ic-page-doc') as HTMLDivElement
+    const first = pageDoc.querySelector('[data-block="bulletList"]') as HTMLElement
+    focusBlockCaret(pageDoc, first, true)
+    pressEnter(pageDoc)
+
+    let blocks = docEditor.store.notebookDocumentBlocks()
+    expect(blocks).toHaveLength(2)
+    expect(blocks[0]?.type).toBe('bulletList')
+    expect(blocks[1]?.type).toBe('bulletList')
+    if (blocks[0]?.type === 'bulletList') expect(blocks[0].content[0]?.text).toBe('first')
+    if (blocks[1]?.type === 'bulletList') expect(blocks[1].content[0]?.text).toBe('')
+
+    ;(docEditor as any).pageDocUI.syncFromStore()
+    const second = pageDoc.querySelector('[data-doc-index="1"][data-block]') as HTMLElement
+    focusBlockCaret(pageDoc, second, true)
+    pressEnter(pageDoc)
+
+    blocks = docEditor.store.notebookDocumentBlocks()
+    expect(blocks).toHaveLength(2)
+    expect(blocks[0]?.type).toBe('bulletList')
+    expect(blocks[1]?.type).toBe('paragraph')
+
     docEditor.destroy()
     docContainer.remove()
   })

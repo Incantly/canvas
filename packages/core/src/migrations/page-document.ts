@@ -2,7 +2,13 @@ import type { Snapshot } from '../types/operations.js'
 import type { PageRecord, ShapeRecord, NotebookRecord } from '../types/models.js'
 import { NOTEBOOK_ID } from '../pages.js'
 import { getPageDocument, mergeTextShapesIntoPage, normalizePageRecord } from '../page-document.js'
+import { consolidateDocumentBlocks } from '../page-document-blocks.js'
 import { registerMigration } from './sequences.js'
+
+function pageBlocks(page: PageRecord, override?: unknown) {
+  const raw = override ?? page.document?.blocks
+  return consolidateDocumentBlocks(getPageDocument({ ...page, document: { blocks: raw as never } }))
+}
 
 function getPages(store: Record<string, any>): PageRecord[] {
   return Object.values(store)
@@ -62,6 +68,45 @@ registerMigration({
       if (page.document) {
         const { document: _doc, ...rest } = page
         store[page.id] = rest as PageRecord
+      }
+    }
+  },
+})
+
+/**
+ * Discrete pages: move continuous notebook.document onto page 0;
+ * ensure every page has document.blocks; clear notebook.document.
+ */
+registerMigration({
+  sequenceId: 'com.incantly.page.document',
+  version: 3,
+  up(snap: Snapshot): void {
+    const store = snap.document.store
+    const nb = store[NOTEBOOK_ID] as NotebookRecord | undefined
+    const pages = getPages(store)
+    if (!pages.length) return
+
+    const nbBlocks = nb?.document?.blocks
+    if (nbBlocks && nbBlocks.length) {
+      const first = pages[0]!
+      store[first.id] = {
+        ...first,
+        document: { blocks: pageBlocks(first, nbBlocks) },
+      }
+      if (nb) {
+        const { document: _doc, ...rest } = nb
+        store[NOTEBOOK_ID] = rest as NotebookRecord
+      }
+    }
+
+    for (const page of getPages(store)) {
+      if (!page.document?.blocks) {
+        store[page.id] = normalizePageRecord(page)
+      } else {
+        store[page.id] = {
+          ...page,
+          document: { blocks: pageBlocks(page) },
+        }
       }
     }
   },

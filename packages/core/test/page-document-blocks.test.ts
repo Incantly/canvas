@@ -11,6 +11,7 @@ import {
   documentBlocksToDomHtml,
   DRAWING_BLOCK_MIN_HEIGHT,
 } from '../src/page-document-blocks.js'
+import { PAGE_DOC_MARGIN_X, PAGE_DOC_MARGIN_Y } from '../src/page-document.js'
 import { themeOf } from '../src/palette.js'
 
 describe('page document drawing blocks', () => {
@@ -71,7 +72,7 @@ describe('page document drawing blocks', () => {
     expect(blocks.every((b) => b.type !== 'drawing' || b.strokes.length === 0)).toBe(true)
   })
 
-  it('layout stacks text then drawing regions', () => {
+  it('layout keeps drawing blocks out of document flow', () => {
     const theme = themeOf('light')
     const layout = layoutPageDocument(
       validateDocumentBlocks([
@@ -82,22 +83,50 @@ describe('page document drawing blocks', () => {
       theme,
     )
     expect(layout.entries).toHaveLength(2)
-    expect(layout.entries[1]!.y).toBeGreaterThan(layout.entries[0]!.y)
-    expect(layout.entries[1]!.h).toBeGreaterThanOrEqual(DRAWING_BLOCK_MIN_HEIGHT)
+    expect(layout.entries[1]!.h).toBe(0)
+    expect(layout.totalHeight).toBe(layout.entries[0]!.h + 4)
   })
 
-  it('findDrawingTarget hints when clicking on text (no mid-body ink)', () => {
+  it('findDrawingTarget allows drawing on text', () => {
     const theme = themeOf('light')
     const blocks = validateDocumentBlocks([
       { type: 'paragraph', content: [{ text: 'Typed line' }] },
     ])
     const layout = layoutPageDocument(blocks, 400, theme)
     const text = layout.entries[0]!
-    const target = findDrawingTarget(layout, blocks, 20, text.y + text.h / 2)
-    expect(target.action).toBe('hint-on-text')
+    const px = PAGE_DOC_MARGIN_X + 20
+    const py = PAGE_DOC_MARGIN_Y + text.y + text.h / 2
+    const target = findDrawingTarget(blocks, px, py, 816, 1200)
+    expect(target.action).toBe('ensure-end')
+    if (target.action === 'ensure-end') {
+      expect(target.localX).toBe(px)
+      expect(target.localY).toBeCloseTo(py)
+    }
   })
 
-  it('findDrawingTarget rejects gaps between paragraphs', () => {
+  it('findDrawingTarget allows drawing in side margins', () => {
+    const blocks = validateDocumentBlocks([
+      { type: 'paragraph', content: [{ text: 'Body' }] },
+    ])
+    const target = findDrawingTarget(blocks, 24, 120, 816, 1200)
+    expect(target.action).toBe('ensure-end')
+    if (target.action === 'ensure-end') {
+      expect(target.localX).toBe(24)
+      expect(target.localX).toBeLessThan(PAGE_DOC_MARGIN_X)
+    }
+  })
+
+  it('findDrawingTarget rejects outside paper bounds', () => {
+    const blocks = validateDocumentBlocks([
+      { type: 'paragraph', content: [{ text: 'Body' }] },
+    ])
+    expect(findDrawingTarget(blocks, -1, 50, 816, 1200).action).toBe('reject')
+    expect(findDrawingTarget(blocks, 900, 50, 816, 1200).action).toBe('reject')
+    expect(findDrawingTarget(blocks, 50, -1, 816, 1200).action).toBe('reject')
+    expect(findDrawingTarget(blocks, 50, 2000, 816, 1200).action).toBe('reject')
+  })
+
+  it('findDrawingTarget allows drawing between paragraphs', () => {
     const theme = themeOf('light')
     const blocks = validateDocumentBlocks([
       { type: 'paragraph', content: [{ text: 'First' }] },
@@ -106,22 +135,32 @@ describe('page document drawing blocks', () => {
     const layout = layoutPageDocument(blocks, 400, theme)
     const a = layout.entries[0]!
     const b = layout.entries[1]!
-    const gapY = a.y + a.h + (b.y - a.y - a.h) / 2
-    const target = findDrawingTarget(layout, blocks, 20, gapY)
-    expect(target.action).toBe('reject')
+    const gapY = PAGE_DOC_MARGIN_Y + a.y + a.h + (b.y - a.y - a.h) / 2
+    const target = findDrawingTarget(blocks, PAGE_DOC_MARGIN_X + 20, gapY, 816, 1200)
+    expect(target.action).toBe('ensure-end')
     expect(b.y).toBeGreaterThan(a.y + a.h)
   })
 
-  it('findDrawingTarget draws only in trailing drawing block', () => {
+  it('findDrawingTarget reuses trailing drawing block', () => {
     const theme = themeOf('light')
     const blocks = validateDocumentBlocks([
       { type: 'paragraph', content: [{ text: 'Note' }] },
       { type: 'drawing', height: DRAWING_BLOCK_MIN_HEIGHT, strokes: [] },
     ])
     const layout = layoutPageDocument(blocks, 400, theme)
-    const draw = layout.entries[1]!
-    const target = findDrawingTarget(layout, blocks, 20, draw.y + 20)
+    const text = layout.entries[0]!
+    const target = findDrawingTarget(
+      blocks,
+      PAGE_DOC_MARGIN_X + 20,
+      PAGE_DOC_MARGIN_Y + text.y + 10,
+      816,
+      1200,
+    )
     expect(target.action).toBe('draw')
+    if (target.action === 'draw') {
+      expect(target.blockIndex).toBe(1)
+      expect(target.localY).toBeCloseTo(PAGE_DOC_MARGIN_Y + text.y + 10)
+    }
   })
 
   it('consolidateDocumentBlocks merges ink to document end', () => {
@@ -215,7 +254,7 @@ describe('page document drawing blocks', () => {
     ])
     expect(html).toContain('data-doc-index="0"')
     expect(html).toContain('class="ic-rt-block ic-rt-paragraph"')
-    expect(html).toContain('ic-drawing-slot')
+    expect(html).toContain('ic-drawing-overlay')
     const root = document.createElement('div')
     root.innerHTML = html
     expect(root.querySelector('[data-doc-index="0"][data-block="paragraph"]')).toBeTruthy()

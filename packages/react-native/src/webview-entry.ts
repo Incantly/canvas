@@ -89,6 +89,7 @@ const handlers: Record<string, (m: any) => any> = {
       styles: m.styles || undefined,
       documentMode: !!m.documentMode,
       documentBackground: m.documentBackground ?? undefined,
+      documentPaperColor: m.documentPaperColor ?? undefined,
       uiTools: m.uiTools,
       uiIcons: m.uiIcons,
       hidePagesBar: m.hidePagesBar,
@@ -175,6 +176,9 @@ const handlers: Record<string, (m: any) => any> = {
   },
   setDocumentBackground(m: any) {
     board!.editor.setDocumentBackground(m.color ?? null)
+  },
+  setDocumentPaperColor(m: any) {
+    board!.editor.setDocumentPaperColor(m.color ?? null)
   },
   focusPageDocument() {
     board!.editor.focusPageDocument()

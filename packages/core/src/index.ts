@@ -4,6 +4,12 @@ export {
   PAGE_GAP_STEP,
   DEFAULT_PAGE_GAP,
   MAX_PAGE_GAP,
+  PAPER_SIZE_PRESETS,
+  paperSizePreset,
+  validatePaperStyle,
+  validatePaperSizeId,
+  paperStyleToGridId,
+  inferPaperSizeId,
 } from './pages.js'
 export { buildUI } from './ui.js'
 export {
@@ -18,6 +24,7 @@ export { Editor, TOOLS }
 
 export type {
   Camera, ToolId, ColorId, SizeId, FontId, DashId, FillId, GeoId, ThemeId, GridId, PageLayout, PageGapPreset,
+  PaperStyleId, PaperSizeId,
   Bounds,
 } from './types/base.js'
 export type { Styles, ScribbleStroke } from './types/styles.js'
@@ -38,6 +45,7 @@ export {
   pointInPageContent,
   notesPageContentRect,
   pointInNotesContent,
+  pointInNotesPaper,
 } from './page-document.js'
 export {
   NOTES_MIN_BODY_HEIGHT,
@@ -64,9 +72,26 @@ export {
   layoutRichText,
   drawRichTextLayout,
 } from './rich-text/index.js'
+export {
+  pageTextBlocksToMarkdown,
+  markdownToPageTextBlocks,
+  mergeMarkdownIntoPageDocument,
+  pageTextBlocksToPlainLines,
+  applyInlineMarkToPageRange,
+} from './rich-text/page-markdown.js'
+export {
+  estimateTextBlockHeight,
+  estimateDocumentHeight,
+  splitBlocksToFitContent,
+  paginateBlocks,
+  planPageOverflow,
+  applyPageDocumentOverflow,
+  isVisuallyEmptyPage,
+} from './page-document-paginate.js'
 export { applyInlineFontSize } from './rich-text/dom.js'
 export {
   defaultDocumentBackground,
+  defaultDocumentPaperColor,
   normalizeCssColor,
   contrastDocumentText,
 } from './document-background.js'

@@ -1,0 +1,42 @@
+{
+  "name": "incantly-native-rn-demo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Standalone Expo demo for the native React Native renderer (roadmap 17). Not part of npm workspaces — own node_modules to avoid Metro/React conflicts.",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-config": "^55.0.27",
+    "@expo/metro-runtime": "~55.0.12",
+    "babel-preset-expo": "~55.0.25",
+    "@incantly/canvas-react-native": "file:../../packages/react-native",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~55.0.0",
+    "expo-asset": "~55.0.0",
+    "expo-constants": "~55.0.0",
+    "expo-font": "~55.0.0",
+    "expo-linking": "~55.0.0",
+    "expo-router": "~55.0.0",
+    "expo-sqlite": "~55.0.0",
+    "expo-status-bar": "~55.0.0",
+    "react": "19.2.8",
+    "react-native": "0.83.10",
+    "react-native-enriched-markdown": "1.0.2",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@types/react": "~19.2.2",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "typescript": "^5.8.0"
+  },
+  "overrides": {
+    "@incantly/canvas": "file:../../packages/core"
+  }
+}

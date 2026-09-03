@@ -8,7 +8,6 @@ import {
   applyLineMarkdown,
 } from './rich-text/index.js'
 import { PAGE_DOC_FONT_SIZE, notesPageContentRect, appendPlainTextToDocument } from './page-document.js'
-import { notesPaperHeight } from './notebook-document.js'
 import {
   documentBlocksToDomHtml,
   documentBlockToDomHtml,
@@ -16,7 +15,6 @@ import {
   parseSingleBlockFromDom,
   layoutPageDocument,
   textBlocksFromDocument,
-  DRAWING_BLOCK_TOP_GAP,
 } from './page-document-blocks.js'
 import { drawPageDocumentBlocks } from './page-document-blocks.js'
 import type { DocumentBlock, ImageBlock } from './rich-text/types.js'
@@ -76,7 +74,6 @@ export class PageDocumentUI {
   private slashFilter = ''
   private slashIndex = 0
   private slashBlock: HTMLElement | null = null
-  private hintBlockIndex: number | null = null
   private _renderedBlocks: DocumentBlock[] = []
   private _syncRaf: number | null = null
 
@@ -139,18 +136,25 @@ export class PageDocumentUI {
   }
 
   private blocks() {
-    return this.host.store.notebookDocumentBlocks()
+    const id = this.host.currentPageId
+    if (!id) return this.host.store.notebookDocumentBlocks()
+    return this.host.store.pageDocumentBlocks(id)
+  }
+
+  private writeBlocks(blocks: DocumentBlock[]): void {
+    const id = this.host.currentPageId
+    if (!id || !this.host.store.page(id)) return
+    this.host.store.setPageDocument(id, blocks)
   }
 
   private paperHeight(): number {
     const page = this.host.currentPage()
     if (!page) return 1056
-    return notesPaperHeight(page, this.blocks(), this.host.theme)
+    return page.height
   }
 
   private bind(): void {
     this.el.addEventListener('input', () => {
-      this.clearDocHints()
       this.checkSlashTrigger()
       this.scheduleSyncToStore()
     })
@@ -234,7 +238,6 @@ export class PageDocumentUI {
 
   destroy(): void {
     if (this._syncRaf !== null) cancelAnimationFrame(this._syncRaf)
-    if (this._hintTimer) clearTimeout(this._hintTimer)
     document.removeEventListener('selectionchange', this.onSelectionChange)
     if (typeof window !== 'undefined' && window.visualViewport) {
       window.visualViewport.removeEventListener('resize', this._onViewportResize)
@@ -302,7 +305,7 @@ export class PageDocumentUI {
     const insertAt = caretIdx !== null ? caretIdx + 1 : blocks.length
     const imageBlock: ImageBlock = { type: 'image', src, width, height }
     blocks.splice(insertAt, 0, imageBlock)
-    this.host.store.setNotebookDocument(blocks)
+    this.writeBlocks(blocks)
     this.syncFromStore()
     this.host.requestRender()
   }
@@ -329,7 +332,7 @@ export class PageDocumentUI {
       return
     }
     const blocks = appendPlainTextToDocument(this.blocks(), text)
-    this.host.store.setNotebookDocument(blocks)
+    this.writeBlocks(blocks)
     this._renderBlocksRange(this.blocks(), blocks.length - text.split('\n').length, blocks.length)
     this.focusAtEnd()
   }
@@ -430,7 +433,7 @@ export class PageDocumentUI {
         if (parsed && !isDrawingBlock(parsed) && !isImageBlock(parsed)) {
           const patched = existing.slice()
           patched[caretIdx] = applyMarkdownToBlock(parsed)
-          this.host.store.setNotebookDocument(patched)
+          this.writeBlocks(patched)
           this._renderedBlocks = this.blocks()
           this.layout()
           this.host.requestRender()
@@ -441,7 +444,7 @@ export class PageDocumentUI {
     const blocks = parseDocumentBlocksFromDom(this.el, existing).map((b) =>
       isDrawingBlock(b) || isImageBlock(b) ? b : applyMarkdownToBlock(b),
     )
-    this.host.store.setNotebookDocument(blocks)
+    this.writeBlocks(blocks)
     this._renderedBlocks = this.blocks()
     this.layout()
     this.host.requestRender()
@@ -466,22 +469,7 @@ export class PageDocumentUI {
     this.el.style.fontSize = `${PAGE_DOC_FONT_SIZE * z}px`
     this.el.style.lineHeight = `${PAGE_DOC_FONT_SIZE * 1.45 * z}px`
     const layout = layoutPageDocument(this.blocks(), rect.w, this.host.theme)
-    const blocks = this.blocks()
-    const lastTextIdx = (() => {
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        if (isTextBlock(blocks[i]!)) return i
-      }
-      return -1
-    })()
-    const hasDrawingBlock = blocks.some(isDrawingBlock)
     for (const child of Array.from(this.el.children)) {
-      if (child instanceof HTMLElement && child.dataset.block) {
-        const idx = Number(child.dataset.docIndex)
-        child.style.marginBottom =
-          idx === lastTextIdx && hasDrawingBlock
-            ? `${DRAWING_BLOCK_TOP_GAP * z}px`
-            : ''
-      }
       if (!(child instanceof HTMLElement) || !child.classList.contains('ic-drawing-slot')) continue
       const idx = Number(child.dataset.docIndex)
       const entry = layout.entries.find((e) => e.index === idx)
@@ -557,35 +545,12 @@ export class PageDocumentUI {
 
   blur(): void {
     this.el.blur()
-  }
-
-  private _hintTimer: ReturnType<typeof setTimeout> | null = null;
-  inkZoneDividerVisible = false;
-
-  flashInkHint(textBlockIndex: number): void {
-    this.showDocHint(textBlockIndex)
-    this.showInkZoneDivider()
-    if (this._hintTimer) clearTimeout(this._hintTimer)
-    this._hintTimer = setTimeout(() => {
-      this.clearDocHints()
-      this._hintTimer = null
-    }, 600)
-  }
-
-  showInkZoneDivider(): void {
-    this.inkZoneDividerVisible = true
-    this.host.requestRender()
-  }
-
-  hideInkZoneDivider(): void {
-    if (!this.inkZoneDividerVisible) return
-    this.inkZoneDividerVisible = false
-    this.host.requestRender()
-  }
-
-  clearInkRedirectHint(): void {
-    this.clearDocHints()
-    this.hideInkZoneDivider()
+    if (!this.focused) return
+    this.focused = false
+    this.wrap.classList.remove('ic-page-doc-focused')
+    this.hideSlashMenu()
+    this.selectionToolbar?.hide()
+    if (this.formatBar) this.formatBar.hidden = true
   }
 
   private lastTextBlockIndex(before = this.blocks().length): number {
@@ -598,22 +563,7 @@ export class PageDocumentUI {
 
   redirectTypingFromDrawing(_drawingIndex: number): void {
     const textIdx = this.lastTextBlockIndex()
-    this.showDocHint(textIdx)
     this.focusTextBlock(textIdx, true)
-  }
-
-  private showDocHint(textBlockIndex: number): void {
-    this.clearDocHints()
-    this.hintBlockIndex = textBlockIndex
-    const block = this.el.querySelector(
-      `[data-doc-index="${textBlockIndex}"][data-block]`,
-    )
-    if (block instanceof HTMLElement) block.classList.add('ic-ink-hint')
-  }
-
-  private clearDocHints(): void {
-    this.hintBlockIndex = null
-    this.el.querySelectorAll('.ic-ink-hint').forEach((el) => el.classList.remove('ic-ink-hint'))
   }
 
   private focusTextBlock(docIndex: number, atEnd: boolean): void {
@@ -637,6 +587,107 @@ export class PageDocumentUI {
     }
     sel?.removeAllRanges()
     sel?.addRange(range)
+  }
+
+  private isListBlockType(type: string): type is 'bulletList' | 'numberedList' {
+    return type === 'bulletList' || type === 'numberedList'
+  }
+
+  private blockElementFromSelection(): HTMLElement | null {
+    const sel = window.getSelection()
+    if (!sel?.anchorNode) return null
+    let node: Node | null = sel.anchorNode
+    while (node && node !== this.el) {
+      if (node instanceof HTMLElement && node.dataset.block) return node
+      node = node.parentNode
+    }
+    return null
+  }
+
+  private caretOffsetInBlock(block: HTMLElement): number {
+    const sel = window.getSelection()
+    if (!sel?.rangeCount || !sel.isCollapsed) return block.textContent?.length ?? 0
+    const range = sel.getRangeAt(0)
+    if (!block.contains(range.startContainer)) return block.textContent?.length ?? 0
+    const pre = document.createRange()
+    pre.selectNodeContents(block)
+    pre.setEnd(range.startContainer, range.startOffset)
+    return pre.toString().length
+  }
+
+  private setCaretInBlock(block: HTMLElement, offset: number): void {
+    const sel = window.getSelection()
+    if (!sel) return
+    const range = document.createRange()
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT)
+    let remaining = offset
+    let textNode = walker.nextNode() as Text | null
+    while (textNode) {
+      const len = textNode.length
+      if (remaining <= len) {
+        range.setStart(textNode, remaining)
+        range.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(range)
+        return
+      }
+      remaining -= len
+      textNode = walker.nextNode() as Text | null
+    }
+    range.selectNodeContents(block)
+    range.collapse(offset > 0)
+    sel.removeAllRanges()
+    sel.addRange(range)
+  }
+
+  /** Enter in a list: split or add item; empty item becomes a paragraph (exit list). */
+  private handleListEnter(e: KeyboardEvent): boolean {
+    const blockEl = this.blockElementFromSelection()
+    if (!blockEl) return false
+    const type = blockEl.dataset.block ?? 'paragraph'
+    if (!this.isListBlockType(type)) return false
+
+    const sel = window.getSelection()
+    if (!sel?.isCollapsed) return false
+
+    const docIndexRaw = blockEl.dataset.docIndex
+    const docIndex =
+      docIndexRaw !== undefined ? Number(docIndexRaw) : this._caretBlockIndex()
+    if (docIndex === null || Number.isNaN(docIndex)) return false
+
+    const full = blockEl.textContent ?? ''
+    const offset = this.caretOffsetInBlock(blockEl)
+    const before = full.slice(0, offset)
+    const after = full.slice(offset)
+
+    e.preventDefault()
+    this.flushSyncToStore()
+
+    const blocks = this.blocks().slice()
+    const current = blocks[docIndex]
+    if (!current || !isTextBlock(current)) return true
+
+    this.host.store.beginBatch()
+    if (!before.trim() && !after.trim()) {
+      blocks[docIndex] = { type: 'paragraph', content: [{ text: '' }] }
+    } else {
+      blocks[docIndex] = { type, content: [{ text: before }] }
+      blocks.splice(docIndex + 1, 0, { type, content: [{ text: after }] })
+    }
+    this.writeBlocks(blocks)
+    this.host.store.endBatch()
+    this.syncFromStore()
+
+    if (!before.trim() && !after.trim()) {
+      this.focusTextBlock(docIndex, false)
+    } else {
+      const nextBlock = this.el.querySelector(
+        `[data-doc-index="${docIndex + 1}"][data-block]`,
+      ) as HTMLElement | null
+      this.el.focus({ preventScroll: true })
+      if (nextBlock) this.setCaretInBlock(nextBlock, 0)
+    }
+    return true
   }
 
   private onKeyDown(e: KeyboardEvent): void {
@@ -684,6 +735,8 @@ export class PageDocumentUI {
         e.preventDefault()
         this.hideSlashMenu()
       }
+    } else if (e.key === 'Enter' && !meta && !e.shiftKey && this.handleListEnter(e)) {
+      return
     } else if (e.key === ' ') {
       this.applyLineMarkdownToBlock()
       this.syncToStore()

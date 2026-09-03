@@ -1,7 +1,7 @@
 {
   "name": "@incantly/canvas-react-native",
   "version": "0.2.0",
-  "description": "React Native component for Incantly Canvas — the MIT-licensed infinite-canvas whiteboard SDK (WebView-based).",
+  "description": "React Native component for Incantly Canvas — native document renderer (Markdown + Skia).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "default": "./dist/storage/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -19,7 +23,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/build-html.mjs && tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
     "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -40,12 +44,21 @@
     "@incantly/canvas": "0.2.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "react-native": "0.83.10"
   },
   "peerDependencies": {
     "react": ">=17",
-    "react-native": ">=0.70",
-    "react-native-webview": ">=11"
+    "react-native": ">=0.76",
+    "react-native-enriched-markdown": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    },
+    "react-native-enriched-markdown": {
+      "optional": true
+    }
   },
   "license": "MIT",
   "homepage": "https://github.com/Incantly/canvas",

@@ -1,6 +1,7 @@
 import type { Snapshot } from '../types/operations.js'
 import type { SerializedSchema } from '../types/schema.js'
 import { CURRENT_SCHEMA } from '../types/schema.js'
+import { cloneJson } from '../utils/clone-json.js'
 import {
   type MigrationStep,
   SEQUENCE_ORDER,
@@ -35,7 +36,7 @@ export function getMigrationsSince(
 }
 
 export function migrateSnapshot(snap: Snapshot): Snapshot {
-  const cloned = structuredClone(snap)
+  const cloned = cloneJson(snap)
 
   if (!cloned.document) {
     cloned.document = { store: {} }
