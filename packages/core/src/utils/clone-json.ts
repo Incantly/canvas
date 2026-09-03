@@ -3,8 +3,14 @@
  * fall back for Hermes / older runtimes (React Native).
  */
 export function cloneJson<T>(value: T): T {
-  if (typeof globalThis.structuredClone === 'function') {
-    return globalThis.structuredClone(value)
+  try {
+    const structuredCloneFn = (globalThis as { structuredClone?: (v: unknown) => unknown })
+      .structuredClone
+    if (typeof structuredCloneFn === 'function') {
+      return structuredCloneFn(value) as T
+    }
+  } catch {
+    // Hermes throws ReferenceError when structuredClone is missing on globalThis.
   }
   return JSON.parse(JSON.stringify(value)) as T
 }

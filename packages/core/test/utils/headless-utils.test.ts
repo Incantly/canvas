@@ -5,6 +5,7 @@ import { createLruCache } from '../../src/utils/cache/lru.js'
 import { createSubscriptionBag } from '../../src/utils/dispose/subscription-bag.js'
 import { snapshotFingerprint } from '../../src/utils/snapshot/fingerprint.js'
 import { safeParseSnapshot } from '../../src/utils/snapshot/parse-json.js'
+import { cloneJson } from '../../src/utils/clone-json.js'
 
 describe('shouldAppendPoint', () => {
   it('filters points closer than minDist', () => {
@@ -55,6 +56,30 @@ describe('snapshotFingerprint', () => {
   it('fingerprints store records', () => {
     const snap = { document: { store: { 'page:1': { id: 'page:1' } } } }
     expect(snapshotFingerprint(snap as never)).toContain('page:1')
+  })
+})
+
+describe('cloneJson', () => {
+  it('falls back when structuredClone is missing (Hermes)', () => {
+    const original = (globalThis as { structuredClone?: unknown }).structuredClone
+    try {
+      delete (globalThis as { structuredClone?: unknown }).structuredClone
+    } catch {
+      Object.defineProperty(globalThis, 'structuredClone', {
+        configurable: true,
+        get() {
+          throw new ReferenceError("Property 'structuredClone' doesn't exist")
+        },
+      })
+    }
+    const input = { a: 1, b: [{ c: 'x' }] }
+    expect(cloneJson(input)).toEqual(input)
+    expect(cloneJson(input)).not.toBe(input)
+    if (original !== undefined) {
+      ;(globalThis as { structuredClone?: unknown }).structuredClone = original
+    } else {
+      delete (globalThis as { structuredClone?: unknown }).structuredClone
+    }
   })
 })
 
