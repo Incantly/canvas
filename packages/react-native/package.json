@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
-    "react-native": "0.76.9"
+    "react-native": "0.83.10"
   },
   "peerDependencies": {
     "react": ">=17",

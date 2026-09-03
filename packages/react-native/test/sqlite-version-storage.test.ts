@@ -164,6 +164,7 @@ describe('createSqliteVersionStorage', () => {
 
   it('works with VersionManager checkpoint and revert', async () => {
     const store = new Store()
+    store.normalizePages('remote')
     const storage = createSqliteVersionStorage(createMemorySqliteDriver())
     const vm = createVersionManager({
       storage,
