@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   THEMES, themeOf, COLOR_IDS, SIZE_IDS, DASH_IDS, FILL_IDS, GEO_IDS, GRID_IDS,
   SIZES, FONT_SIZES, FONTS,
+  HIGHLIGHT_ALPHA,
+  HIGHLIGHT_SCALE,
 } from '../src/palette.js'
 
 describe('palette', () => {
@@ -33,6 +35,9 @@ describe('palette', () => {
     expect(FILL_IDS).toContain('none')
     expect(GEO_IDS.length).toBeGreaterThanOrEqual(6)
     for (const f of Object.values(FONTS)) expect(typeof f).toBe('string')
+    expect(HIGHLIGHT_ALPHA).toBeGreaterThan(0)
+    expect(HIGHLIGHT_ALPHA).toBeLessThanOrEqual(1)
+    expect(HIGHLIGHT_SCALE).toBeGreaterThan(1)
   })
 
   it('every theme carries two-weight grid ink for rules and dots', () => {

@@ -65,6 +65,22 @@ describe('page document drawing blocks', () => {
     expect(blocks[1]?.type).toBe('drawing')
   })
 
+  it('validateDocumentBlocks keeps a safe host pen id on strokes', () => {
+    const blocks = validateDocumentBlocks([
+      {
+        type: 'drawing',
+        height: 140,
+        strokes: [
+          { pts: [10, 10, 0.5, 20, 30, 0.5], color: 'black', size: 'm', kind: 'draw', pen: 'pencil' },
+          { pts: [1, 1, 0.5, 2, 2, 0.5], color: 'black', size: 'm', kind: 'draw', pen: '../x' },
+        ],
+      },
+    ])
+    const drawing = blocks.find((b) => b.type === 'drawing')
+    expect(drawing && drawing.type === 'drawing' ? drawing.strokes[0]?.pen : undefined).toBe('pencil')
+    expect(drawing && drawing.type === 'drawing' ? drawing.strokes[1]?.pen : undefined).toBeUndefined()
+  })
+
   it('validateDocumentBlocks rejects corrupt drawing strokes', () => {
     const blocks = validateDocumentBlocks([
       { type: 'drawing', height: 100, strokes: [{ pts: [1], color: 'black', size: 'm', kind: 'draw' }] },

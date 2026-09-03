@@ -5,14 +5,19 @@ import {
   type CanvasRef,
   type Snapshot,
   type FormatBarConfig,
+  type InkBarConfig,
+  type InkPenDefinition,
   type VersionStorage,
 } from '@incantly/canvas-react-native'
 
 interface CanvasScreenProps {
   snapshot?: Snapshot
   formatBar?: FormatBarConfig
+  inkBar?: InkBarConfig
+  inkPens?: readonly InkPenDefinition[]
   versionStorage?: VersionStorage
   notebookId?: string
+  documentMode?: boolean
   onReady?: (ref: CanvasRef) => void
   onError?: (message: string) => void
 }
@@ -40,11 +45,51 @@ export const DEMO_FORMAT_BAR: FormatBarConfig = {
   link: { name: 'Link', icon: <Glyph>🔗</Glyph> },
 }
 
+/** Example host ink chrome — same icon override pattern as `formatBar`. */
+export const DEMO_INK_BAR: InkBarConfig = {
+  type: { icon: <Glyph>T</Glyph> },
+  select: { name: 'Cursor', icon: <Glyph>↖</Glyph> },
+  draw: { name: 'Ballpoint', icon: <Glyph>✎</Glyph> },
+  pencil: { name: 'Pencil', icon: <Glyph>✏</Glyph> },
+  highlight: { icon: <Glyph>▮</Glyph> },
+  eraser: { icon: <Glyph>⌫</Glyph> },
+  line: { icon: <Glyph>/</Glyph> },
+  arrow: { icon: <Glyph>→</Glyph> },
+  geo: { icon: <Glyph>□</Glyph> },
+  hand: { icon: <Glyph>✋</Glyph> },
+  text: { icon: <Glyph>Aa</Glyph> },
+}
+
+/** Built-in pens plus a pressure-sensitive pencil the host owns. */
+export const DEMO_INK_PENS: InkPenDefinition[] = [
+  { id: 'draw', name: 'Pen', style: { kind: 'draw', widthScale: 0.75, cap: 'round' } },
+  {
+    id: 'highlight',
+    name: 'Highlight',
+    style: { kind: 'highlight', widthScale: 4.5, opacity: 0.55, cap: 'round' },
+  },
+  {
+    id: 'pencil',
+    name: 'Pencil',
+    style: {
+      kind: 'draw',
+      widthScale: 0.55,
+      pressureWidth: true,
+      pressureMin: 0.3,
+      pressureMax: 1.4,
+      cap: 'round',
+    },
+  },
+]
+
 export function CanvasScreen({
   snapshot,
   formatBar,
+  inkBar,
+  inkPens,
   versionStorage,
   notebookId,
+  documentMode = true,
   onReady,
   onError,
 }: CanvasScreenProps) {
@@ -55,11 +100,13 @@ export function CanvasScreen({
       <Canvas
         ref={ref}
         style={styles.canvas}
-        documentMode
+        documentMode={documentMode}
         hidePagesBar
         touchUi
         snapshot={snapshot}
         formatBar={formatBar}
+        inkBar={inkBar}
+        inkPens={inkPens}
         versionStorage={versionStorage}
         notebookId={notebookId}
         onError={onError}

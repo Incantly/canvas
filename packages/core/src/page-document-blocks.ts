@@ -18,6 +18,7 @@ import {
 import { emptyParagraph, validateBlocks } from "./rich-text/document.js";
 import { layoutRichText, drawRichTextLayout } from "./rich-text/layout.js";
 import { blocksToHtml, htmlToBlocks } from "./rich-text/dom.js";
+import { sanitizeInkPenId } from "./ink-pen-id.js";
 import {
   PAGE_DOC_FONT_SIZE,
   pageContentRect,
@@ -84,7 +85,8 @@ function normalizeStroke(raw: unknown): DrawingStroke | null {
   const kind = s.kind === "highlight" ? "highlight" : "draw";
   const color = typeof s.color === "string" ? (s.color as ColorId) : "black";
   const size = typeof s.size === "string" ? (s.size as SizeId) : "m";
-  return { pts, color, size, kind };
+  const pen = sanitizeInkPenId(s.pen);
+  return pen ? { pts, color, size, kind, pen } : { pts, color, size, kind };
 }
 
 function normalizeDrawingBlock(raw: unknown): DrawingBlock | null {

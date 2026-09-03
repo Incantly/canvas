@@ -18,7 +18,7 @@ npm run build:packages
 
 This demo targets **Expo SDK 55 / React Native 0.83** (New Architecture only).
 
-`react-native-enriched-markdown` is a Fabric native module. It does **not** run in Expo Go. Use a **dev client** after prebuild:
+`react-native-enriched-markdown` is a Fabric native module. It does **not** run in Expo Go. Use a **dev client** after prebuild. `react-native-svg` is required for ink and shapes (included in this demo).
 
 ```bash
 cd examples/native-rn-demo
@@ -44,17 +44,18 @@ npm run dev:mobile
 
 ## Playground scenes
 
-| Scene | Workstream | Phase | Status |
-|-------|------------|-------|--------|
-| Headless store + utils | W1 | 0 | Ready |
-| Markdown serialize | W2 | 0 | Ready |
-| Document mode | W3 | 1 | Partial |
-| Paper pages + overflow | 18 | 1 | Ready |
-| CanvasRef / undo | W3 | 1 | Ready |
-| Persistence | W6 | 4 | Ready |
-| Version history | W6 | 4 | Partial |
-| Ink overlay (Skia) | W4 | 2 | Planned |
-| Shapes | W5 | 3 | Planned |
+| Scene                  | Workstream | Phase | Status  |
+| ---------------------- | ---------- | ----- | ------- |
+| Headless store + utils | W1         | 0     | Ready   |
+| Markdown serialize     | W2         | 0     | Ready   |
+| Document mode          | W3         | 1     | Partial |
+| Paper pages + overflow | 18         | 1     | Ready   |
+| CanvasRef / undo       | W3         | 1     | Ready   |
+| Persistence            | W6         | 4     | Ready   |
+| Version history        | W6         | 4     | Partial |
+| Ink overlay (SVG)      | W4         | 2     | Ready   |
+| Shapes                 | W5         | 3     | Ready   |
+| Open canvas            | W5         | 3     | Ready   |
 
 Open **Native RN Playground** from the home screen.
 

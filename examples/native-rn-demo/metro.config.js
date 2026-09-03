@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config')
+const fs = require('fs')
 const path = require('path')
 
 const projectRoot = __dirname
@@ -20,6 +21,21 @@ config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   '@incantly/canvas': coreRoot,
   '@incantly/canvas-react-native': rnRoot,
+}
+
+function resolveExistingFile(filePath) {
+  const candidates = [filePath]
+  if (!filePath.endsWith('.js')) candidates.push(`${filePath}.js`)
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return { filePath: candidate, type: 'sourceFile' }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return null
 }
 
 const upstreamResolveRequest = config.resolver.resolveRequest
@@ -46,6 +62,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     return {
       filePath: path.resolve(rnRoot, 'dist/index.js'),
       type: 'sourceFile',
+    }
+  }
+  // Package `exports` + disableHierarchicalLookup can miss new nested dist files
+  // (e.g. ./utils/ink/ink-pen.js). Resolve those off disk from the importer.
+  const origin = context.originModulePath
+  if (moduleName.startsWith('.') && typeof origin === 'string') {
+    if (origin.startsWith(coreRoot) || origin.startsWith(rnRoot)) {
+      const hit = resolveExistingFile(path.resolve(path.dirname(origin), moduleName))
+      if (hit) return hit
     }
   }
   if (upstreamResolveRequest) {

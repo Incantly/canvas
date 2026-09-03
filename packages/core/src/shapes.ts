@@ -23,11 +23,6 @@ import {
   themeOf,
 } from './palette.js'
 import {
-  ptsBounds,
-  rotWith,
-  distToPolyline,
-  pointInPolygon,
-  pointInEllipse,
   geoPolygon,
   ellipsePolygon,
   cloudPolygon,
@@ -35,10 +30,16 @@ import {
   CLOUD_CURVES,
   wobblePolyline,
   traceSmooth,
-  segIntersectsBounds,
-  boundsIntersect,
-  boundsContain,
 } from './geometry.js'
+import {
+  NOTE_W,
+  localBounds,
+  pageBounds,
+  toLocal,
+  hitShape,
+  sampleLinePts,
+  marqueeHits,
+} from './utils/shapes/hit.js'
 import { strokeOutline } from './freehand.js'
 import {
   getShapeBlocks,
@@ -47,7 +48,16 @@ import {
   type RichTextLayout,
 } from './rich-text/index.js'
 
-export const NOTE_W = 200
+export {
+  NOTE_W,
+  localBounds,
+  pageBounds,
+  toLocal,
+  hitShape,
+  sampleLinePts,
+  marqueeHits,
+}
+
 export const NOTE_PAD = 20
 const LABEL_PAD = 12
 
@@ -58,78 +68,6 @@ const SEMI: Record<'light' | 'dark', string> = {
 
 type AnyProps = Record<string, any>
 const asProps = (p: ShapeProps): AnyProps => p as AnyProps
-
-export function localBounds(shape: ShapeRecord): Bounds {
-  const p = asProps(shape.props)
-  switch (shape.type) {
-    case 'draw':
-    case 'highlight': {
-      const b = ptsBounds(p.pts, 3)
-      const m = SIZES[p.size as SizeId] * (shape.type === 'highlight' ? HIGHLIGHT_SCALE / 2 : 0.75)
-      return { x: b.x - m, y: b.y - m, w: b.w + m * 2, h: b.h + m * 2 }
-    }
-    case 'arrow':
-    case 'line': {
-      const bend = p.bend || 0
-      const x = Math.min(0, p.dx) - Math.abs(bend)
-      const y = Math.min(0, p.dy) - Math.abs(bend)
-      return {
-        x,
-        y,
-        w: Math.abs(p.dx) + Math.abs(bend) * 2,
-        h: Math.abs(p.dy) + Math.abs(bend) * 2,
-      }
-    }
-    case 'text': {
-      const l = textLayout(shape)
-      return { x: 0, y: 0, w: l.w, h: l.h }
-    }
-    case 'note': {
-      const l = noteLayout(shape)
-      return { x: 0, y: 0, w: NOTE_W * (p.scale || 1), h: l.boxH * (p.scale || 1) }
-    }
-    case 'image':
-      return { x: 0, y: 0, w: p.w, h: p.h }
-    case 'geo':
-    default:
-      return { x: 0, y: 0, w: p.w || 1, h: p.h || 1 }
-  }
-}
-
-export function pageBounds(shape: ShapeRecord): Bounds {
-  const lb = localBounds(shape)
-  if (!shape.rot) return { x: shape.x + lb.x, y: shape.y + lb.y, w: lb.w, h: lb.h }
-  const cx = shape.x + lb.x + lb.w / 2
-  const cy = shape.y + lb.y + lb.h / 2
-  let minX = Infinity,
-    minY = Infinity,
-    maxX = -Infinity,
-    maxY = -Infinity
-  for (const [px, py] of [
-    [shape.x + lb.x, shape.y + lb.y],
-    [shape.x + lb.x + lb.w, shape.y + lb.y],
-    [shape.x + lb.x + lb.w, shape.y + lb.y + lb.h],
-    [shape.x + lb.x, shape.y + lb.y + lb.h],
-  ] as [number, number][]) {
-    const r = rotWith(px, py, cx, cy, shape.rot)
-    if (r.x < minX) minX = r.x
-    if (r.x > maxX) maxX = r.x
-    if (r.y < minY) minY = r.y
-    if (r.y > maxY) maxY = r.y
-  }
-  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
-}
-
-export function toLocal(shape: ShapeRecord, px: number, py: number): { x: number; y: number } {
-  if (shape.rot) {
-    const lb = localBounds(shape)
-    const cx = shape.x + lb.x + lb.w / 2
-    const cy = shape.y + lb.y + lb.h / 2
-    const r = rotWith(px, py, cx, cy, -shape.rot)
-    return { x: r.x - shape.x, y: r.y - shape.y }
-  }
-  return { x: px - shape.x, y: py - shape.y }
-}
 
 type LayoutValue = TextLayout | NoteLayout | GeoLabelLayout
 const outlineCache = new WeakMap<AnyProps, Path2D>()
@@ -624,148 +562,6 @@ export function drawShape(
     }
   }
   ctx.restore()
-}
-
-export function hitShape(
-  shape: ShapeRecord,
-  px: number,
-  py: number,
-  tol: number,
-  store: Store
-): boolean {
-  const b = pageBounds(shape)
-  const wide = tol + SIZES[(asProps(shape.props).size || 'm') as SizeId] * 2
-  if (
-    !boundsContain(
-      { x: b.x - wide, y: b.y - wide, w: b.w + wide * 2, h: b.h + wide * 2 },
-      px,
-      py
-    )
-  )
-    return false
-  const l = toLocal(shape, px, py)
-  const p = asProps(shape.props)
-  switch (shape.type) {
-    case 'draw':
-      return distToPolyline(l.x, l.y, p.pts, 3) <= tol + SIZES[p.size as SizeId] * 0.9
-    case 'highlight':
-      return (
-        distToPolyline(l.x, l.y, p.pts, 3) <= tol + (SIZES[p.size as SizeId] * HIGHLIGHT_SCALE) / 2
-      )
-    case 'geo': {
-      const edgeTol = tol + SIZES[p.size as SizeId]
-      if (p.geo === 'ellipse') {
-        const inside = pointInEllipse(l.x, l.y, p.w / 2, p.h / 2, p.w / 2, p.h / 2)
-        if (p.fill !== 'none' || p.label) return inside || nearEllipseEdge(l, p, edgeTol)
-        return nearEllipseEdge(l, p, edgeTol)
-      }
-      const poly = geoPolygon(p.geo, p.w, p.h)
-      if (p.fill !== 'none' || p.label) {
-        if (pointInPolygon(l.x, l.y, poly)) return true
-      }
-      return distToPolyline(l.x, l.y, poly, 2, true) <= edgeTol
-    }
-    case 'arrow':
-    case 'line': {
-      const pts = sampleLinePts(p, p.bend || 0)
-      return distToPolyline(l.x, l.y, pts, 2) <= tol + SIZES[p.size as SizeId]
-    }
-    case 'text':
-    case 'note':
-    case 'image': {
-      const lb = localBounds(shape)
-      return (
-        l.x >= lb.x - tol &&
-        l.x <= lb.x + lb.w + tol &&
-        l.y >= lb.y - tol &&
-        l.y <= lb.y + lb.h + tol
-      )
-    }
-  }
-  return false
-}
-
-const nearEllipseEdge = (l: { x: number; y: number }, p: AnyProps, tol: number): boolean => {
-  const rx = p.w / 2,
-    ry = p.h / 2
-  if (rx <= 0 || ry <= 0) return false
-  const outer = pointInEllipse(l.x, l.y, rx, ry, rx + tol, ry + tol)
-  const inner = pointInEllipse(
-    l.x,
-    l.y,
-    rx,
-    ry,
-    Math.max(0.5, rx - tol),
-    Math.max(0.5, ry - tol)
-  )
-  return outer && !inner
-}
-
-export const sampleLinePts = (p: AnyProps, bend: number): number[] => {
-  if (!bend) return [0, 0, p.dx, p.dy]
-  const len = Math.hypot(p.dx, p.dy) || 1
-  const nx = -p.dy / len,
-    ny = p.dx / len
-  const cx = p.dx / 2 + nx * bend * 2
-  const cy = p.dy / 2 + ny * bend * 2
-  const pts: number[] = []
-  for (let i = 0; i <= 16; i++) {
-    const t = i / 16
-    const mt = 1 - t
-    pts.push(
-      mt * mt * 0 + 2 * mt * t * cx + t * t * p.dx,
-      mt * mt * 0 + 2 * mt * t * cy + t * t * p.dy
-    )
-  }
-  return pts
-}
-
-export function marqueeHits(shape: ShapeRecord, rect: Bounds): boolean {
-  const b = pageBounds(shape)
-  if (!boundsIntersect(b, rect)) return false
-  if (['text', 'note', 'image'].includes(shape.type)) return true
-  if (shape.type === 'geo' && asProps(shape.props).fill !== 'none') return true
-  if (shape.rot) return true
-  const p = asProps(shape.props)
-  const local: Bounds = { x: rect.x - shape.x, y: rect.y - shape.y, w: rect.w, h: rect.h }
-  let pts: number[] | null = null
-  let stride = 2
-  if (shape.type === 'draw' || shape.type === 'highlight') {
-    pts = p.pts
-    stride = 3
-  } else if (shape.type === 'arrow' || shape.type === 'line') pts = sampleLinePts(p, p.bend || 0)
-  else if (shape.type === 'geo') {
-    pts = geoPolygon(p.geo, p.w, p.h)
-    if (pointInPolygon(local.x + local.w / 2, local.y + local.h / 2, pts)) return true
-  }
-  if (!pts) return true
-  const n = Math.floor(pts.length / stride)
-  if (n === 1) return boundsContain(local, pts[0], pts[1])
-  for (let i = 0; i < n - 1; i++) {
-    if (
-      segIntersectsBounds(
-        pts[i * stride],
-        pts[i * stride + 1],
-        pts[(i + 1) * stride],
-        pts[(i + 1) * stride + 1],
-        local
-      )
-    )
-      return true
-  }
-  if (shape.type === 'geo' && n > 2) {
-    if (
-      segIntersectsBounds(
-        pts[(n - 1) * stride],
-        pts[(n - 1) * stride + 1],
-        pts[0],
-        pts[1],
-        local
-      )
-    )
-      return true
-  }
-  return false
 }
 
 export function scaleShape(shape: ShapeRecord, sx: number, sy: number): ShapeRecord {

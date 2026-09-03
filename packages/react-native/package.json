@@ -1,7 +1,7 @@
 {
   "name": "@incantly/canvas-react-native",
   "version": "0.2.0",
-  "description": "React Native component for Incantly Canvas — native document renderer (Markdown + Skia).",
+  "description": "React Native component for Incantly Canvas — native document renderer (Markdown + SVG ink).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -45,12 +45,14 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
-    "react-native": "0.83.10"
+    "react-native": "0.83.10",
+    "react-native-svg": "15.15.3"
   },
   "peerDependencies": {
     "react": ">=17",
     "react-native": ">=0.76",
-    "react-native-enriched-markdown": ">=1.0.0"
+    "react-native-enriched-markdown": ">=1.0.0",
+    "react-native-svg": ">=15.0.0"
   },
   "peerDependenciesMeta": {
     "react-native": {

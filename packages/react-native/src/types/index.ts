@@ -17,7 +17,8 @@ import type {
   PaperStyleId,
 } from '@incantly/canvas'
 import type { FormatBarConfig } from '../document/format-bar-config.js'
-import type { VersionStorage } from '@incantly/canvas/headless'
+import type { InkBarConfig } from '../ink/ink-bar-config.js'
+import type { VersionStorage, InkPenDefinition } from '@incantly/canvas/headless'
 
 export interface VersionSummary {
   id: string
@@ -36,7 +37,7 @@ export interface SafeAreaInsets {
 export interface CanvasRef {
   loadSnapshot(snapshot: Snapshot, fit?: boolean): void
   applyDiff(diff: Diff): void
-  setTool(tool: ToolId): void
+  setTool(tool: ToolId | string): void
   setStyle(key: keyof Styles, value: ColorId | SizeId | DashId | FillId | FontId): void
   setDocumentBackground(color: string | null): void
   setDocumentPaperColor(color: string | null): void
@@ -108,6 +109,16 @@ export interface CanvasProps {
    * `strikethrough`, `inlineCode`, `link`.
    */
   formatBar?: FormatBarConfig
+  /**
+   * Replace Type / Pen / Highlight / Eraser (and host pen) labels or icons.
+   * Same shape as `formatBar`: `{ draw: { icon: <PenIcon /> }, eraser: { hidden: true } }`.
+   */
+  inkBar?: InkBarConfig
+  /**
+   * Host drawing tools. Defaults to pen + highlighter.
+   * Each pen's `style` controls pressure, width, opacity, and stored `kind`.
+   */
+  inkPens?: readonly InkPenDefinition[]
   /**
    * Persistent version history. Host should pass `createSqliteVersionStorage(...)`.
    * Defaults to in-memory (lost when the component unmounts).

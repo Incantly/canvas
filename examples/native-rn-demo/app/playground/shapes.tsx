@@ -1,22 +1,20 @@
-import { Text, StyleSheet, View } from 'react-native'
 import { SceneShell } from '@/components/SceneShell'
+import { CanvasScreen, DEMO_FORMAT_BAR, DEMO_INK_BAR, DEMO_INK_PENS } from '@/components/CanvasScreen'
+import { EMPTY_DOCUMENT_SNAPSHOT } from '@/lib/fixtures'
 
 export default function ShapesScene() {
   return (
-    <SceneShell title="Shapes (line/arrow/geo)" subtitle="W5 — Phase 3" status="planned">
-      <View style={styles.box}>
-        <Text style={styles.title}>Coming in Phase 3</Text>
-        <Text style={styles.body}>
-          Skia ShapeLayer for line, arrow, and geo shapes parented to the page. Select tool +
-          tap-drag to create.
-        </Text>
-      </View>
+    <SceneShell
+      title="Shapes (line/arrow/geo)"
+      subtitle="On paper notes — Type to write in the column; Cursor to select, move, and resize shapes"
+      status="ready"
+    >
+      <CanvasScreen
+        snapshot={EMPTY_DOCUMENT_SNAPSHOT}
+        formatBar={DEMO_FORMAT_BAR}
+        inkBar={DEMO_INK_BAR}
+        inkPens={DEMO_INK_PENS}
+      />
     </SceneShell>
   )
 }
-
-const styles = StyleSheet.create({
-  box: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 20, fontWeight: '600', marginBottom: 12 },
-  body: { fontSize: 15, lineHeight: 22, color: '#555' },
-})

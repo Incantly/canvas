@@ -12,6 +12,9 @@
 - `packages/react-native/src/storage/*` — AsyncStorage notebook persistence + SQLite `VersionStorage`
 - `packages/react-native/src/store/*` — StoreBridge, useCanvasStore
 - `packages/react-native/src/document/*` — native document text sync
+- `packages/react-native/src/ink/*` — SVG overlay; packed stroke `pts` must be finite; commit on pointer up
+- `packages/react-native/src/shapes/*` — SVG shape layer; `canPutShape` requires parent page + finite geometry
+- `packages/react-native/src/board/*` — open-canvas camera (not persisted); text box 256KB cap
 - `examples/native-rn-demo` — notebook load/save, playground scenes
 
 ## Findings
@@ -32,6 +35,8 @@ Reviewed uncommitted storage + version-history paths. Parameterized SQLite, note
 4. **Storage boundaries** — SQLite `versions` table scoped by `notebook_id`; path-like ids rejected; corrupt JSON rows skipped on list; list via CanvasRef is summaries only
 5. **PII stays local** — no secrets in bundle, keys, or snapshots
 6. **File-system version offload** — deferred:v1.1
+7. **SVG ink (W4)** — `commitDocumentInkStroke` rejects non-finite `pts`; no new persistence keys; overlay does not persist beyond existing page `document.blocks`
+8. **SVG shapes + open canvas (W5)** — `commitShape` / `canPutShape` reject missing `parentId` and non-finite `x/y/w/h/dx/dy`; corrupt records skipped at render (not stripped from snapshot); open-canvas text clamped to 256KB; camera is session-only (not a new persistence key); board ink stores `draw`/`highlight` ShapeRecords in the existing snapshot. Text box `h`/`fill` are optional props (no schema bump). Chrome id `type` is reserved (not a host pen). Resize/minimap math is headless and does not persist.
 
 ### Residual (Low)
 

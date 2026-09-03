@@ -44,7 +44,7 @@ function nextKey(): string {
 function DrawingBlockRow() {
   return (
     <View style={styles.drawingBlock}>
-      <Text style={styles.drawingLabel}>Drawing region (Skia ink — Phase 2)</Text>
+      <Text style={styles.drawingLabel}>Drawing region (paper ink overlay)</Text>
     </View>
   )
 }
