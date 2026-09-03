@@ -277,20 +277,18 @@ export function planPageOverflow(
     const same = documentBlocksEqual(fitting, current)
     return { current: fitting, extraPages: [], changed: !same }
   }
-  const chunks = paginateBlocks(overflow, contentW, contentH)
-  if (!chunks.length) {
-    return { current: fitting, extraPages: [], changed: true }
-  }
+  // One continuation sheet per overflow. A later write can split that page
+  // if it is still over-full — avoids creating a stack of pages at once.
   if (nextPage && isVisuallyEmptyPage(nextPage)) {
     const drawings = nextPage.filter(isDrawingBlock)
     return {
       current: fitting,
-      next: validateDocumentBlocks([...(chunks[0] ?? []), ...drawings]),
-      extraPages: chunks.slice(1),
+      next: validateDocumentBlocks([...overflow, ...drawings]),
+      extraPages: [],
       changed: true,
     }
   }
-  return { current: fitting, extraPages: chunks, changed: true }
+  return { current: fitting, extraPages: [overflow], changed: true }
 }
 
 function documentBlocksEqual(a: DocumentBlock[], b: DocumentBlock[]): boolean {
@@ -305,6 +303,8 @@ function documentBlocksEqual(a: DocumentBlock[], b: DocumentBlock[]): boolean {
 export interface ApplyOverflowResult {
   changed: boolean
   createdPageIds: string[]
+  /** First page that received leftover text (existing next page or a newly inserted one). */
+  overflowPageId?: string
 }
 
 export interface ApplyOverflowOptions {
@@ -351,10 +351,12 @@ export function applyPageDocumentOverflow(
   store.setPageDocument(pageId, plan.current, source)
   const createdPageIds: string[] = []
   let afterId = pageId
+  let overflowPageId: string | undefined
 
   if (plan.next && nextRec) {
     store.setPageDocument(nextRec.id, plan.next, source)
     afterId = nextRec.id
+    overflowPageId = nextRec.id
   }
 
   const paperSize = inferPaperSizeId(page.width, page.height) ?? undefined
@@ -364,8 +366,9 @@ export function applyPageDocumentOverflow(
       : store.addPage({ paperSize, paperStyle: page.paperStyle }, source)
     store.setPageDocument(created.id, blocks, source)
     createdPageIds.push(created.id)
+    if (!overflowPageId) overflowPageId = created.id
     afterId = created.id
   }
 
-  return { changed: true, createdPageIds }
+  return { changed: true, createdPageIds, overflowPageId }
 }

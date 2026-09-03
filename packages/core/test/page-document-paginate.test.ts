@@ -8,7 +8,8 @@ import {
   splitBlocksToFitContent,
 } from '../src/page-document-paginate.js'
 import type { DocumentBlock, TextBlock } from '../src/rich-text/types.js'
-import { PAGE_DOC_MARGIN_X, PAGE_DOC_MARGIN_Y } from '../src/page-document-layout.js'
+import { pageContentRect, PAGE_DOC_MARGIN_X, PAGE_DOC_MARGIN_Y } from '../src/page-document-layout.js'
+import { paperSizePreset } from '../src/pages.js'
 
 function para(text: string): TextBlock {
   return { type: 'paragraph', content: [{ text }] }
@@ -98,13 +99,43 @@ describe('applyPageDocumentOverflow', () => {
     s.setPageDocument(p1.id, tall)
     const result = applyPageDocumentOverflow(s, p1.id)
     expect(result.changed).toBe(true)
-    expect(s.pages().length).toBeGreaterThan(1)
+    expect(result.overflowPageId).toBe(s.pages()[1]!.id)
+    expect(s.pages()).toHaveLength(2)
     const first = s.pageDocumentBlocks(p1.id)
     const rectH = p1.height - PAGE_DOC_MARGIN_Y - PAGE_DOC_MARGIN_X
     const firstText = first.filter((b) => b.type !== 'drawing')
     expect(firstText.length).toBeLessThan(tall.length)
     expect(isVisuallyEmptyPage(s.pageDocumentBlocks(s.pages()[1]!.id))).toBe(false)
     expect(rectH).toBeGreaterThan(200)
+  })
+
+  it('cuts overflow using the active paper size (Letter vs A4)', () => {
+    const tall = Array.from({ length: 28 }, (_, i) =>
+      para(`Paper line ${i} ${'word '.repeat(16)}`),
+    )
+    const letter = new Store()
+    letter.normalizePages('remote')
+    const lp = letter.pages()[0]!
+    letter.setPagePaper(lp.id, { paperSize: 'letter' })
+    letter.setPageDocument(lp.id, tall)
+    applyPageDocumentOverflow(letter, lp.id)
+    const letterFirst = letter.pageDocumentBlocks(lp.id).filter((b) => b.type !== 'drawing')
+
+    const a4 = new Store()
+    a4.normalizePages('remote')
+    const ap = a4.pages()[0]!
+    a4.setPagePaper(ap.id, { paperSize: 'a4' })
+    a4.setPageDocument(ap.id, tall)
+    applyPageDocumentOverflow(a4, ap.id)
+    const a4First = a4.pageDocumentBlocks(ap.id).filter((b) => b.type !== 'drawing')
+
+    const letterH = pageContentRect(letter.page(lp.id)!).h
+    const a4H = pageContentRect(a4.page(ap.id)!).h
+    expect(paperSizePreset('a4').height).toBeGreaterThan(paperSizePreset('letter').height)
+    expect(a4H).toBeGreaterThan(letterH)
+    expect(a4First.length).toBeGreaterThanOrEqual(letterFirst.length)
+    expect(letter.pages()[1]!.width).toBe(paperSizePreset('letter').width)
+    expect(letter.pages()[1]!.height).toBe(paperSizePreset('letter').height)
   })
 
   it('inserts between pages when page 2 already has notes', () => {

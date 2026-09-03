@@ -118,6 +118,8 @@ export const Canvas = forwardRef(function Canvas(
   const [zoom, setZoom] = useState(0.75)
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
+  const [caretAtEnd, setCaretAtEnd] = useState(false)
+  const overflowQuietUntilRef = useRef(0)
 
   const activeId = store.page(currentPageId) ? currentPageId : pages[0]?.id ?? ''
   const storeBlocks = validateDocumentBlocks(
@@ -137,6 +139,20 @@ export const Canvas = forwardRef(function Canvas(
       setLocalBlocks(trimmed)
     },
     [store],
+  )
+
+  const followOverflowPage = useCallback(
+    (overflowPageId?: string) => {
+      if (!overflowPageId || !store.page(overflowPageId)) return false
+      if (overflowPageId === currentPageIdRef.current) return false
+      setCaretAtEnd(true)
+      overflowQuietUntilRef.current = Date.now() + 500
+      setCurrentPageId(overflowPageId)
+      currentPageIdRef.current = overflowPageId
+      syncLocalFromPage(overflowPageId)
+      return true
+    },
+    [store, syncLocalFromPage],
   )
 
   useEffect(() => {
@@ -206,6 +222,10 @@ export const Canvas = forwardRef(function Canvas(
       const trimmed = validateDocumentBlocks(store.pageDocumentBlocks(pageId))
       const trimmedFp = documentBlocksFingerprint(trimmed)
       lastFpRef.current = trimmedFp
+      if (overflow.changed && followOverflowPage(overflow.overflowPageId)) {
+        notify()
+        return
+      }
       if (overflow.changed || trimmedFp !== fp) {
         localFpRef.current = trimmedFp
         lastPlainLenRef.current = pageTextBlocksToPlainLines(trimmed).length
@@ -213,7 +233,7 @@ export const Canvas = forwardRef(function Canvas(
       }
       notify()
     },
-    [store, notify],
+    [store, notify, followOverflowPage],
   )
 
   const debouncedWrite = useRef(
@@ -245,6 +265,7 @@ export const Canvas = forwardRef(function Canvas(
 
   const onOverflowRequest = useCallback(
     (measuredHeight: number, boxHeight: number) => {
+      if (Date.now() < overflowQuietUntilRef.current) return
       const pageId = currentPageIdRef.current
       if (!pageId || !store.page(pageId)) return
       debouncedWrite.current.flush()
@@ -252,17 +273,19 @@ export const Canvas = forwardRef(function Canvas(
       if (!page) return
       const rect = pageContentRect(page)
       const inset = PAGE_FORMAT_BAR_HEIGHT / Math.max(0.35, zoomRef.current)
-      const ratio = Math.min(1, (boxHeight * 0.92) / Math.max(1, measuredHeight))
-      if (ratio >= 0.99) return
+      if (measuredHeight <= boxHeight + 8) return
       const overflow = applyPageDocumentOverflow(store, pageId, 'user', {
-        maxContentHeight: Math.max(80, (rect.h - inset) * ratio),
+        contentInsetBottom: inset,
+        maxContentHeight: Math.max(80, rect.h - inset),
       })
       if (overflow.changed) {
-        syncLocalFromPage(pageId)
+        if (!followOverflowPage(overflow.overflowPageId)) {
+          syncLocalFromPage(pageId)
+        }
         notify()
       }
     },
-    [store, notify, syncLocalFromPage],
+    [store, notify, syncLocalFromPage, followOverflowPage],
   )
 
   const editable = documentMode && !readonly
@@ -270,6 +293,7 @@ export const Canvas = forwardRef(function Canvas(
   const selectPage = useCallback(
     (pageId: string) => {
       if (!store.page(pageId)) return
+      setCaretAtEnd(false)
       setCurrentPageId(pageId)
       currentPageIdRef.current = pageId
       const blocks = validateDocumentBlocks(store.pageDocumentBlocks(pageId))
@@ -338,6 +362,7 @@ export const Canvas = forwardRef(function Canvas(
         onZoom={setZoom}
         onError={onError}
         onOverflowRequest={editable ? onOverflowRequest : undefined}
+        caretAtEnd={caretAtEnd}
       />
     </View>
   )

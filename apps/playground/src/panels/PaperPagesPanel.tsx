@@ -31,7 +31,8 @@ export function PaperPagesPanel({ store, onEditorReady }: PaperPagesPanelProps) 
           <strong>18 — Document paper pages</strong>
           <p style={styles.hint}>
             Discrete sheets (Page 1, Page 2). Use the page bar to add / switch / delete.
-            Cycle <strong>Letter / A4</strong> and <strong>Plain / Rule / Grid / Dot</strong>.
+            Cycle <strong>Letter / A4</strong> — overflow uses that paper’s content box.
+            Typing past the bottom continues on the next sheet of the same size.
             Pinch, ⌘+/−, or ctrl+wheel to zoom; drag with Hand or space to pan.
           </p>
         </div>

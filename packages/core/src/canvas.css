@@ -611,6 +611,7 @@
 /* Document-first mode: page body is always the typing surface until ink tools are active. */
 .ic-page-doc-wrap.ic-page-doc-mode {
   pointer-events: auto;
+  overflow: hidden;
 }
 
 .ic-page-doc-wrap.ic-page-doc-mode.ic-page-doc-ink-pass,
@@ -635,6 +636,8 @@
   font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
   letter-spacing: 0.01em;
   min-height: 100%;
+  max-height: 100%;
+  overflow: hidden;
   cursor: text;
 }
 
