@@ -1,5 +1,6 @@
 import { Link } from 'expo-router'
-import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native'
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { PLAYGROUND_SCENES, type SceneStatus } from '@/lib/playground-scenes'
 
 const STATUS_COLOR: Record<SceneStatus, string> = {

@@ -24,6 +24,7 @@ export function useCanvasStore(opts: UseCanvasStoreOptions = {}) {
 
   if (!storeRef.current) {
     storeRef.current = new Store()
+    storeRef.current.normalizePages('remote')
     versionRef.current = createVersionManager({
       storage: opts.versionStorage ?? new MemoryVersionStorage(),
       store: storeRef.current,

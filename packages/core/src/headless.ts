@@ -51,6 +51,25 @@ export {
 } from './rich-text/markdown-serialize.js'
 
 export {
+  pageTextBlocksToMarkdown,
+  markdownToPageTextBlocks,
+  mergeMarkdownIntoPageDocument,
+  pageTextBlocksToPlainLines,
+  applyInlineMarkToPageRange,
+} from './rich-text/page-markdown.js'
+
+export {
+  estimateTextBlockHeight,
+  estimateDocumentHeight,
+  splitBlocksToFitContent,
+  paginateBlocks,
+  planPageOverflow,
+  applyPageDocumentOverflow,
+  isVisuallyEmptyPage,
+  isOverflowEmpty,
+} from './page-document-paginate.js'
+
+export {
   validateDocumentBlocks,
   layoutPageDocument,
   DRAWING_BLOCK_MIN_HEIGHT,
@@ -94,6 +113,12 @@ export {
   DEFAULT_PAGE_GAP,
   MAX_PAGE_GAP,
   NOTEBOOK_ID,
+  PAPER_SIZE_PRESETS,
+  paperSizePreset,
+  validatePaperStyle,
+  validatePaperSizeId,
+  paperStyleToGridId,
+  inferPaperSizeId,
 } from './pages.js'
 
 export {
@@ -104,7 +129,18 @@ export {
   SIZES,
 } from './palette.js'
 
-export type { ColorId, SizeId, FontId, ThemeId, GridId, PageLayout, Bounds, ToolId } from './types/base.js'
+export type {
+  ColorId,
+  SizeId,
+  FontId,
+  ThemeId,
+  GridId,
+  PageLayout,
+  PaperStyleId,
+  PaperSizeId,
+  Bounds,
+  ToolId,
+} from './types/base.js'
 
 export {
   boundsUnion,

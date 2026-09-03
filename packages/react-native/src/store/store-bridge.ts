@@ -14,10 +14,12 @@ export interface StoreBridgeDeps {
   loadSnapshot: (snap: Snapshot, source?: 'user' | 'remote' | 'all') => void
   notify: () => void
   toolRef: MutableRefObject<ToolId>
+  currentPageIdRef?: MutableRefObject<string>
 }
 
 export function createStoreBridge(deps: StoreBridgeDeps): CanvasRef {
-  const { store, versionManager, getSnapshot, loadSnapshot, notify, toolRef } = deps
+  const { store, versionManager, getSnapshot, loadSnapshot, notify, toolRef, currentPageIdRef } =
+    deps
 
   return {
     loadSnapshot(snapshot, _fit) {
@@ -64,15 +66,27 @@ export function createStoreBridge(deps: StoreBridgeDeps): CanvasRef {
     refreshPageDocument() {
       notify()
     },
-    setPage(_pageId, _opts) {
+    setPage(pageId, _opts) {
+      if (!store.page(pageId)) return
+      if (currentPageIdRef) currentPageIdRef.current = pageId
       notify()
     },
     addPage(opts = {}) {
-      store.addPage(opts)
+      const page = store.addPage(opts)
+      if (currentPageIdRef) currentPageIdRef.current = page.id
+      notify()
+    },
+    setPagePaper(pageId, opts) {
+      store.setPagePaper(pageId, opts)
       notify()
     },
     removePage(pageId) {
-      if (pageId) store.removePage(pageId)
+      const id = pageId ?? currentPageIdRef?.current
+      if (id) store.removePage(id)
+      const pages = store.pages()
+      if (currentPageIdRef && !store.page(currentPageIdRef.current)) {
+        currentPageIdRef.current = pages[0]?.id ?? ''
+      }
       notify()
     },
     async getSnapshot() {

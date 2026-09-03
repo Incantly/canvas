@@ -3,10 +3,18 @@ import type { NotebookRecord, PageRecord } from '../types/models.js'
 import type { DocumentBlock, ImageBlock } from '../rich-text/types.js'
 import { NOTEBOOK_ID } from '../pages.js'
 import { mergePageDocumentsIntoNotebook } from '../notebook-document.js'
+import { getPageDocument, normalizePageRecord } from '../page-document.js'
 import {
   validateDocumentBlocks,
   consolidateDocumentBlocks,
 } from '../page-document-blocks.js'
+
+function pageBlocks(page: PageRecord, override?: unknown) {
+  const raw = override ?? page.document?.blocks
+  return consolidateDocumentBlocks(
+    getPageDocument({ ...page, document: { blocks: raw as never } }),
+  )
+}
 import { registerMigration } from './sequences.js'
 
 function getNotebook(store: Record<string, any>): NotebookRecord | undefined {
@@ -82,6 +90,46 @@ registerMigration({
     store[NOTEBOOK_ID] = {
       ...nb,
       document: { blocks: validateDocumentBlocks(blocks) },
+    }
+  },
+})
+
+/**
+ * Discrete pages: after notebook v1–v3 (continuous stream), move content onto
+ * page 0 and keep per-page documents. Complements page.document v3 when that
+ * step is undone by notebook v1 on a full-from-zero migrate.
+ */
+registerMigration({
+  sequenceId: 'com.incantly.notebook.document',
+  version: 4,
+  up(snap: Snapshot): void {
+    const store = snap.document.store
+    const nb = getNotebook(store)
+    const pages = getPages(store)
+    if (!pages.length) return
+
+    const nbBlocks = nb?.document?.blocks
+    if (nbBlocks && nbBlocks.length) {
+      const first = pages[0]!
+      store[first.id] = {
+        ...first,
+        document: { blocks: pageBlocks(first, nbBlocks) },
+      }
+      if (nb) {
+        const { document: _doc, ...rest } = nb
+        store[NOTEBOOK_ID] = rest as NotebookRecord
+      }
+    }
+
+    for (const page of getPages(store)) {
+      if (!page.document?.blocks) {
+        store[page.id] = normalizePageRecord(page)
+      } else {
+        store[page.id] = {
+          ...page,
+          document: { blocks: pageBlocks(page) },
+        }
+      }
     }
   },
 })

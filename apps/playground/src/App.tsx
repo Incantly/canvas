@@ -6,6 +6,7 @@ import { CanvasDemoPanel } from './panels/CanvasDemoPanel'
 import { PageCanvasPanel } from './panels/PageCanvasPanel'
 import { RichTextPanel } from './panels/RichTextPanel'
 import { VersionHistoryPanel } from './panels/VersionHistoryPanel'
+import { PaperPagesPanel } from './panels/PaperPagesPanel'
 import { DebugPanel } from './components/DebugPanel'
 
 export default function App() {
@@ -31,6 +32,8 @@ export default function App() {
           <RichTextPanel store={store} onEditorReady={setEditor} />
         ) : selectedPanel === '16' ? (
           <VersionHistoryPanel store={store} onEditorReady={setEditor} />
+        ) : selectedPanel === '18' ? (
+          <PaperPagesPanel store={store} onEditorReady={setEditor} />
         ) : (
           <div style={styles.placeholder}>
             <p style={styles.placeholderTitle}>Coming soon</p>

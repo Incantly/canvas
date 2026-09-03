@@ -715,14 +715,19 @@
   background: var(--ic-doc-bg, #191713);
 }
 
-.ic-document-mode .ic-pages.ic-notes-pages {
-  display: none !important;
-}
-
+/* Page strip stays visible in document mode (discrete paper pages). */
 .ic-document-mode .ic-pages.ic-notes-pages .ic-page-layout,
 .ic-document-mode .ic-pages.ic-notes-pages .ic-page-gap,
 .ic-document-mode .ic-pages.ic-notes-pages .ic-page-gap-label {
   display: none !important;
+}
+
+.ic-document-mode .ic-pages.ic-notes-pages .ic-paper-size,
+.ic-document-mode .ic-pages.ic-notes-pages .ic-paper-style {
+  min-width: 40px;
+  padding: 0 8px;
+  font-size: 11px;
+  width: auto;
 }
 
 .ic-slash-menu {

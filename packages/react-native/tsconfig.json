@@ -10,7 +10,7 @@
     "allowJs": true,
     "types": []
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.d.ts"],
   "exclude": ["dist", "test", "scripts"],
   "references": [{ "path": "../core" }]
 }

@@ -16,6 +16,20 @@ npm run build:packages
 
 ## Install & run
 
+This demo targets **Expo SDK 55 / React Native 0.83** (New Architecture only).
+
+`react-native-enriched-markdown` is a Fabric native module. It does **not** run in Expo Go. Use a **dev client** after prebuild:
+
+```bash
+cd examples/native-rn-demo
+npm install
+npx expo prebuild
+npx expo run:ios
+# or: npx expo run:android
+```
+
+`npx expo start` still works for Metro, but open the **dev client** (not Expo Go) to get cross-paragraph selection via Enriched. Without a native build the page editor falls back to one multiline `TextInput` per page (selection across Enter still works; marks apply to the selected range).
+
 ```bash
 cd examples/native-rn-demo
 npm install
@@ -35,6 +49,7 @@ npm run dev:mobile
 | Headless store + utils | W1 | 0 | Ready |
 | Markdown serialize | W2 | 0 | Ready |
 | Document mode | W3 | 1 | Partial |
+| Paper pages + overflow | 18 | 1 | Ready |
 | CanvasRef / undo | W3 | 1 | Ready |
 | Persistence | W6 | 4 | Ready |
 | Version history | W6 | 4 | Partial |

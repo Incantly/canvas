@@ -8,7 +8,7 @@ export interface SqliteDriver {
 }
 
 /**
- * Wraps an Expo SQLite database (`expo-sqlite` v14/v15) without importing Expo.
+ * Wraps an Expo SQLite database (`expo-sqlite` v14+) without importing Expo.
  * Host: `createExpoSqliteDriver(await SQLite.openDatabaseAsync('incantly.db'))`
  */
 export function createExpoSqliteDriver(db: ExpoSqliteLike): SqliteDriver {

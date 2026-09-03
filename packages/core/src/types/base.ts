@@ -13,6 +13,9 @@ export type FontId = 'draw' | 'sans' | 'serif' | 'mono'
 export type GeoId = 'rectangle' | 'ellipse' | 'triangle' | 'diamond' | 'hexagon' | 'star' | 'cloud'
 export type ThemeId = 'light' | 'dark'
 export type GridId = 'none' | 'lines' | 'ruled' | 'dots' | 'crosses' | 'iso'
+/** Document paper background pattern (discrete notes). */
+export type PaperStyleId = 'plain' | 'ruled' | 'grid' | 'dots'
+export type PaperSizeId = 'letter' | 'a4'
 export type PageLayout = 'vertical' | 'horizontal'
 export type PageGapPreset = 'connected' | 'normal' | 'wide'
 

@@ -157,7 +157,9 @@ export interface PageRecord {
   height: number
   name?: string
   grid?: GridId
-  /** Primary typing surface — OpenNote / Apple Notes style body. */
+  /** Document paper pattern (ruled / grid / dots). */
+  paperStyle?: import('./base.js').PaperStyleId
+  /** Per-page typing + drawing surface (discrete notes). */
   document?: PageDocumentRecord
 }
 
@@ -166,7 +168,10 @@ export interface NotebookRecord {
   typeName: 'notebook'
   pageLayout: PageLayout
   pageGap?: number
-  /** Continuous notes body — single stream (OpenNote / Apple Notes). */
+  /**
+   * Legacy continuous notes stream. After page.document v3 migration,
+   * content lives on each page; this field is cleared.
+   */
   document?: PageDocumentRecord
 }
 

@@ -8,7 +8,6 @@ import {
   applyLineMarkdown,
 } from './rich-text/index.js'
 import { PAGE_DOC_FONT_SIZE, notesPageContentRect, appendPlainTextToDocument } from './page-document.js'
-import { notesPaperHeight } from './notebook-document.js'
 import {
   documentBlocksToDomHtml,
   documentBlockToDomHtml,
@@ -137,13 +136,21 @@ export class PageDocumentUI {
   }
 
   private blocks() {
-    return this.host.store.notebookDocumentBlocks()
+    const id = this.host.currentPageId
+    if (!id) return this.host.store.notebookDocumentBlocks()
+    return this.host.store.pageDocumentBlocks(id)
+  }
+
+  private writeBlocks(blocks: DocumentBlock[]): void {
+    const id = this.host.currentPageId
+    if (!id || !this.host.store.page(id)) return
+    this.host.store.setPageDocument(id, blocks)
   }
 
   private paperHeight(): number {
     const page = this.host.currentPage()
     if (!page) return 1056
-    return notesPaperHeight(page, this.blocks(), this.host.theme)
+    return page.height
   }
 
   private bind(): void {
@@ -298,7 +305,7 @@ export class PageDocumentUI {
     const insertAt = caretIdx !== null ? caretIdx + 1 : blocks.length
     const imageBlock: ImageBlock = { type: 'image', src, width, height }
     blocks.splice(insertAt, 0, imageBlock)
-    this.host.store.setNotebookDocument(blocks)
+    this.writeBlocks(blocks)
     this.syncFromStore()
     this.host.requestRender()
   }
@@ -325,7 +332,7 @@ export class PageDocumentUI {
       return
     }
     const blocks = appendPlainTextToDocument(this.blocks(), text)
-    this.host.store.setNotebookDocument(blocks)
+    this.writeBlocks(blocks)
     this._renderBlocksRange(this.blocks(), blocks.length - text.split('\n').length, blocks.length)
     this.focusAtEnd()
   }
@@ -426,7 +433,7 @@ export class PageDocumentUI {
         if (parsed && !isDrawingBlock(parsed) && !isImageBlock(parsed)) {
           const patched = existing.slice()
           patched[caretIdx] = applyMarkdownToBlock(parsed)
-          this.host.store.setNotebookDocument(patched)
+          this.writeBlocks(patched)
           this._renderedBlocks = this.blocks()
           this.layout()
           this.host.requestRender()
@@ -437,7 +444,7 @@ export class PageDocumentUI {
     const blocks = parseDocumentBlocksFromDom(this.el, existing).map((b) =>
       isDrawingBlock(b) || isImageBlock(b) ? b : applyMarkdownToBlock(b),
     )
-    this.host.store.setNotebookDocument(blocks)
+    this.writeBlocks(blocks)
     this._renderedBlocks = this.blocks()
     this.layout()
     this.host.requestRender()
@@ -667,7 +674,7 @@ export class PageDocumentUI {
       blocks[docIndex] = { type, content: [{ text: before }] }
       blocks.splice(docIndex + 1, 0, { type, content: [{ text: after }] })
     }
-    this.host.store.setNotebookDocument(blocks)
+    this.writeBlocks(blocks)
     this.host.store.endBatch()
     this.syncFromStore()
 

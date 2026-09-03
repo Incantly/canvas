@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
+import { CURRENT_SCHEMA } from '../src/types/schema.js'
 import { Store } from '../src/store.js'
 import { createPage, NOTEBOOK_ID } from '../src/pages.js'
 import { themeOf } from '../src/palette.js'
@@ -64,9 +65,10 @@ describe('notebook document', () => {
     expect(pages[1]!.sliceY).toBe(sliceH)
   })
 
-  it('migrateNotebookDocument merges per-page documents into notebook.document', () => {
+  it('loadSnapshot keeps discrete per-page documents (does not merge into notebook)', () => {
     const s = new Store()
     s.loadSnapshot({
+      schema: CURRENT_SCHEMA,
       document: {
         store: {
           p1: {
@@ -95,11 +97,12 @@ describe('notebook document', () => {
       },
     } as any)
     const nb = s.get(NOTEBOOK_ID) as any
-    expect(nb.document?.blocks?.length).toBeGreaterThanOrEqual(2)
-    expect(s.page('p1')?.document).toBeUndefined()
-    expect(s.page('p2')?.document).toBeUndefined()
-    const stream = s.notebookDocumentBlocks()
-    expect(stream.some((b) => b.type === 'paragraph' && b.content[0]?.text === 'Page A')).toBe(true)
-    expect(stream.some((b) => b.type === 'paragraph' && b.content[0]?.text === 'Page B')).toBe(true)
+    expect(nb.document).toBeUndefined()
+    expect(
+      s.pageDocumentBlocks('p1').some((b) => b.type === 'paragraph' && b.content[0]?.text === 'Page A'),
+    ).toBe(true)
+    expect(
+      s.pageDocumentBlocks('p2').some((b) => b.type === 'paragraph' && b.content[0]?.text === 'Page B'),
+    ).toBe(true)
   })
 })

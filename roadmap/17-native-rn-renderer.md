@@ -95,7 +95,7 @@ flowchart TB
 | Pillar | Package / module | Role |
 |--------|------------------|------|
 | **Headless export** | `@incantly/canvas/headless` | Store, migrations, version history, geometry, validation, shared utils — zero DOM imports |
-| **Enriched Markdown** | `react-native-enriched-markdown` | One `EnrichedMarkdownTextInput` / `EnrichedMarkdownText` per `TextBlock`; debounced sync to store |
+| **Enriched Markdown** | `react-native-enriched-markdown` | One `EnrichedMarkdownTextInput` **per page document** (not per `TextBlock`) so selection can span Enter-separated paragraphs; fallback is one multiline `TextInput` per page |
 | **Skia** | `@shopify/react-native-skia` | Ink overlay + line/arrow/geo shape layer; commit strokes on pointer up only |
 
 ### Prerequisites
@@ -249,7 +249,7 @@ Constraints:
 | --- | --- |
 | W1 — Headless export + shared utils | implemented |
 | W2 — Markdown serialize + block sync | implemented |
-| W3 — Document UI (Enriched) | partial |
+| W3 — Document UI (Enriched) | implemented — one editor per page; Expo 55 / optional Enriched |
 | W4 — Ink overlay (Skia) | missing |
 | W5 — Shapes (line/arrow/geo) | missing |
 | W6 — Storage + VersionStorage | partial |
@@ -292,7 +292,7 @@ Constraints:
 
 | Check | Status |
 | --- | --- |
-| One `EnrichedMarkdownTextInput` per `TextBlock`; read-only uses `EnrichedMarkdownText` | deferred:package — `TextInput` markdown editor for Expo 52 / RN 0.76; Enriched needs RN ≥0.83 |
+| One `EnrichedMarkdownTextInput` **per page**; fallback one multiline `TextInput` per page | implemented — Expo SDK 55 / RN 0.83 + optional `react-native-enriched-markdown` (dev client / prebuild; not Expo Go) |
 | Debounced text sync (300ms) + flush on blur/unmount | implemented |
 | `documentBlocksFingerprint` prevents redundant undo steps | implemented |
 | Markdown block size cap (256KB) with user-visible `onError` | implemented |
@@ -300,6 +300,8 @@ Constraints:
 | Bold, italic, headings, lists, links round-trip through markdown serialize | partial |
 | Lossy fields (`font`, `fontSize`, `color`) documented; structured spans remain canonical | partial |
 | VoiceOver (iOS) + TalkBack (Android) on text blocks | missing |
+| Enter then a second short line: drag-select across both works | implemented (one editor per page) |
+| Bold/Italic apply to the selected range (Enriched) or fallback range marks | implemented |
 
 ### Ink + pen
 

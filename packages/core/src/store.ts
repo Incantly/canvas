@@ -28,11 +28,15 @@ import {
   validatePageLayout,
   validatePageGap,
   validatePageGapPreset,
+  validatePaperStyle,
   clampPageGap,
   pageGapForPreset,
+  paperSizePreset,
   DEFAULT_PAGE_GAP,
   PAGE_GAP_STEP,
+  type CreatePageOpts,
 } from './pages.js'
+import type { PaperSizeId, PaperStyleId } from './types/base.js'
 import { migrateTextProps, validateBlocks } from './rich-text/document.js'
 import type { TextBlock, DocumentBlock } from './rich-text/types.js'
 import { isDrawingBlock } from './rich-text/types.js'
@@ -231,7 +235,7 @@ export class Store {
 
   put(rec: BoardRecord, source: DiffSource = 'user'): void {
     this.transact(() => {
-      if (rec.id === NOTEBOOK_ID) this._cachedNbBlocks = null
+      if (rec.id === NOTEBOOK_ID || isPageRecord(rec)) this._cachedNbBlocks = null
       const prev = this.records.get(rec.id)
       this.records.set(rec.id, rec)
       const d = this._tx!.diff
@@ -266,8 +270,9 @@ export class Store {
   remove(idList: string[], source: DiffSource = 'user'): void {
     this.transact(() => {
       for (const id of idList) {
-        if (id === NOTEBOOK_ID) this._cachedNbBlocks = null
+        if (id === NOTEBOOK_ID || id.startsWith('page:')) this._cachedNbBlocks = null
         const prev = this.records.get(id)
+        if (prev && isPageRecord(prev)) this._cachedNbBlocks = null
         if (!prev) continue
         this.records.delete(id)
         const d = this._tx!.diff
@@ -365,14 +370,60 @@ export class Store {
     return pageId
   }
 
-  addPage(
-    opts: { width?: number; height?: number; name?: string } = {},
-    source: DiffSource = 'user'
-  ): PageRecord {
+  addPage(opts: CreatePageOpts = {}, source: DiffSource = 'user'): PageRecord {
     const page = createPage(this.pages().length, opts)
     this.put(page, source)
     this.relayoutPages(source)
     return this.page(page.id)!
+  }
+
+  /** Insert a page immediately after `afterId` (used when overflow must not skip existing pages). */
+  insertPageAfter(
+    afterId: string,
+    opts: CreatePageOpts = {},
+    source: DiffSource = 'user',
+  ): PageRecord {
+    const after = this.page(afterId)
+    if (!after) throw new Error(`Unknown page: ${afterId}`)
+    const index = after.index + 1
+    const page = createPage(index, opts)
+    this.transact(() => {
+      this.put(page, source)
+      for (const p of this.pages()) {
+        if (p.id !== page.id && p.index >= index) {
+          this.update(p.id, { index: p.index + 1 }, source)
+        }
+      }
+    }, source)
+    this.relayoutPages(source)
+    return this.page(page.id)!
+  }
+
+  /** Update paper size/style on an existing page. */
+  setPagePaper(
+    pageId: string,
+    opts: {
+      width?: number
+      height?: number
+      paperStyle?: PaperStyleId
+      paperSize?: PaperSizeId
+    },
+    source: DiffSource = 'user',
+  ): boolean {
+    const page = this.page(pageId)
+    if (!page) return false
+    const preset = opts.paperSize ? paperSizePreset(opts.paperSize) : null
+    const next: PageRecord = {
+      ...page,
+      width: opts.width ?? preset?.width ?? page.width,
+      height: opts.height ?? preset?.height ?? page.height,
+    }
+    if (opts.paperStyle !== undefined && validatePaperStyle(opts.paperStyle)) {
+      next.paperStyle = opts.paperStyle
+    }
+    this.put(next, source)
+    this.relayoutPages(source)
+    return true
   }
 
   removePage(id: string, source: DiffSource = 'user'): boolean {
@@ -478,49 +529,68 @@ export class Store {
     }
   }
 
+  /**
+   * Compat: first page's document (discrete notes).
+   * Prefer {@link pageDocumentBlocks} with an explicit page id.
+   */
   notebookDocumentBlocks(): DocumentBlock[] {
     if (this._cachedNbBlocks) return this._cachedNbBlocks
-    const nb = this.notebook()
-    let blocks: DocumentBlock[]
-    if (nb.document?.blocks) {
-      blocks = validateDocumentBlocks(nb.document.blocks)
-    } else {
-      const pages = this.pages()
-      blocks = pages[0] ? getPageDocument(pages[0]) : validateDocumentBlocks(null)
+    const pages = this.pages()
+    const first = pages[0]
+    if (!first) {
+      this._cachedNbBlocks = validateDocumentBlocks(null)
+      return this._cachedNbBlocks
     }
-    this._cachedNbBlocks = blocks
-    return blocks
+    // Legacy continuous stream still present (pre-migration load)
+    const nb = this.notebook()
+    if (nb.document?.blocks?.length && !first.document?.blocks?.length) {
+      this._cachedNbBlocks = validateDocumentBlocks(nb.document.blocks)
+      return this._cachedNbBlocks
+    }
+    this._cachedNbBlocks = getPageDocument(first)
+    return this._cachedNbBlocks
   }
 
+  /** Compat: writes to the first page. Prefer {@link setPageDocument}. */
   setNotebookDocument(blocks: DocumentBlock[], source: DiffSource = 'user'): void {
+    const pages = this.pages()
+    const first = pages[0]
+    if (!first) return
+    this.setPageDocument(first.id, blocks, source)
+  }
+
+  pageDocumentBlocks(pageId: string): DocumentBlock[] {
+    const page = this.page(pageId)
+    if (!page) return validateDocumentBlocks(null)
+    return getPageDocument(page)
+  }
+
+  pageDocumentTextBlocks(pageId: string): TextBlock[] {
+    return textBlocksFromDocument(this.pageDocumentBlocks(pageId))
+  }
+
+  setPageDocument(pageId: string, blocks: DocumentBlock[], source: DiffSource = 'user'): void {
+    const page = this.page(pageId)
+    if (!page) throw new Error(`Unknown page: ${pageId}`)
     this._cachedNbBlocks = null
-    const nb = this.notebook()
     this.put(
-      { ...nb, document: { blocks: consolidateDocumentBlocks(blocks) } },
+      {
+        ...page,
+        document: { blocks: consolidateDocumentBlocks(validateDocumentBlocks(blocks)) },
+      },
       source,
     )
   }
 
-  pageDocumentBlocks(_pageId: string): DocumentBlock[] {
-    return this.notebookDocumentBlocks()
-  }
-
-  pageDocumentTextBlocks(_pageId: string): TextBlock[] {
-    return textBlocksFromDocument(this.notebookDocumentBlocks())
-  }
-
-  setPageDocument(_pageId: string, blocks: DocumentBlock[], source: DiffSource = 'user'): void {
-    this.setNotebookDocument(blocks, source)
-  }
-
   /** Trailing drawing block for page-absolute ink overlay. */
-  ensureEndDrawingBlock(_pageId: string, source: DiffSource = 'user'): number {
-    let blocks = consolidateDocumentBlocks(this.notebookDocumentBlocks())
+  ensureEndDrawingBlock(pageId: string, source: DiffSource = 'user'): number {
+    if (!this.page(pageId)) throw new Error('Unknown page')
+    let blocks = consolidateDocumentBlocks(this.pageDocumentBlocks(pageId))
     const last = blocks[blocks.length - 1]
     if (!last || !isDrawingBlock(last)) {
       blocks = [...blocks, emptyDrawingBlock()]
     }
-    this.setNotebookDocument(blocks, source)
+    this.setPageDocument(pageId, blocks, source)
     return blocks.length - 1
   }
 
@@ -531,18 +601,18 @@ export class Store {
     source: DiffSource = 'user',
   ): void {
     if (!this.page(pageId)) throw new Error('Unknown page')
-    const blocks = this.notebookDocumentBlocks()
+    const blocks = this.pageDocumentBlocks(pageId)
     const block = blocks[blockIndex]
     if (!block || !isDrawingBlock(block)) {
       throw new Error(`Invalid drawing block index: ${blockIndex}`)
     }
     const next = blocks.slice()
     next[blockIndex] = appendStrokeToDrawingBlock(block, stroke)
-    this.setNotebookDocument(next, source)
+    this.setPageDocument(pageId, next, source)
   }
 
   extendDocumentDrawingStroke(
-    _pageId: string,
+    pageId: string,
     blockIndex: number,
     strokeIndex: number,
     localX: number,
@@ -550,22 +620,24 @@ export class Store {
     pressure: number,
     source: DiffSource = 'user',
   ): void {
-    const blocks = this.notebookDocumentBlocks()
+    if (!this.page(pageId)) return
+    const blocks = this.pageDocumentBlocks(pageId)
     const block = blocks[blockIndex]
     if (!block || !isDrawingBlock(block)) return
     const next = blocks.slice()
     next[blockIndex] = extendDrawingStroke(block, strokeIndex, localX, localY, pressure)
-    this.setNotebookDocument(next, source)
+    this.setPageDocument(pageId, next, source)
   }
 
-  insertDocumentDrawingBlock(_pageId: string, afterIndex: number, source: DiffSource = 'user'): number {
-    const blocks = this.notebookDocumentBlocks()
+  insertDocumentDrawingBlock(pageId: string, afterIndex: number, source: DiffSource = 'user'): number {
+    if (!this.page(pageId)) throw new Error('Unknown page')
+    const blocks = this.pageDocumentBlocks(pageId)
     const insertAt = afterIndex < 0 ? 0 : afterIndex + 1
     const existing = blocks[insertAt]
     if (existing && isDrawingBlock(existing)) return insertAt
     const next = blocks.slice()
     next.splice(insertAt, 0, emptyDrawingBlock())
-    this.setNotebookDocument(next, source)
+    this.setPageDocument(pageId, next, source)
     return insertAt
   }
 

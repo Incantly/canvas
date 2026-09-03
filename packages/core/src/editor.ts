@@ -26,9 +26,11 @@ import {
   PAGE_GAP_STEP,
   pageGapForPreset,
   pageGapPresetFor,
+  paperStyleToGridId,
   DEFAULT_PAGE_HEIGHT,
+  type CreatePageOpts,
 } from "./pages.js";
-import type { PageGapPreset } from "./types/base.js";
+import type { PageGapPreset, PaperSizeId, PaperStyleId } from "./types/base.js";
 import {
   themeOf,
   SIZES,
@@ -78,7 +80,6 @@ import {
   drawDocumentInkOverlay,
 } from "./page-document-blocks.js";
 import type { DocumentBlock } from "./rich-text/types.js";
-import { notesPaperHeight, notesPaperBounds } from "./notebook-document.js";
 import {
   contrastDocumentText,
   defaultDocumentBackground,
@@ -628,7 +629,6 @@ export class Editor {
     mult: number,
     opts?: { animate?: number },
   ): void {
-    if (this.documentMode) return;
     const c = this.camera;
     const z = clamp(c.z * mult, ZOOM_MIN, ZOOM_MAX);
     const p = this.screenToPage(sx, sy);
@@ -655,12 +655,14 @@ export class Editor {
     this.pageDocUI?.blur();
     this.currentPageId = id;
     this.setSelection([]);
-    if (fit) {
-      if (this.documentMode) this.fitDocumentView({ animate: 0 });
-      else this.fitPage({ animate, ease: animate ? 0 : 0 });
-    } else if (this.documentMode) this.fitDocumentView({ animate: 0 });
-    else if (preserveZoom) this._panToCurrentPageKeepingZoom({ animate });
-    else {
+    if (this.documentMode) {
+      if (fit && !preserveZoom) this.fitDocumentView({ animate: 0 });
+      else this._panToCurrentPageKeepingZoom({ animate: fit ? animate : 0 });
+    } else if (fit) {
+      this.fitPage({ animate, ease: animate ? 0 : 0 });
+    } else if (preserveZoom) {
+      this._panToCurrentPageKeepingZoom({ animate });
+    } else {
       this._clampCamera();
       this._afterCamera();
     }
@@ -686,11 +688,37 @@ export class Editor {
       { animate },
     );
   }
-  addPage(opts: { width?: number; height?: number; name?: string } = {}): PageRecord {
+  addPage(opts: CreatePageOpts = {}): PageRecord {
     const page = this.store.addPage(opts);
-    this.emit("page", this.currentPageId);
-    this.requestRender();
+    if (this.documentMode) {
+      this.setPage(page.id, { fit: false, preserveZoom: true, animate: 180 });
+    } else {
+      this.emit("page", this.currentPageId);
+      this.requestRender();
+    }
     return page;
+  }
+
+  setPagePaper(
+    pageId: string,
+    opts: {
+      width?: number;
+      height?: number;
+      paperStyle?: PaperStyleId;
+      paperSize?: PaperSizeId;
+    },
+  ): boolean {
+    const ok = this.store.setPagePaper(pageId, opts);
+    if (!ok) return false;
+    this._cachedPaperH = null;
+    this._cachedPaperHBlocks = null;
+    this.emit("page", this.currentPageId);
+    if (this.documentMode && pageId === this.currentPageId) {
+      this._clampNotesCamera();
+      this.pageDocUI?.layout();
+    }
+    this.requestRender();
+    return true;
   }
   removePage(id: string): boolean {
     if (id === this.currentPageId && this.store.pages().length <= 1) return false;
@@ -743,33 +771,34 @@ export class Editor {
     this._clampNotesCamera();
   }
 
-  _notesPaperHeight(): number {
-    const page = this.currentPage();
-    if (!page) return DEFAULT_PAGE_HEIGHT;
-    const blocks = this.store.notebookDocumentBlocks();
-    if (this._cachedPaperH !== null && this._cachedPaperHBlocks === blocks) {
-      return this._cachedPaperH;
+  _notesPaperHeight(page: PageRecord | null = this.currentPage()): number {
+    return page?.height ?? DEFAULT_PAGE_HEIGHT;
+  }
+
+  _pageStackBounds(): Bounds {
+    let b: Bounds | null = null;
+    for (const pg of this.store.pages()) {
+      b = boundsUnion(b, pageBoundsRect(pg));
     }
-    const h = notesPaperHeight(page, blocks, this.theme);
-    this._cachedPaperH = h;
-    this._cachedPaperHBlocks = blocks;
-    return h;
+    return b ?? { x: 0, y: 0, w: 816, h: DEFAULT_PAGE_HEIGHT };
   }
 
   _clampNotesCamera(): void {
-    const page = this.currentPage();
-    if (!page) return;
+    const stack = this._pageStackBounds();
     const { w, h } = this.viewSize();
     const c = this.camera;
     const z = c.z;
-    const paperH = this._notesPaperHeight();
-    const margin = 24 / z;
+    const margin = 48 / z;
+    const vw = w / z;
     const vh = h / z;
-    const centerX = page.x + page.width / 2;
-    const x = w / 2 / z - centerX;
+    let x = c.x;
     let y = c.y;
-    const minY = -(page.y + paperH - vh + margin);
-    const maxY = margin - page.y;
+    const minX = -(stack.x + stack.w + margin - vw);
+    const maxX = margin - stack.x;
+    const minY = -(stack.y + stack.h + margin - vh);
+    const maxY = margin - stack.y;
+    if (minX > maxX) x = (minX + maxX) / 2;
+    else x = clamp(x, minX, maxX);
     if (minY > maxY) y = (minY + maxY) / 2;
     else y = clamp(y, minY, maxY);
     if (x !== c.x || y !== c.y) this.camera = { ...c, x, y };
@@ -1293,27 +1322,31 @@ export class Editor {
     }
 
     if (!this.penMode || e.pointerType !== "pen") {
-      if (!this.documentMode) {
-        const pp = this._pinchPoints();
-        if (pp.length === 2 && !(this.penMode && this._penDown)) {
-          this._abortForPinch();
-          const [a, b] = pp;
-          this.session = {
-            type: "pinch",
-            dist: Math.hypot(a.x - b.x, a.y - b.y),
-            center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
-            cam: { ...this.camera },
-          };
-          return;
-        }
-        if (pp.length > 2) return;
+      const pp = this._pinchPoints();
+      if (pp.length === 2 && !(this.penMode && this._penDown)) {
+        this._abortForPinch();
+        const [a, b] = pp;
+        this.session = {
+          type: "pinch",
+          dist: Math.hypot(a.x - b.x, a.y - b.y),
+          center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+          cam: { ...this.camera },
+        };
+        return;
       }
+      if (pp.length > 2) return;
     }
     if (this.penMode && e.pointerType === "touch") return;
     if (this._pointers.size > 2) return;
     if (this.session?.type === "pinch") return;
 
     const p = this._pointerPagePoint(s.x, s.y);
+    if (this.documentMode) {
+      const hit = this._pageAtWorldPoint(p);
+      if (hit && hit.id !== this.currentPageId) {
+        this.setPage(hit.id, { fit: false, preserveZoom: true, animate: 0 });
+      }
+    }
     if (e.button === 1 || this.spaceHeld || this.tool === "hand") {
       this.session = { type: "panning", last: s };
       this._syncCursor("grabbing");
@@ -1611,8 +1644,8 @@ export class Editor {
     this.pageDocUI?.blur();
     const page = this.currentPage();
     if (!page) return;
-    const paperH = this._notesPaperHeight();
-    const blocks = this.store.notebookDocumentBlocks();
+    const paperH = this._notesPaperHeight(page);
+    const blocks = this.store.pageDocumentBlocks(page.id);
     const target = findDrawingTarget(blocks, pp.px, pp.py, page.width, paperH);
     if (target.action === "reject") return;
 
@@ -1733,12 +1766,14 @@ export class Editor {
   _eraseDocStrokeAt(p: XY): void {
     const pp = this._paperPointFromPage(p);
     if (!pp) return;
-    const blocks = this.store.notebookDocumentBlocks();
+    const page = this.currentPage();
+    if (!page) return;
+    const blocks = this.store.pageDocumentBlocks(page.id);
     const tol = 10 / this.camera.z;
     const hit = hitDocumentStroke(blocks, pp.px, pp.py, tol);
     if (hit) {
       const next = removeDocumentStroke(blocks, hit.blockIndex, hit.strokeIndex);
-      this.store.setNotebookDocument(next);
+      this.store.setPageDocument(page.id, next);
     }
   }
   _endErase(): void {
@@ -1996,6 +2031,20 @@ export class Editor {
     }
     this._focusPageDocument();
     this.pageDocUI.pasteText(text);
+  }
+
+  _pageAtWorldPoint(p: XY): PageRecord | null {
+    for (const page of this.store.pages()) {
+      if (
+        p.x >= page.x &&
+        p.x <= page.x + page.width &&
+        p.y >= page.y &&
+        p.y <= page.y + page.height
+      ) {
+        return page;
+      }
+    }
+    return null;
   }
 
   _localPagePoint(p: XY): { page: PageRecord; lx: number; ly: number } | null {
@@ -2627,12 +2676,12 @@ export class Editor {
     }
     if (meta && (k === "=" || k === "+")) {
       e.preventDefault();
-      if (!this.documentMode) this._zoomCenter(1.25);
+      this._zoomCenter(1.25);
       return;
     }
     if (meta && k === "-") {
       e.preventDefault();
-      if (!this.documentMode) this._zoomCenter(1 / 1.25);
+      this._zoomCenter(1 / 1.25);
       return;
     }
     if (k === "escape") {
@@ -2742,7 +2791,7 @@ export class Editor {
     if (this.readonly) return;
     e.preventDefault();
     const s = this._evPoint(e);
-    if (!this.documentMode && (e.ctrlKey || e.metaKey)) {
+    if (e.ctrlKey || e.metaKey) {
       this.zoomAt(s.x, s.y, Math.exp(-e.deltaY * 0.012));
     } else {
       this.pan(-e.deltaX, -e.deltaY);
@@ -3038,7 +3087,7 @@ export class Editor {
   }
   resize(): void {
     if (this.documentMode) {
-      this.fitDocumentView();
+      this._clampNotesCamera();
       this.pageDocUI?.layout();
     }
     this.requestRender();
@@ -3053,65 +3102,80 @@ export class Editor {
     background: boolean,
     hideEditing: boolean,
   ): void {
-    const pg = this.currentPage();
-    if (!pg) return;
-    const paperH = this._notesPaperHeight();
-    const pb = notesPaperBounds(pg, paperH);
-    if (
-      pb.x + pb.w < vis.x ||
-      pb.x > vis.x + vis.w ||
-      pb.y + pb.h < vis.y ||
-      pb.y > vis.y + vis.h
-    )
-      return;
-    if (background) {
-      const paperBg = this.documentPaperColor();
+    const paperBg = this.documentPaperColor();
+    for (const pg of this.store.pages()) {
+      const paperH = this._notesPaperHeight(pg);
+      const pb = pageBoundsRect(pg);
+      if (
+        pb.x + pb.w < vis.x ||
+        pb.x > vis.x + vis.w ||
+        pb.y + pb.h < vis.y ||
+        pb.y > vis.y + vis.h
+      )
+        continue;
+      if (background) {
+        ctx.save();
+        ctx.translate(pg.x, pg.y);
+        ctx.shadowColor = "rgba(28, 27, 24, 0.14)";
+        ctx.shadowBlur = 12 / cam.z;
+        ctx.shadowOffsetY = 4 / cam.z;
+        ctx.fillStyle = paperBg;
+        ctx.fillRect(0, 0, pg.width, paperH);
+        ctx.shadowColor = "transparent";
+        const styleGrid = paperStyleToGridId(pg.paperStyle);
+        if (styleGrid !== "none") {
+          ctx.beginPath();
+          ctx.rect(0, 0, pg.width, paperH);
+          ctx.clip();
+          this._drawPageGridFn(ctx, pg, cam, dpr, {
+            grid: styleGrid,
+            height: paperH,
+          });
+        }
+        ctx.restore();
+      }
+      const isCurrent = pg.id === this.currentPageId;
+      const skipDom = isCurrent && this.pageDocUI && !this.pageDocUI.wrap.hidden;
+      const blocks = this.store.pageDocumentBlocks(pg.id);
       ctx.save();
       ctx.translate(pg.x, pg.y);
-      ctx.fillStyle = paperBg;
-      ctx.fillRect(0, 0, pg.width, paperH);
+      if (skipDom) {
+        drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
+          drawingOnly: true,
+          skipInk: true,
+          paperHeight: paperH,
+        });
+      } else {
+        drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
+          paperHeight: paperH,
+        });
+      }
+      ctx.restore();
+      const shapes = this.store.shapesOnPage(pg.id);
+      if (!shapes.length) continue;
+      ctx.save();
+      ctx.translate(pg.x, pg.y);
+      for (const s of shapes.sort(
+        (a, b) =>
+          (a.type === "highlight" ? 0 : 1) - (b.type === "highlight" ? 0 : 1) ||
+          a.z - b.z ||
+          (a.id < b.id ? -1 : 1),
+      )) {
+        if (s.type === "draw" || s.type === "highlight") continue;
+        drawShape(ctx, s, {
+          theme: this.theme,
+          store: this.store,
+          zoom: cam.z,
+          ghost: false,
+          hideText:
+            hideEditing && this.editing?.id === s.id
+              ? this.editing.field
+              : undefined,
+          onAssetLoad: () => this.requestRender(),
+        });
+      }
       ctx.restore();
     }
-    const skipDom = this.pageDocUI && !this.pageDocUI.wrap.hidden;
-    const blocks = this.store.notebookDocumentBlocks();
-    ctx.save();
-    ctx.translate(pg.x, pg.y);
-    if (skipDom) {
-      drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
-        drawingOnly: true,
-        skipInk: true,
-        paperHeight: paperH,
-      });
-    } else {
-      drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
-        paperHeight: paperH,
-      });
-    }
-    ctx.restore();
-    const shapes = this.store.shapesOnPage(pg.id);
-    if (!shapes.length) return;
-    ctx.save();
-    ctx.translate(pg.x, pg.y);
-    for (const s of shapes.sort(
-      (a, b) =>
-        (a.type === "highlight" ? 0 : 1) - (b.type === "highlight" ? 0 : 1) ||
-        a.z - b.z ||
-        (a.id < b.id ? -1 : 1),
-    )) {
-      if (s.type === "draw" || s.type === "highlight") continue;
-      drawShape(ctx, s, {
-        theme: this.theme,
-        store: this.store,
-        zoom: cam.z,
-        ghost: false,
-        hideText:
-          hideEditing && this.editing?.id === s.id
-            ? this.editing.field
-            : undefined,
-        onAssetLoad: () => this.requestRender(),
-      });
-    }
-    ctx.restore();
   }
 
   renderScene(
@@ -3263,9 +3327,12 @@ export class Editor {
     page: PageRecord,
     cam: Camera,
     dpr: number,
+    opts?: { grid?: GridId; height?: number },
   ): void {
-    if (this.grid === "none" || !(cam.z > 0)) return;
-    const isDotGrid = ["dots", "crosses"].includes(this.grid);
+    const grid = opts?.grid ?? this.grid;
+    const pageH = opts?.height ?? page.height;
+    if (grid === "none" || !(cam.z > 0)) return;
+    const isDotGrid = ["dots", "crosses"].includes(grid);
     const g: any = (this.theme.grid as any)?.[isDotGrid ? "dot" : "line"];
     if (!g) return;
     let step = GRID_STEP;
@@ -3278,23 +3345,23 @@ export class Editor {
     const lw = 1 / scale;
     const isMajor = (i: number) => i % GRID_MAJOR === 0;
     const colCount = Math.ceil(page.width / step);
-    const rowCount = Math.ceil(page.height / step);
+    const rowCount = Math.ceil(pageH / step);
 
-    if (this.grid === "lines" || this.grid === "ruled") {
+    if (grid === "lines" || grid === "ruled") {
       ctx.lineWidth = lw;
       for (const major of [false, true]) {
         ctx.beginPath();
-        if (this.grid === "lines") {
+        if (grid === "lines") {
           for (let n = 0; n <= colCount; n++) {
             if (isMajor(n) !== major) continue;
             const x = Math.min(n * step, page.width);
             ctx.moveTo(x, 0);
-            ctx.lineTo(x, page.height);
+            ctx.lineTo(x, pageH);
           }
         }
         for (let m = 0; m <= rowCount; m++) {
           if (isMajor(m) !== major) continue;
-          const y = Math.min(m * step, page.height);
+          const y = Math.min(m * step, pageH);
           ctx.moveTo(0, y);
           ctx.lineTo(page.width, y);
         }
@@ -3302,7 +3369,7 @@ export class Editor {
         ctx.globalAlpha = fade;
         ctx.stroke();
       }
-    } else if (this.grid === "crosses") {
+    } else if (grid === "crosses") {
       for (const major of [false, true]) {
         const arm = (major ? 4.5 : 3) / scale;
         ctx.lineWidth = lw;
@@ -3313,7 +3380,7 @@ export class Editor {
             if (maj !== major) continue;
             const x = n * step;
             const y = m * step;
-            if (x > page.width || y > page.height) continue;
+            if (x > page.width || y > pageH) continue;
             ctx.moveTo(x - arm, y);
             ctx.lineTo(x + arm, y);
             ctx.moveTo(x, y - arm);
@@ -3324,14 +3391,14 @@ export class Editor {
         ctx.globalAlpha = fade;
         ctx.stroke();
       }
-    } else if (this.grid === "iso") {
+    } else if (grid === "iso") {
       const s = Math.tan(Math.PI / 6);
       ctx.lineWidth = lw;
       ctx.beginPath();
       for (const sign of [1, -1]) {
         const slope = sign * s;
         const k0 = 0;
-        const k1 = Math.ceil(page.height / step) + Math.ceil(page.width / step);
+        const k1 = Math.ceil(pageH / step) + Math.ceil(page.width / step);
         for (let k = k0; k <= k1; k++) {
           const b = k * step;
           ctx.moveTo(0, b);
@@ -3348,7 +3415,7 @@ export class Editor {
         for (let n = 0; n <= colCount; n++) {
           const x = n * step;
           const y = m * step;
-          if (x > page.width || y > page.height) continue;
+          if (x > page.width || y > pageH) continue;
           ctx.moveTo(x + r, y);
           ctx.arc(x, y, r, 0, Math.PI * 2);
         }
@@ -3503,8 +3570,8 @@ export class Editor {
     if (this.documentMode && this.pageDocUI && !this.pageDocUI.wrap.hidden) {
       const pg = this.currentPage();
       if (pg) {
-        const paperH = this._notesPaperHeight();
-        const blocks = this.store.notebookDocumentBlocks();
+        const paperH = this._notesPaperHeight(pg);
+        const blocks = this.store.pageDocumentBlocks(pg.id);
         ctx.save();
         ctx.setTransform(
           cam.z * dpr,

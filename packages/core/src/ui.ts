@@ -1,5 +1,6 @@
 import type { Editor, BuildUIOptions, BoardUI, ToolId, GeoId, GridId, ThemeId, ColorId } from './types/index.js'
-import { PAGE_GAP_STEP } from './pages.js'
+import { PAGE_GAP_STEP, inferPaperSizeId, validatePaperStyle } from './pages.js'
+import type { PaperSizeId, PaperStyleId } from './types/base.js'
 import { COLOR_IDS, SIZE_IDS, DASH_IDS, FILL_IDS, GEO_IDS, GRID_IDS, THEMES } from './palette.js'
 
 const SVG = (inner: string): string =>
@@ -211,7 +212,7 @@ const DOCK_NAMES: readonly ToolId[] = [
 ]
 
 /** Minimal dock for notes / documentMode. */
-const NOTES_DOCK_TOOLS: readonly ToolId[] = ['select', 'draw', 'highlight', 'eraser']
+const NOTES_DOCK_TOOLS: readonly ToolId[] = ['select', 'hand', 'draw', 'highlight', 'eraser']
 const DROP_ORDER: readonly ToolId[] = [
   'hand',
   'laser',
@@ -251,7 +252,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     gridControl: gridControl !== false,
     tools: toolsOpt ?? (isDocMode ? [...NOTES_DOCK_TOOLS] : undefined),
     icons: iconsOpt ?? {},
-    hidePagesBar: hidePagesBarOpt ?? isDocMode,
+    hidePagesBar: hidePagesBarOpt ?? false,
   }
   const iconFor = (name: string): string =>
     opts.icons[name] || (ICONS as Record<string, string>)[name] || ''
@@ -424,7 +425,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
   pagesBar.appendChild(nextPageBtn)
   const addPageBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-add')
   addPageBtn.type = 'button'
-  addPageBtn.title = 'Add page (stay on current view)'
+  addPageBtn.title = isDocMode ? 'Add page' : 'Add page (stay on current view)'
   addPageBtn.textContent = '+'
   addPageBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
   addPageBtn.addEventListener('click', (e) => {
@@ -443,6 +444,42 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
   )
   removePageBtn.title = 'Delete page'
   pagesBar.appendChild(removePageBtn)
+
+  const PAPER_SIZES: PaperSizeId[] = ['letter', 'a4']
+  const PAPER_STYLES: PaperStyleId[] = ['plain', 'ruled', 'grid', 'dots']
+  const SIZE_LABEL: Record<PaperSizeId, string> = { letter: 'Letter', a4: 'A4' }
+  const STYLE_LABEL: Record<PaperStyleId, string> = {
+    plain: 'Plain',
+    ruled: 'Rule',
+    grid: 'Grid',
+    dots: 'Dot',
+  }
+
+  const paperSizeBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-paper-size')
+  paperSizeBtn.type = 'button'
+  paperSizeBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+  paperSizeBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const page = editor.currentPage()
+    if (!page) return
+    const cur = inferPaperSizeId(page.width, page.height) ?? 'letter'
+    const next = PAPER_SIZES[(PAPER_SIZES.indexOf(cur) + 1) % PAPER_SIZES.length]!
+    editor.setPagePaper(page.id, { paperSize: next })
+  })
+  pagesBar.appendChild(paperSizeBtn)
+
+  const paperStyleBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-paper-style')
+  paperStyleBtn.type = 'button'
+  paperStyleBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+  paperStyleBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const page = editor.currentPage()
+    if (!page) return
+    const cur = validatePaperStyle(page.paperStyle) ? page.paperStyle : 'plain'
+    const next = PAPER_STYLES[(PAPER_STYLES.indexOf(cur) + 1) % PAPER_STYLES.length]!
+    editor.setPagePaper(page.id, { paperStyle: next })
+  })
+  pagesBar.appendChild(paperStyleBtn)
 
   const layoutBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-layout')
   layoutBtn.type = 'button'
@@ -491,6 +528,15 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     prevPageBtn.disabled = idx <= 0
     nextPageBtn.disabled = idx < 0 || idx >= pages.length - 1
     removePageBtn.disabled = pages.length <= 1
+    const page = editor.currentPage()
+    const sizeId = page ? inferPaperSizeId(page.width, page.height) : null
+    paperSizeBtn.textContent = sizeId ? SIZE_LABEL[sizeId] : 'Size'
+    paperSizeBtn.title = sizeId
+      ? `Paper size ${SIZE_LABEL[sizeId]} — click to change`
+      : 'Paper size'
+    const style = page && validatePaperStyle(page.paperStyle) ? page.paperStyle : 'plain'
+    paperStyleBtn.textContent = STYLE_LABEL[style]
+    paperStyleBtn.title = `Paper ${STYLE_LABEL[style]} — click to change`
   }
   const refreshLayout = (): void => {
     const layout = editor.pageLayout()

@@ -178,7 +178,22 @@ export interface Editor {
   pages(): PageRecord[]
   currentPage(): PageRecord | null
   setPage(id: string, opts?: { fit?: boolean; animate?: number; preserveZoom?: boolean }): void
-  addPage(opts?: { width?: number; height?: number; name?: string }): PageRecord
+  addPage(opts?: {
+    width?: number
+    height?: number
+    name?: string
+    paperStyle?: import('./base.js').PaperStyleId
+    paperSize?: import('./base.js').PaperSizeId
+  }): PageRecord
+  setPagePaper(
+    pageId: string,
+    opts: {
+      width?: number
+      height?: number
+      paperStyle?: import('./base.js').PaperStyleId
+      paperSize?: import('./base.js').PaperSizeId
+    },
+  ): boolean
   removePage(id: string): boolean
   pageLayout(): import('./base.js').PageLayout
   setPageLayout(layout: import('./base.js').PageLayout): void
@@ -265,7 +280,7 @@ export interface BuildUIOptions {
   tools?: ToolId[]
   /** Custom SVG inner HTML per tool or chrome icon key. */
   icons?: Partial<Record<string, string>>
-  /** Hide page navigation bar (default true in documentMode). */
+  /** Hide page navigation bar (default false). */
   hidePagesBar?: boolean
 }
 
@@ -285,7 +300,7 @@ export interface CreateCanvasOptions extends EditorOptions {
   uiTools?: ToolId[]
   /** Custom dock icons (see BuildUIOptions.icons). */
   uiIcons?: Partial<Record<string, string>>
-  /** Hide page bar in notes mode (default true when documentMode). */
+  /** Hide page bar (default false). */
   hidePagesBar?: boolean
   /** Viewport/canvas color around the page sheet (documentMode). */
   documentBackground?: string | null

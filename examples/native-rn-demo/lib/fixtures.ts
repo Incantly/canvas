@@ -5,8 +5,8 @@ const EMPTY_SCHEMA = {
   sequences: {
     'com.incantly.store': 1,
     'com.incantly.shape.text': 1,
-    'com.incantly.page.document': 2,
-    'com.incantly.notebook.document': 3,
+    'com.incantly.page.document': 3,
+    'com.incantly.notebook.document': 4,
   },
 } as const
 
@@ -20,9 +20,6 @@ export const EMPTY_DOCUMENT_SNAPSHOT: Snapshot = {
         typeName: 'notebook',
         pageLayout: 'vertical',
         pageGap: 24,
-        document: {
-          blocks: [{ type: 'paragraph', content: [{ text: '' }] }],
-        },
       },
       'page:1': {
         id: 'page:1',
@@ -33,6 +30,9 @@ export const EMPTY_DOCUMENT_SNAPSHOT: Snapshot = {
         width: 816,
         height: 1056,
         name: 'Page 1',
+        document: {
+          blocks: [{ type: 'paragraph', content: [{ text: '' }] }],
+        },
       },
     },
   },
@@ -48,6 +48,16 @@ export const DOCUMENT_DEMO_SNAPSHOT: Snapshot = {
         typeName: 'notebook',
         pageLayout: 'vertical',
         pageGap: 24,
+      },
+      'page:1': {
+        id: 'page:1',
+        typeName: 'page',
+        index: 0,
+        x: 0,
+        y: 0,
+        width: 816,
+        height: 1056,
+        name: 'Page 1',
         document: {
           blocks: [
             {
@@ -77,16 +87,6 @@ export const DOCUMENT_DEMO_SNAPSHOT: Snapshot = {
             },
           ],
         },
-      },
-      'page:1': {
-        id: 'page:1',
-        typeName: 'page',
-        index: 0,
-        x: 0,
-        y: 0,
-        width: 816,
-        height: 1056,
-        name: 'Page 1',
       },
     },
   },

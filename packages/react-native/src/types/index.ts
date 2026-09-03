@@ -13,6 +13,8 @@ import type {
   ThemeId,
   ToolId,
   VersionKind,
+  PaperSizeId,
+  PaperStyleId,
 } from '@incantly/canvas'
 import type { FormatBarConfig } from '../document/format-bar-config.js'
 import type { VersionStorage } from '@incantly/canvas/headless'
@@ -46,7 +48,22 @@ export interface CanvasRef {
   focusPageDocument(): void
   refreshPageDocument(): void
   setPage(pageId: string, opts?: { fit?: boolean; animate?: number }): void
-  addPage(opts?: { width?: number; height?: number; name?: string }): void
+  addPage(opts?: {
+    width?: number
+    height?: number
+    name?: string
+    paperSize?: PaperSizeId
+    paperStyle?: PaperStyleId
+  }): void
+  setPagePaper(
+    pageId: string,
+    opts: {
+      width?: number
+      height?: number
+      paperSize?: PaperSizeId
+      paperStyle?: PaperStyleId
+    },
+  ): void
   removePage(pageId?: string): void
   getSnapshot(): Promise<Snapshot>
   exportPng(opts?: { background?: boolean; scale?: number; margin?: number }): Promise<string | null>

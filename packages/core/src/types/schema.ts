@@ -8,7 +8,7 @@ export const CURRENT_SCHEMA: SerializedSchema = {
   sequences: {
     'com.incantly.store': 1,
     'com.incantly.shape.text': 1,
-    'com.incantly.page.document': 2,
-    'com.incantly.notebook.document': 3,
+    'com.incantly.page.document': 3,
+    'com.incantly.notebook.document': 4,
   },
 }

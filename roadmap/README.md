@@ -28,7 +28,7 @@ Full implementation specs for the Incantly fork of Quickdraw. Each doc is the so
 | 14 | Web product shell | `feat/apps-web-shell` | [14-apps-web-shell.md](./14-apps-web-shell.md) |
 | 15 | Mobile product shell | `feat/apps-mobile-shell` | [15-apps-mobile-shell.md](./15-apps-mobile-shell.md) |
 | 17 | Native RN renderer | `feat/native-rn-renderer` | [17-native-rn-renderer.md](./17-native-rn-renderer.md) |
-| 17 | Native RN renderer | `feat/native-rn-renderer` | [17-native-rn-renderer.md](./17-native-rn-renderer.md) |
+| 18 | Document paper pages | `feat/document-paper-pages` | [18-document-paper-pages.md](./18-document-paper-pages.md) |
 
 ## Core model
 
@@ -63,6 +63,7 @@ Full implementation specs for the Incantly fork of Quickdraw. Each doc is the so
   → 13 sync + 14 web + 15 mobile (parallel after 00)
   → 16 snapshot-versioning (after 03)
   → 17 native-rn-renderer (after 15 + 16)
+  → 18 document-paper-pages (after 17 document host)
   → 11 collaboration → 12 ai-presence
 ```
 

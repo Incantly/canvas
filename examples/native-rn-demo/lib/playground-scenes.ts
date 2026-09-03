@@ -40,6 +40,15 @@ export const PLAYGROUND_SCENES: PlaygroundScene[] = [
     route: '/playground/document',
   },
   {
+    id: 'pages',
+    title: 'Paper pages',
+    description: 'Discrete sheets — A4/Letter, Rule/Grid/Dot, add/switch pages, zoom',
+    workstream: '18',
+    phase: 'Doc 18',
+    status: 'ready',
+    route: '/playground/pages',
+  },
+  {
     id: 'store-bridge',
     title: 'CanvasRef / undo',
     description: 'Imperative API: undo, redo, getSnapshot, setTool',

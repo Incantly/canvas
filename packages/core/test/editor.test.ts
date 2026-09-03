@@ -238,14 +238,16 @@ describe('document mode drawing', () => {
     docContainer.remove()
   })
 
-  it('documentMode ignores zoomAt', () => {
+  it('documentMode allows zoomAt around the page stack', () => {
     const docContainer = document.createElement('div')
+    Object.defineProperty(docContainer, 'clientWidth', { value: 900, configurable: true })
+    Object.defineProperty(docContainer, 'clientHeight', { value: 700, configurable: true })
     document.body.appendChild(docContainer)
     const docEditor = new Editor({ container: docContainer, documentMode: true })
     docEditor.fitDocumentView()
     const z0 = docEditor.camera.z
     docEditor.zoomAt(100, 100, 2)
-    expect(docEditor.camera.z).toBeCloseTo(z0)
+    expect(docEditor.camera.z).toBeGreaterThan(z0)
     docEditor.destroy()
     docContainer.remove()
   })
