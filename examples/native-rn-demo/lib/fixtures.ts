@@ -78,12 +78,67 @@ export const DOCUMENT_DEMO_SNAPSHOT: Snapshot = {
             },
             {
               type: 'bulletList',
-              content: [{ text: 'Ink overlay (Phase 2)' }],
+              content: [{ text: 'SVG ink overlay on the paper sheet' }],
             },
             {
               type: 'drawing',
               height: 120,
               strokes: [],
+            },
+          ],
+        },
+      },
+    },
+  },
+}
+
+/** Letter sheet with sample ink in the margin and over the typing column. */
+export const INK_DEMO_SNAPSHOT: Snapshot = {
+  schema: { ...EMPTY_SCHEMA },
+  document: {
+    store: {
+      'notebook:main': {
+        id: 'notebook:main',
+        typeName: 'notebook',
+        pageLayout: 'vertical',
+        pageGap: 24,
+      },
+      'page:1': {
+        id: 'page:1',
+        typeName: 'page',
+        index: 0,
+        x: 0,
+        y: 0,
+        width: 816,
+        height: 1056,
+        name: 'Page 1',
+        document: {
+          blocks: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  text: 'Draw on the full sheet, including the margin. Typing stays in this inner box.',
+                },
+              ],
+            },
+            {
+              type: 'drawing',
+              height: 1,
+              strokes: [
+                {
+                  pts: [36, 48, 0.5, 180, 72, 0.5, 420, 56, 0.5, 640, 96, 0.5],
+                  color: 'blue',
+                  size: 'm',
+                  kind: 'draw',
+                },
+                {
+                  pts: [80, 140, 0.5, 280, 148, 0.5, 480, 136, 0.5],
+                  color: 'yellow',
+                  size: 'l',
+                  kind: 'highlight',
+                },
+              ],
             },
           ],
         },

@@ -19,6 +19,7 @@ export default function RootLayout() {
         <Stack.Screen name="playground/versions" options={{ headerShown: false }} />
         <Stack.Screen name="playground/ink" options={{ headerShown: false }} />
         <Stack.Screen name="playground/shapes" options={{ headerShown: false }} />
+        <Stack.Screen name="playground/open-canvas" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   )

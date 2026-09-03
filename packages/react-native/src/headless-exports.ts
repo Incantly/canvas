@@ -16,6 +16,9 @@ export {
   createMutex,
   createSerialQueue,
   debounce,
+  DEFAULT_INK_PENS,
+  sanitizeInkPens,
+  resolveInkPen,
 } from '@incantly/canvas/headless'
 
 export type {
@@ -28,6 +31,8 @@ export type {
   VersionManager,
   VersionStorage,
   DocumentVersion,
+  InkPenDefinition,
+  InkPenStyle,
 } from '@incantly/canvas/headless'
 
 export {

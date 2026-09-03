@@ -70,6 +70,10 @@ export interface TextShapeProps {
   autosize?: boolean
   scale?: number
   w?: number
+  /** Explicit box height (RN text boxes). Web ignores. */
+  h?: number
+  /** Box fill. `none` = transparent. Web ignores. */
+  fill?: FillId
   align?: 'left' | 'center' | 'right'
   /** @deprecated Migrated to blocks on load */
   text?: string

@@ -2,11 +2,11 @@
  * Platform-agnostic headless export for React Native and sync clients.
  * No DOM, Canvas2D, or window APIs.
  */
-export { Store, newId, isDiffEmpty, invertDiff, composeDiff } from './store.js'
-export type { DiffSource, Diff, Snapshot } from './types/operations.js'
-export type { SerializedSchema } from './types/schema.js'
-export { CURRENT_SCHEMA } from './types/schema.js'
-export { migrateSnapshot } from './migrations/index.js'
+export { Store, newId, isDiffEmpty, invertDiff, composeDiff } from "./store.js";
+export type { DiffSource, Diff, Snapshot } from "./types/operations.js";
+export type { SerializedSchema } from "./types/schema.js";
+export { CURRENT_SCHEMA } from "./types/schema.js";
+export { migrateSnapshot } from "./migrations/index.js";
 
 export type {
   ShapeType,
@@ -19,7 +19,10 @@ export type {
   DrawShapeProps,
   LineishShapeProps,
   GeoShapeProps,
-} from './types/models.js'
+  TextShapeProps,
+  NoteShapeProps,
+  ImageShapeProps,
+} from "./types/models.js";
 
 export type {
   BlockType,
@@ -30,9 +33,13 @@ export type {
   ImageBlock,
   DocumentBlock,
   RichTextLink,
-} from './rich-text/types.js'
+} from "./rich-text/types.js";
 
-export { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
+export {
+  isDrawingBlock,
+  isImageBlock,
+  isTextBlock,
+} from "./rich-text/types.js";
 
 export {
   emptyDocument,
@@ -41,14 +48,14 @@ export {
   isEmptyDocument,
   validateBlocks,
   mergeAdjacentSpans,
-} from './rich-text/document.js'
+} from "./rich-text/document.js";
 
 export {
   textBlockToMarkdown,
   markdownToTextBlock,
   textBlocksToMarkdown,
   markdownLinesToTextBlocks,
-} from './rich-text/markdown-serialize.js'
+} from "./rich-text/markdown-serialize.js";
 
 export {
   pageTextBlocksToMarkdown,
@@ -56,7 +63,7 @@ export {
   mergeMarkdownIntoPageDocument,
   pageTextBlocksToPlainLines,
   applyInlineMarkToPageRange,
-} from './rich-text/page-markdown.js'
+} from "./rich-text/page-markdown.js";
 
 export {
   estimateTextBlockHeight,
@@ -67,7 +74,7 @@ export {
   applyPageDocumentOverflow,
   isVisuallyEmptyPage,
   isOverflowEmpty,
-} from './page-document-paginate.js'
+} from "./page-document-paginate.js";
 
 export {
   validateDocumentBlocks,
@@ -82,7 +89,7 @@ export {
   extendDrawingStroke,
   insertDrawingBlockAfter,
   findDrawingTarget,
-} from './page-document-blocks.js'
+} from "./page-document-blocks.js";
 
 export {
   PAGE_DOC_MARGIN_X,
@@ -94,7 +101,7 @@ export {
   notesPageContentRect,
   pointInNotesContent,
   pointInNotesPaper,
-} from './page-document.js'
+} from "./page-document.js";
 
 export {
   NOTES_MIN_BODY_HEIGHT,
@@ -103,9 +110,9 @@ export {
   notesPaperBounds,
   virtualPrintPages,
   mergePageDocumentsIntoNotebook,
-} from './notebook-document.js'
+} from "./notebook-document.js";
 
-export type { VirtualPrintPage } from './notebook-document.js'
+export type { VirtualPrintPage } from "./notebook-document.js";
 
 export {
   PAGE_GAP_PRESETS,
@@ -119,7 +126,7 @@ export {
   validatePaperSizeId,
   paperStyleToGridId,
   inferPaperSizeId,
-} from './pages.js'
+} from "./pages.js";
 
 export {
   themeOf,
@@ -127,20 +134,30 @@ export {
   COLOR_IDS,
   SIZE_IDS,
   SIZES,
-} from './palette.js'
+  FONT_SIZES,
+  GEO_IDS,
+  DASH_IDS,
+  FILL_IDS,
+  HIGHLIGHT_ALPHA,
+  HIGHLIGHT_SCALE,
+} from "./palette.js";
 
 export type {
   ColorId,
   SizeId,
   FontId,
+  DashId,
+  FillId,
+  GeoId,
   ThemeId,
   GridId,
   PageLayout,
   PaperStyleId,
   PaperSizeId,
   Bounds,
+  Camera,
   ToolId,
-} from './types/base.js'
+} from "./types/base.js";
 
 export {
   boundsUnion,
@@ -150,9 +167,16 @@ export {
   ptsBounds,
   traceSmooth,
   distToSegSq,
-} from './geometry.js'
+  geoPolygon,
+  ellipsePolygon,
+  distToPolyline,
+  pointInPolygon,
+  pointInEllipse,
+  rotWith,
+  clamp,
+} from "./geometry.js";
 
-export { strokeOutline } from './freehand.js'
+export { strokeOutline } from "./freehand.js";
 
 export {
   createVersionManager,
@@ -162,8 +186,8 @@ export {
   type DocumentVersion,
   type VersionStorage,
   type VersionKind,
-} from './version-history.js'
+} from "./version-history.js";
 
-export { MemoryVersionStorage } from './storage/memory-version-storage.js'
+export { MemoryVersionStorage } from "./storage/memory-version-storage.js";
 
-export * from './utils/index.js'
+export * from "./utils/index.js";

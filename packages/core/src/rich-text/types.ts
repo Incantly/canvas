@@ -42,6 +42,8 @@ export interface DrawingStroke {
   color: ColorId
   size: SizeId
   kind: 'draw' | 'highlight'
+  /** Host pen id. Optional; web ignores it and renders via `kind`. */
+  pen?: string
 }
 
 export interface DrawingBlock {
