@@ -6,8 +6,8 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native'
-import type { DocumentBlock, PaperSizeId, PaperStyleId, TextBlock } from '@incantly/canvas/headless'
-import { isTextBlock, PAGE_DOC_MARGIN_X, PAGE_DOC_MARGIN_Y } from '@incantly/canvas/headless'
+import type { DocumentBlock, PaperSizeId, PaperStyleId } from '@incantly/canvas/headless'
+import { PAGE_DOC_MARGIN_X, PAGE_DOC_MARGIN_Y } from '@incantly/canvas/headless'
 import type { PageRecord } from '@incantly/canvas/headless'
 import { PageRichTextEditor } from './PageRichTextEditor.js'
 import { PaperBackground } from './PaperBackground.js'
@@ -42,14 +42,8 @@ export interface PageViewportProps {
   onError?: (message: string) => void
   /** Host flushes writes and reflows when measured text exceeds the paper box. */
   onOverflowRequest?: (measuredHeight: number, boxHeight: number) => void
-}
-
-function previewText(blocks: DocumentBlock[]): string {
-  const texts = blocks.filter(isTextBlock).map((b: TextBlock) =>
-    (b.content ?? []).map((s) => s.text ?? '').join(''),
-  )
-  const joined = texts.join(' ').trim()
-  return joined.length ? joined : 'Empty page'
+  /** Place caret at the end of the active page (overflow handoff). */
+  caretAtEnd?: boolean
 }
 
 function cycle<T>(list: readonly T[], current: T): T {
@@ -74,6 +68,7 @@ export function PageViewport({
   onZoom,
   onError,
   onOverflowRequest,
+  caretAtEnd,
 }: PageViewportProps) {
   const current = pages.find((p) => p.id === currentPageId) ?? pages[0]
   const sizeId: PaperSizeId =
@@ -121,6 +116,9 @@ export function PageViewport({
           const active = page.id === currentPageId
           const w = page.width * zoom
           const h = page.height * zoom
+          const contentW = Math.max(80, page.width - PAGE_DOC_MARGIN_X * 2) * zoom
+          const contentH =
+            Math.max(80, page.height - PAGE_DOC_MARGIN_Y - PAGE_DOC_MARGIN_X) * zoom
           return (
             <Pressable
               key={page.id}
@@ -143,43 +141,37 @@ export function PageViewport({
                   height={h}
                   style={page.paperStyle ?? 'plain'}
                 />
-                {active ? (
-                  <View
-                    style={[
-                      styles.contentBox,
-                      {
-                        left: PAGE_DOC_MARGIN_X * zoom,
-                        top: PAGE_DOC_MARGIN_Y * zoom,
-                        width: Math.max(80, page.width - PAGE_DOC_MARGIN_X * 2) * zoom,
-                        height: Math.max(
-                          80,
-                          page.height - PAGE_DOC_MARGIN_Y - PAGE_DOC_MARGIN_X,
-                        ) * zoom,
-                      },
-                    ]}
-                  >
-                    <PageRichTextEditor
-                      blocks={blocks}
-                      readonly={readonly}
-                      onChangeBlocks={readonly ? undefined : onChangeBlocks}
-                      onError={onError}
-                      formatBar={formatBar}
-                      zoom={zoom}
-                      contentBoxHeight={
-                        Math.max(80, page.height - PAGE_DOC_MARGIN_Y - PAGE_DOC_MARGIN_X) *
-                        zoom
-                      }
-                      onOverflowRequest={readonly ? undefined : onOverflowRequest}
-                    />
-                  </View>
-                ) : (
-                  <View style={styles.preview}>
-                    <Text style={styles.previewLabel}>Page {i + 1}</Text>
-                    <Text style={styles.previewBody} numberOfLines={8}>
-                      {previewText(page.document?.blocks ?? [])}
+                <View
+                  style={[
+                    styles.contentBox,
+                    {
+                      left: PAGE_DOC_MARGIN_X * zoom,
+                      top: PAGE_DOC_MARGIN_Y * zoom,
+                      width: contentW,
+                      height: contentH,
+                    },
+                  ]}
+                >
+                  <PageRichTextEditor
+                    blocks={active ? blocks : (page.document?.blocks ?? [])}
+                    readonly={readonly || !active}
+                    onChangeBlocks={active && !readonly ? onChangeBlocks : undefined}
+                    onError={onError}
+                    formatBar={formatBar}
+                    zoom={zoom}
+                    contentBoxWidth={contentW}
+                    contentBoxHeight={contentH}
+                    caretAtEnd={active ? caretAtEnd : undefined}
+                    onOverflowRequest={
+                      active && !readonly ? onOverflowRequest : undefined
+                    }
+                  />
+                  {!active ? (
+                    <Text style={styles.sheetIndex} pointerEvents="none">
+                      Page {i + 1}
                     </Text>
-                  </View>
-                )}
+                  ) : null}
+                </View>
               </View>
             </Pressable>
           )
@@ -265,9 +257,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     overflow: 'hidden',
   },
-  preview: { flex: 1, padding: 16 },
-  previewLabel: { fontSize: 12, fontWeight: '700', color: '#666', marginBottom: 8 },
-  previewBody: { fontSize: 14, color: '#333', lineHeight: 20 },
+  sheetIndex: {
+    position: 'absolute',
+    right: 0,
+    bottom: -22,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#888',
+  },
   strip: {
     flexDirection: 'row',
     alignItems: 'center',

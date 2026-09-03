@@ -71,6 +71,7 @@ import {
 } from "./rich-text/index.js";
 import { PageDocumentUI, drawPageDocument, type PageDocumentHost } from "./page-document-ui.js";
 import { pointInPageContent, pageContentRect, pointInNotesContent, pointInNotesPaper, notesPageContentRect } from "./page-document.js";
+import { applyPageDocumentOverflow } from "./page-document-paginate.js";
 import {
   findDrawingTarget,
   hitDocumentStroke,
@@ -468,6 +469,8 @@ export class Editor {
       emitEdit: () => self.emit("edit"),
       undo: () => self.undo(),
       redo: () => self.redo(),
+      setPage: (id, opts) => self.setPage(id, opts),
+      emitPage: () => self.emit("page", self.currentPageId),
       copySelection: () => self.copySelection(),
       pasteFromClipboard: () => self.pasteFromClipboard(),
     };
@@ -712,10 +715,13 @@ export class Editor {
     if (!ok) return false;
     this._cachedPaperH = null;
     this._cachedPaperHBlocks = null;
+    if (this.documentMode) {
+      applyPageDocumentOverflow(this.store, pageId, "user");
+    }
     this.emit("page", this.currentPageId);
     if (this.documentMode && pageId === this.currentPageId) {
       this._clampNotesCamera();
-      this.pageDocUI?.layout();
+      this.pageDocUI?.syncFromStore();
     }
     this.requestRender();
     return true;

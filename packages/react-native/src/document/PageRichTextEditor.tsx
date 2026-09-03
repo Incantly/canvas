@@ -126,6 +126,10 @@ export interface PageRichTextEditorProps {
   zoom?: number
   /** Content box height in screen px (paper content rect × zoom). */
   contentBoxHeight?: number
+  /** Content box width in screen px — required so iOS TextInput wraps instead of growing sideways. */
+  contentBoxWidth?: number
+  /** Place the caret at the end after a page-overflow handoff. */
+  caretAtEnd?: boolean
   /**
    * Fired when measured editor content exceeds the paper content box.
    * Host should flush pending writes and reflow overflow onto the next page.
@@ -142,6 +146,8 @@ export function PageRichTextEditor({
   placeholder = 'Start writing…',
   zoom = 1,
   contentBoxHeight,
+  contentBoxWidth,
+  caretAtEnd,
   onOverflowRequest,
 }: PageRichTextEditorProps) {
   const editable = !readonly && !!onChangeBlocks
@@ -155,6 +161,7 @@ export function PageRichTextEditor({
         placeholder={placeholder}
         zoom={zoom}
         contentBoxHeight={contentBoxHeight}
+        contentBoxWidth={contentBoxWidth}
         onOverflowRequest={onOverflowRequest}
       />
     )
@@ -169,6 +176,8 @@ export function PageRichTextEditor({
       placeholder={placeholder}
       zoom={zoom}
       contentBoxHeight={contentBoxHeight}
+      contentBoxWidth={contentBoxWidth}
+      caretAtEnd={caretAtEnd}
       onOverflowRequest={onOverflowRequest}
     />
   )
@@ -182,6 +191,7 @@ function EnrichedPageEditor({
   placeholder,
   zoom,
   contentBoxHeight,
+  contentBoxWidth,
   onOverflowRequest,
 }: {
   blocks: DocumentBlock[]
@@ -191,6 +201,7 @@ function EnrichedPageEditor({
   placeholder: string
   zoom: number
   contentBoxHeight?: number
+  contentBoxWidth?: number
   onOverflowRequest?: (measuredHeight: number, boxHeight: number) => void
 }) {
   const Input = ENRICHED!.EnrichedMarkdownTextInput
@@ -271,10 +282,11 @@ function EnrichedPageEditor({
   const lineHeight = Math.round(fontSize * 1.45)
   const boxH = contentBoxHeight ?? 0
   const textBudget = Math.max(0, boxH - PAGE_FORMAT_BAR_HEIGHT)
+  const wrapWidth = contentBoxWidth && contentBoxWidth > 0 ? contentBoxWidth : undefined
 
   return (
     <View
-      style={styles.flex}
+      style={[styles.flex, wrapWidth ? { width: wrapWidth, maxWidth: wrapWidth } : null]}
       onLayout={(e) => {
         if (!onOverflowRequest || textBudget <= 0) return
         const h = e.nativeEvent.layout.height
@@ -313,7 +325,11 @@ function EnrichedPageEditor({
         placeholder={placeholder}
         placeholderTextColor="#bbb"
         scrollEnabled={false}
-        style={[styles.input, { fontSize, lineHeight }]}
+        style={[
+          styles.input,
+          { fontSize, lineHeight },
+          wrapWidth ? { width: wrapWidth, maxWidth: wrapWidth } : styles.inputFill,
+        ]}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onChangeState={setState}
@@ -342,6 +358,8 @@ function FallbackPageEditor({
   placeholder,
   zoom,
   contentBoxHeight,
+  contentBoxWidth,
+  caretAtEnd,
   onOverflowRequest,
 }: {
   blocks: DocumentBlock[]
@@ -352,11 +370,18 @@ function FallbackPageEditor({
   placeholder: string
   zoom: number
   contentBoxHeight?: number
+  contentBoxWidth?: number
+  caretAtEnd?: boolean
   onOverflowRequest?: (measuredHeight: number, boxHeight: number) => void
 }) {
   const [draft, setDraft] = useState(() => pageTextBlocksToPlainLines(blocks))
   const draftRef = useRef(draft)
   const selRef = useRef({ start: 0, end: 0 })
+  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(() => {
+    if (!caretAtEnd) return undefined
+    const end = pageTextBlocksToPlainLines(blocks).length
+    return { start: end, end }
+  })
   const [focused, setFocused] = useState(false)
   const lastFp = useRef(documentBlocksFingerprint(blocks))
   const overflowArmed = useRef(false)
@@ -365,6 +390,7 @@ function FallbackPageEditor({
   const lineHeight = Math.round(fontSize * 1.45)
   const boxH = contentBoxHeight ?? 0
   const textBudget = Math.max(0, boxH - PAGE_FORMAT_BAR_HEIGHT)
+  const wrapWidth = contentBoxWidth && contentBoxWidth > 0 ? contentBoxWidth : undefined
 
   useEffect(() => {
     const fp = documentBlocksFingerprint(blocks)
@@ -462,7 +488,7 @@ function FallbackPageEditor({
     : undefined
 
   return (
-    <View style={styles.flex}>
+    <View style={[styles.flex, wrapWidth ? { width: wrapWidth, maxWidth: wrapWidth } : null]}>
       {onChangeBlocks && !readonly ? (
         <View style={styles.toolbar}>
           <BlockFormatBar
@@ -479,10 +505,16 @@ function FallbackPageEditor({
         editable={!readonly && !!onChangeBlocks}
         multiline
         scrollEnabled={false}
+        autoFocus={!!caretAtEnd}
         textAlignVertical="top"
         placeholder={placeholder}
         placeholderTextColor="#bbb"
-        style={[styles.input, { fontSize, lineHeight }]}
+        selection={selection}
+        style={[
+          styles.input,
+          { fontSize, lineHeight },
+          wrapWidth ? { width: wrapWidth, maxWidth: wrapWidth } : styles.inputFill,
+        ]}
         onFocus={() => setFocused(true)}
         onBlur={() => {
           setFocused(false)
@@ -492,6 +524,7 @@ function FallbackPageEditor({
         }}
         onSelectionChange={(e: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
           selRef.current = e.nativeEvent.selection
+          if (selection) setSelection(undefined)
         }}
         onContentSizeChange={(e: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) => {
           if (!onOverflowRequest || textBudget <= 0) return
@@ -517,14 +550,16 @@ function FallbackPageEditor({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, minHeight: 0 },
-  toolbar: { marginBottom: 4 },
+  flex: { flex: 1, minHeight: 0, alignSelf: 'stretch', overflow: 'hidden' },
+  toolbar: { marginBottom: 4, alignSelf: 'stretch' },
   input: {
     flexGrow: 0,
     flexShrink: 0,
     minHeight: 0,
     color: '#111',
     padding: 0,
+    textAlign: 'left',
     textAlignVertical: 'top',
   },
+  inputFill: { alignSelf: 'stretch', width: '100%', maxWidth: '100%' },
 })

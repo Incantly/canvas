@@ -19,6 +19,7 @@ import {
 import { drawPageDocumentBlocks } from './page-document-blocks.js'
 import type { DocumentBlock, ImageBlock } from './rich-text/types.js'
 import { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
+import { applyPageDocumentOverflow } from './page-document-paginate.js'
 import {
   type DocumentUiOptions,
   type SelectionToolbarHandle,
@@ -49,6 +50,11 @@ export interface PageDocumentHost {
   emitEdit(): void
   undo(): void
   redo(): void
+  setPage?(
+    id: string,
+    opts?: { fit?: boolean; animate?: number; preserveZoom?: boolean },
+  ): void
+  emitPage?(): void
   copySelection?(): Promise<void>
   pasteFromClipboard?(): Promise<void>
 }
@@ -76,6 +82,7 @@ export class PageDocumentUI {
   private slashBlock: HTMLElement | null = null
   private _renderedBlocks: DocumentBlock[] = []
   private _syncRaf: number | null = null
+  private _applyingOverflow = false
 
   private onSelectionChange = (): void => {
     this.guardSelectionInDrawing()
@@ -145,6 +152,18 @@ export class PageDocumentUI {
     const id = this.host.currentPageId
     if (!id || !this.host.store.page(id)) return
     this.host.store.setPageDocument(id, blocks)
+    if (this._applyingOverflow || !this.host.documentMode) return
+    this._applyingOverflow = true
+    try {
+      const overflow = applyPageDocumentOverflow(this.host.store, id, 'user')
+      if (overflow.changed) {
+        this._renderedBlocks = []
+        this.host.emitPage?.()
+        this.host.requestRender()
+      }
+    } finally {
+      this._applyingOverflow = false
+    }
   }
 
   private paperHeight(): number {
@@ -464,8 +483,11 @@ export class PageDocumentUI {
     this.wrap.style.left = `${tl.x}px`
     this.wrap.style.top = `${tl.y}px`
     this.wrap.style.width = `${rect.w * z}px`
+    this.wrap.style.height = `${rect.h * z}px`
     this.wrap.style.minHeight = `${rect.h * z}px`
+    this.wrap.style.maxHeight = `${rect.h * z}px`
     this.el.style.minHeight = `${rect.h * z}px`
+    this.el.style.maxHeight = `${rect.h * z}px`
     this.el.style.fontSize = `${PAGE_DOC_FONT_SIZE * z}px`
     this.el.style.lineHeight = `${PAGE_DOC_FONT_SIZE * 1.45 * z}px`
     const layout = layoutPageDocument(this.blocks(), rect.w, this.host.theme)
