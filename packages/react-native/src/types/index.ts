@@ -18,6 +18,7 @@ import type {
 } from '@incantly/canvas'
 import type { FormatBarConfig } from '../document/format-bar-config.js'
 import type { InkBarConfig } from '../ink/ink-bar-config.js'
+import type { CanvasInkChromeProps } from '../ink/canvas-ink-chrome-context.js'
 import type { VersionStorage, InkPenDefinition } from '@incantly/canvas/headless'
 
 export interface VersionSummary {
@@ -114,6 +115,18 @@ export interface CanvasProps {
    * Same shape as `formatBar`: `{ draw: { icon: <PenIcon /> }, eraser: { hidden: true } }`.
    */
   inkBar?: InkBarConfig
+  /**
+   * Hide the default top ink toolbar. Use `renderInkBar`, `children` + `CanvasInkToolbar`,
+   * or `useCanvasInkChrome()` to host chrome anywhere (bottom, side, floating).
+   */
+  hideInkBar?: boolean
+  /**
+   * Fully custom ink chrome. Receives the same props as `<InkToolbar>`.
+   * Return a positioned view (e.g. absolute bottom dock) inside the canvas root.
+   */
+  renderInkBar?: (chrome: CanvasInkChromeProps) => React.ReactNode
+  /** Rendered above the viewport inside `<Canvas>` (pointerEvents box-none). */
+  children?: React.ReactNode
   /**
    * Host drawing tools. Defaults to pen + highlighter.
    * Each pen's `style` controls pressure, width, opacity, and stored `kind`.

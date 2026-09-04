@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import {
   TextInput,
-  UIManager,
   View,
   StyleSheet,
   type NativeSyntheticEvent,
@@ -64,42 +63,9 @@ type EnrichedProps = {
   onBlur?: () => void
 }
 
-/** True when the Fabric/native view is registered (false in Expo Go without a dev client). */
-function isNativeEnrichedLinked(): boolean {
-  const ui = UIManager as {
-    hasViewManagerConfig?: (name: string) => boolean
-    getViewManagerConfig?: (name: string) => unknown
-  }
-  try {
-    if (typeof ui.hasViewManagerConfig === 'function') {
-      return ui.hasViewManagerConfig('EnrichedMarkdownTextInput')
-    }
-    if (typeof ui.getViewManagerConfig === 'function') {
-      return ui.getViewManagerConfig('EnrichedMarkdownTextInput') != null
-    }
-  } catch {
-    return false
-  }
-  return false
-}
-
-function loadEnriched(): { EnrichedMarkdownTextInput: ComponentType<EnrichedProps> } | null {
-  if (!isNativeEnrichedLinked()) return null
-  try {
-    // Literal require so Metro includes the optional native module in the demo bundle.
-    const mod = require('react-native-enriched-markdown') as {
-      EnrichedMarkdownTextInput?: ComponentType<EnrichedProps>
-    }
-    if (mod?.EnrichedMarkdownTextInput) {
-      return { EnrichedMarkdownTextInput: mod.EnrichedMarkdownTextInput }
-    }
-  } catch {
-    /* optional peer — fallback TextInput if the JS package is missing */
-  }
-  return null
-}
-
-const ENRICHED = loadEnriched()
+/** Optional peer is not loaded here — probing UIManager at import crashes host apps. */
+const ENRICHED: { EnrichedMarkdownTextInput: ComponentType<EnrichedProps> } | null =
+  null
 
 export function isEnrichedMarkdownAvailable(): boolean {
   return !!ENRICHED

@@ -39,4 +39,45 @@ export default function App() {
 
 `inkBar` uses the same `{ name, icon, hidden }` shape as `formatBar`. `inkPens` is how hosts add their own tools (pressure, width, opacity). Snapshots still store `kind: "draw" | "highlight"` so web can paint the stroke; an optional `pen` id remembers which host tool made it.
 
+### Custom ink toolbar placement
+
+By default the ink toolbar renders at the **top** of `<Canvas>`. To host it elsewhere (bottom dock, side rail, floating pill):
+
+**Option A — `hideInkBar` + `CanvasInkToolbar` child**
+
+```tsx
+import { Canvas, CanvasInkToolbar } from "@incantly/canvas-react-native";
+
+<Canvas hideInkBar style={{ flex: 1 }} inkBar={inkBar} inkPens={inkPens}>
+  <View
+    style={{
+      position: "absolute",
+      bottom: 24,
+      left: 16,
+      right: 16,
+      borderRadius: 20,
+      overflow: "hidden",
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+    }}
+  >
+    <CanvasInkToolbar style={{ borderTopWidth: 0 }} />
+  </View>
+</Canvas>
+```
+
+**Option B — `renderInkBar`**
+
+```tsx
+<Canvas
+  renderInkBar={(chrome) => (
+    <View style={{ position: "absolute", bottom: 16, alignSelf: "center" }}>
+      <InkToolbar {...chrome} style={{ borderRadius: 24 }} />
+    </View>
+  )}
+/>
+```
+
+**Option C — `useCanvasInkChrome()`** for a fully custom UI (your own buttons wired to `onTool`, `onColor`, etc.).
+
 See [`example/README.md`](example/README.md) for the RN playground reference.

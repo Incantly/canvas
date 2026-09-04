@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native'
 import type { ColorId, FillId, GeoId, InkPenDefinition, SizeId } from '@incantly/canvas/headless'
 import {
   COLOR_IDS,
@@ -41,6 +41,8 @@ export interface InkToolbarProps {
   onSize: (size: SizeId) => void
   onGeoKind?: (geo: GeoId) => void
   onFill?: (fill: FillId) => void
+  /** Host chrome container style (placement, borders, radius, shadows). */
+  style?: ViewStyle
 }
 
 export function InkToolbar({
@@ -58,11 +60,12 @@ export function InkToolbar({
   onSize,
   onGeoKind,
   onFill,
+  style,
 }: InkToolbarProps) {
   const items = resolveInkBarItems(pens, inkBar, mode)
   const styleOn = isInkPenTool(tool, pens) || isShapeCreateTool(tool) || tool === 'text'
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, style]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {items.map((t) => (
           <Pressable

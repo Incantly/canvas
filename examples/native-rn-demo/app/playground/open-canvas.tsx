@@ -6,11 +6,12 @@ export default function OpenCanvasScene() {
   return (
     <SceneShell
       title="Open canvas"
-      subtitle="Infinite board — Hand to pan, Cursor to move/resize, Text for boxes (transparent fill by default)"
+      subtitle="Infinite board — bottom dock toolbar; Hand to pan, Cursor to move/resize, Text for boxes"
       status="ready"
     >
       <CanvasScreen
         documentMode={false}
+        bottomInkBar
         snapshot={EMPTY_DOCUMENT_SNAPSHOT}
         inkBar={DEMO_INK_BAR}
         inkPens={DEMO_INK_PENS}
