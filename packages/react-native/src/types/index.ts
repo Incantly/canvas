@@ -90,6 +90,12 @@ export interface CanvasProps {
   uiTools?: ToolId[]
   uiIcons?: Partial<Record<string, string>>
   hidePagesBar?: boolean
+  /**
+   * Document page navigator style. `strip` (default) is the bottom bar with
+   * prev/next, add, and delete. `floating` is a bottom-left pill with
+   * prev/next + current/total — add/delete live in host chrome instead.
+   */
+  pagerVariant?: 'strip' | 'floating'
   touchUi?: boolean
   safeAreaInsets?: SafeAreaInsets
   onReady?: () => void

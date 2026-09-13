@@ -20,8 +20,6 @@ import type {
 } from '@incantly/canvas/headless'
 import {
   DEFAULT_CAMERA,
-  cameraToCenter,
-  cameraViewport,
   isInkCapturingTool,
   panCamera,
   pinchCamera,
@@ -31,7 +29,6 @@ import { InkOverlay, type InkHit } from '../ink/InkOverlay.js'
 import type { DrawingStroke } from '@incantly/canvas/headless'
 import { ShapeLayer, type ShapeDraft } from '../shapes/ShapeLayer.js'
 import { TextBoxLayer } from '../shapes/TextBoxLayer.js'
-import { Minimap } from './Minimap.js'
 
 type TouchPt = { x: number; y: number }
 
@@ -274,18 +271,6 @@ export function BoardViewport({
   }, [camera.x, camera.y, camera.z, grid, width, height])
 
   const inkOn = !readonly && isInkCapturingTool(tool, pens)
-  const minimapViewport = useMemo(
-    () => cameraViewport(camera, width, height),
-    [camera, width, height],
-  )
-  const minimapFallback = useMemo(() => ({ x: -200, y: -200, w: 800, h: 600 }), [])
-  const handleMinimapPan = useCallback(
-    (wx: number, wy: number) => {
-      const c = cameraRef.current
-      setCam(cameraToCenter(wx, wy, width, height, c.z))
-    },
-    [setCam, width, height],
-  )
 
   return (
     <View style={styles.root} {...camPan.panHandlers}>
@@ -348,12 +333,6 @@ export function BoardViewport({
           editingId={editingTextId}
           readonly={readonly}
           onChange={onChangeText}
-        />
-        <Minimap
-          shapes={shapes}
-          viewport={minimapViewport}
-          fallback={minimapFallback}
-          onPanTo={handleMinimapPan}
         />
       </View>
     </View>

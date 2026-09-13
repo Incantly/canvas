@@ -119,7 +119,7 @@ export {
   isEnrichedMarkdownAvailable,
   PAGE_FORMAT_BAR_HEIGHT,
 } from "./document/PageRichTextEditor.js";
-export { PageViewport } from "./document/PageViewport.js";
+  export { PageViewport, PageStepper } from "./document/PageViewport.js";
 export { PaperBackground } from "./document/PaperBackground.js";
 export { InkOverlay } from "./ink/InkOverlay.js";
 export { InkToolbar } from "./ink/InkToolbar.js";
@@ -166,6 +166,7 @@ export const Canvas = forwardRef(function Canvas(
     inkBar,
     inkPens,
     hideInkBar = false,
+    pagerVariant = "strip",
     renderInkBar,
     children,
     versionStorage,
@@ -680,6 +681,7 @@ export const Canvas = forwardRef(function Canvas(
           onError={onError}
           onOverflowRequest={editable ? onOverflowRequest : undefined}
           caretAtEnd={caretAtEnd}
+          pagerVariant={pagerVariant}
           shapes={pageShapes}
           geoKind={geoKind}
           fill={fill}
@@ -748,10 +750,11 @@ export const Canvas = forwardRef(function Canvas(
 });
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#e8e4dc" },
-  stage: { flex: 1 },
+  root: { flex: 1, backgroundColor: "#e8e4dc", overflow: "hidden" },
+  stage: { flex: 1, overflow: "hidden", zIndex: 0 },
   chromeOverlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 10,
+    zIndex: 100,
+    elevation: 100,
   },
 });

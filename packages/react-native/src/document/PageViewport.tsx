@@ -1,5 +1,6 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  PanResponder,
   ScrollView,
   View,
   Text,
@@ -8,6 +9,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import type {
   ColorId,
   DocumentBlock,
@@ -27,7 +29,6 @@ import {
   clamp,
   isInkCapturingTool,
   isShapeCreateTool,
-  paperVisibleRect,
   sanitizeInkPens,
 } from "@incantly/canvas/headless";
 import type { PageRecord, ShapeRecord } from "@incantly/canvas/headless";
@@ -36,13 +37,10 @@ import { PaperBackground } from "./PaperBackground.js";
 import { InkOverlay, type InkHit } from "../ink/InkOverlay.js";
 import { ShapeLayer, type ShapeDraft } from "../shapes/ShapeLayer.js";
 import type { FormatBarConfig } from "./format-bar-config.js";
-import { Minimap } from "../board/Minimap.js";
 
 const ZOOM_STEPS = [CAMERA_ZOOM_MIN, 0.5, 1, 2, CAMERA_ZOOM_MAX] as const;
 const STACK_PAD = 16;
 const STACK_GAP = 24;
-/** Minimap viewport updates at most 5Hz — scroll offset stays in a ref. */
-const MINIMAP_SCROLL_MS = 200;
 const EMPTY_BLOCKS: DocumentBlock[] = [];
 const EMPTY_SHAPES: ShapeRecord[] = [];
 const NOOP = () => {};
@@ -93,6 +91,12 @@ export interface PageViewportProps {
   onMoveShape?: (id: string, x: number, y: number) => void;
   onSelectShape?: (id: string | null) => void;
   onResizeShape?: (id: string, box: { x: number; y: number; w: number; h: number }) => void;
+  /**
+   * Page navigator style. `strip` (default) is the bottom bar with prev/next,
+   * add, and delete. `floating` is a bottom-left pill with prev/next and the
+   * current/total count — add/delete live in host chrome instead.
+   */
+  pagerVariant?: "strip" | "floating";
 }
 
 function cycle<T>(list: readonly T[], current: T): T {
@@ -127,6 +131,7 @@ export function PageViewport({
   onMoveShape,
   onSelectShape,
   onResizeShape,
+  pagerVariant = "strip",
 }: PageViewportProps) {
   const current = pages.find((p) => p.id === currentPageId) ?? pages[0];
   const sizeId: PaperSizeId =
@@ -151,34 +156,62 @@ export function PageViewport({
       isShapeCreateTool(tool) ||
       tool === "select");
   const scrollRef = useRef<ScrollView>(null);
-  // Latest scroll offset lives in a ref (no re-render). miniScroll mirrors it
-  // at MINIMAP_SCROLL_MS so only the Minimap re-renders while scrolling —
-  // previously every onScroll tick re-rendered every page + SVG layer.
+  // Latest scroll offset lives in a ref so two-finger programmatic scrolling
+  // never triggers a re-render.
   const scrollPos = useRef({ x: 0, y: 0 });
-  const lastMiniSync = useRef(0);
-  const [miniScroll, setMiniScroll] = useState({ x: 0, y: 0 });
   const [viewSize, setViewSize] = useState({ w: 1, h: 1 });
-
-  const syncMiniScroll = useCallback((force = false) => {
-    const now = Date.now();
-    if (!force && now - lastMiniSync.current < MINIMAP_SCROLL_MS) return;
-    lastMiniSync.current = now;
-    const p = scrollPos.current;
-    setMiniScroll((prev) => (prev.x === p.x && prev.y === p.y ? prev : { x: p.x, y: p.y }));
-  }, []);
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset } = e.nativeEvent;
       scrollPos.current = { x: contentOffset.x, y: contentOffset.y };
-      syncMiniScroll();
     },
-    [syncMiniScroll],
+    [],
   );
+  const twoFingerLast = useRef<{ x: number; y: number } | null>(null);
 
-  const handleScrollEnd = useCallback(() => {
-    syncMiniScroll(true);
-  }, [syncMiniScroll]);
+  // Ink/shape/select tools lock the ScrollView (single-finger draws), so a
+  // two-finger drag scrolls the page list programmatically instead.
+  const pagePan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (e) => (e.nativeEvent.touches?.length ?? 0) >= 2,
+      onMoveShouldSetPanResponder: (e) => (e.nativeEvent.touches?.length ?? 0) >= 2,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: (e) => {
+        const t = e.nativeEvent.touches;
+        if (!t || t.length < 2) {
+          twoFingerLast.current = null;
+          return;
+        }
+        twoFingerLast.current = {
+          x: (t[0]!.pageX + t[1]!.pageX) / 2,
+          y: (t[0]!.pageY + t[1]!.pageY) / 2,
+        };
+      },
+      onPanResponderMove: (e) => {
+        const t = e.nativeEvent.touches;
+        const last = twoFingerLast.current;
+        if (!t || t.length < 2 || !last) return;
+        const mid = {
+          x: (t[0]!.pageX + t[1]!.pageX) / 2,
+          y: (t[0]!.pageY + t[1]!.pageY) / 2,
+        };
+        const dy = mid.y - last.y;
+        twoFingerLast.current = mid;
+        if (dy === 0) return;
+        const p = scrollPos.current;
+        const y = Math.max(0, p.y - dy);
+        scrollPos.current = { x: p.x, y };
+        scrollRef.current?.scrollTo({ x: p.x, y, animated: false });
+      },
+      onPanResponderRelease: () => {
+        twoFingerLast.current = null;
+      },
+      onPanResponderTerminate: () => {
+        twoFingerLast.current = null;
+      },
+    }),
+  ).current;
 
   const handleLayout = useCallback((e: { nativeEvent: { layout: { width: number; height: number } } }) => {
     const { width, height } = e.nativeEvent.layout;
@@ -190,21 +223,19 @@ export function PageViewport({
     for (let i = 0; i < idx; i++) y += (pages[i]?.height ?? 0) * zoom + STACK_GAP;
     return y;
   }, [idx, pages, zoom]);
+
+  // New / selected page may be off-screen (e.g. + adds below the fold) —
+  // bring it into view. Skipped on mount so boot doesn't jump.
+  const didMountRef = useRef(false);
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    scrollRef.current?.scrollTo({ y: Math.max(0, sheetY - STACK_PAD), animated: true });
+  }, [currentPageId, sheetY]);
   const sheetW = (current?.width ?? 816) * zoom;
   const sheetX = Math.max(0, (viewSize.w - sheetW) / 2);
-  const pageW = current?.width ?? 816;
-  const pageH = current?.height ?? 1056;
-  const paperViewport = useMemo(
-    () =>
-      paperVisibleRect(
-        miniScroll,
-        viewSize,
-        { x: sheetX, y: sheetY },
-        zoom,
-        { w: pageW, h: pageH },
-      ),
-    [miniScroll, viewSize, sheetX, sheetY, zoom, pageW, pageH],
-  );
 
   const shapesByPage = useMemo(() => {
     const map = new Map<string, ShapeRecord[]>();
@@ -217,24 +248,17 @@ export function PageViewport({
     }
     return map;
   }, [shapes]);
-  const currentShapes = useMemo(
-    () => (current ? (shapesByPage.get(current.id) ?? EMPTY_SHAPES) : EMPTY_SHAPES),
-    [current, shapesByPage],
-  );
-  const minimapFallback = useMemo(() => ({ x: 0, y: 0, w: pageW, h: pageH }), [pageW, pageH]);
-  const handleMinimapPan = useCallback(
-    (wx: number, wy: number) => {
-      scrollRef.current?.scrollTo({
-        x: Math.max(0, sheetX + wx * zoom - viewSize.w / 2),
-        y: Math.max(0, sheetY + wy * zoom - viewSize.h / 2),
-        animated: true,
-      });
-    },
-    [sheetX, sheetY, zoom, viewSize],
-  );
   const commitShape = onCommitShape ?? NOOP;
   const moveShape = onMoveShape ?? NOOP;
   const selectShape = onSelectShape ?? NOOP;
+  const goPrevPage = useCallback(() => {
+    const prev = pages[idx - 1];
+    if (prev) onSelectPage(prev.id);
+  }, [pages, idx, onSelectPage]);
+  const goNextPage = useCallback(() => {
+    const next = pages[idx + 1];
+    if (next) onSelectPage(next.id);
+  }, [pages, idx, onSelectPage]);
 
   return (
     <View style={styles.root}>
@@ -266,7 +290,7 @@ export function PageViewport({
         </View>
       </View>
 
-      <View style={styles.stage}>
+      <View style={styles.stage} {...(chromeLocked ? pagePan.panHandlers : {})}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroller}
@@ -277,8 +301,6 @@ export function PageViewport({
         keyboardShouldPersistTaps="handled"
         onLayout={handleLayout}
         onScroll={handleScroll}
-        onScrollEndDrag={handleScrollEnd}
-        onMomentumScrollEnd={handleScrollEnd}
         scrollEventThrottle={16}
       >
         {sheets.map((page, i) => (
@@ -315,25 +337,23 @@ export function PageViewport({
         ))}
       </ScrollView>
 
-      {current ? (
-        <Minimap
-          shapes={currentShapes}
-          viewport={paperViewport}
-          fallback={minimapFallback}
-          backdrop={minimapFallback}
-          onPanTo={handleMinimapPan}
+      {current && pagerVariant === "floating" ? (
+        <PageStepper
+          current={pages.length ? idx + 1 : 0}
+          total={pages.length}
+          onPrev={goPrevPage}
+          onNext={goNextPage}
+          onAddPage={onAddPage}
         />
       ) : null}
       </View>
 
+      {pagerVariant === "strip" ? (
       <View style={styles.strip}>
         <Pressable
           style={styles.stripBtn}
           disabled={idx <= 0}
-          onPress={() => {
-            const prev = pages[idx - 1];
-            if (prev) onSelectPage(prev.id);
-          }}
+          onPress={goPrevPage}
         >
           <Text style={[styles.stripText, idx <= 0 && styles.muted]}>‹</Text>
         </Pressable>
@@ -343,10 +363,7 @@ export function PageViewport({
         <Pressable
           style={styles.stripBtn}
           disabled={idx >= pages.length - 1}
-          onPress={() => {
-            const next = pages[idx + 1];
-            if (next) onSelectPage(next.id);
-          }}
+          onPress={goNextPage}
         >
           <Text
             style={[styles.stripText, idx >= pages.length - 1 && styles.muted]}
@@ -367,9 +384,84 @@ export function PageViewport({
           </Text>
         </Pressable>
       </View>
+      ) : null}
     </View>
   );
 }
+
+function PagerChevron({ dir, color }: { dir: "up" | "down"; color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24">
+      <Path
+        d={dir === "up" ? "M6 14l6-6 6 6" : "M6 10l6 6 6-6"}
+        fill="none"
+        stroke={color}
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Floating bottom-left page stepper (vertical pill): prev chevron, current
+ * page, divider, total pages, next chevron. Add/delete live in host chrome.
+ */
+export const PageStepper = memo(function PageStepper({
+  current,
+  total,
+  onPrev,
+  onNext,
+  onAddPage,
+}: {
+  current: number;
+  total: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onAddPage?: () => void;
+}) {
+  const atStart = current <= 1;
+  const atEnd = total <= 0 || current >= total;
+  return (
+    <View style={styles.pager} pointerEvents="box-none">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Previous page"
+        disabled={atStart}
+        onPress={onPrev}
+        style={styles.pagerBtn}
+      >
+        <PagerChevron dir="up" color={atStart ? "#ccd1d9" : "#8b93a3"} />
+      </Pressable>
+      <Text style={styles.pagerNum}>{current}</Text>
+      <View style={styles.pagerDiv} />
+      <Text style={styles.pagerNum}>{total}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Next page"
+        disabled={atEnd}
+        onPress={onNext}
+        style={styles.pagerBtn}
+      >
+        <PagerChevron dir="down" color={atEnd ? "#ccd1d9" : "#8b93a3"} />
+      </Pressable>
+      {onAddPage ? (
+        <>
+          <View style={styles.pagerDiv} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add page"
+            onPress={onAddPage}
+            style={styles.pagerBtn}
+          >
+            <Text style={styles.pagerPlus}>+</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </View>
+  );
+});
 
 const PageSheet = memo(function PageSheet({
   page,
@@ -584,4 +676,47 @@ const styles = StyleSheet.create({
   stripBtn: { paddingHorizontal: 10, paddingVertical: 4 },
   stripText: { fontSize: 16, fontWeight: "600" },
   muted: { opacity: 0.35 },
+  pager: {
+    position: "absolute",
+    left: 12,
+    bottom: 12,
+    width: 64,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    paddingVertical: 8,
+    gap: 2,
+    shadowColor: "#1c1b18",
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    zIndex: 9,
+  },
+  pagerBtn: {
+    width: 44,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pagerNum: {
+    fontSize: 19,
+    fontWeight: "700",
+    color: "#4c5f82",
+    textAlign: "center",
+  },
+  pagerPlus: {
+    fontSize: 22,
+    fontWeight: "600",
+    color: "#4c5f82",
+    textAlign: "center",
+    lineHeight: 26,
+  },
+  pagerDiv: {
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: "#a3adbd",
+    marginVertical: 3,
+  },
 });
