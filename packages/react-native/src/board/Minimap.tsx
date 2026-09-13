@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import Svg, { Rect } from 'react-native-svg'
 import type { Bounds, ShapeRecord } from '@incantly/canvas/headless'
@@ -14,7 +14,7 @@ import {
 const MINI_W = 120
 const MINI_H = 90
 
-export function Minimap({
+export const Minimap = memo(function Minimap({
   shapes,
   viewport,
   fallback,
@@ -53,10 +53,39 @@ export function Minimap({
   )
   const layout = useMemo(() => fitMinimap(world, MINI_W, MINI_H), [world])
   const vp = worldToMini(viewport.x, viewport.y, world, layout)
-  const vpSize = {
-    w: Math.max(4, viewport.w * layout.scale),
-    h: Math.max(4, viewport.h * layout.scale),
-  }
+  const vpSize = useMemo(
+    () => ({
+      w: Math.max(4, viewport.w * layout.scale),
+      h: Math.max(4, viewport.h * layout.scale),
+    }),
+    [viewport.w, viewport.h, layout.scale],
+  )
+  const backdropRect = useMemo(() => {
+    if (!backdrop) return null
+    const p = worldToMini(backdrop.x, backdrop.y, world, layout)
+    return {
+      x: p.x,
+      y: p.y,
+      w: Math.max(2, backdrop.w * layout.scale),
+      h: Math.max(2, backdrop.h * layout.scale),
+    }
+  }, [backdrop, world, layout])
+  const dots = useMemo(() => {
+    const out: Array<{ id: string; x: number; y: number; w: number; h: number }> = []
+    for (const s of shapes) {
+      if (!shapeRenderable(s)) continue
+      const b = pageBounds(s)
+      const p = worldToMini(b.x, b.y, world, layout)
+      out.push({
+        id: s.id,
+        x: p.x,
+        y: p.y,
+        w: Math.max(2, b.w * layout.scale),
+        h: Math.max(2, b.h * layout.scale),
+      })
+    }
+    return out
+  }, [shapes, world, layout])
 
   return (
     <View style={styles.wrap} pointerEvents="box-none">
@@ -72,31 +101,27 @@ export function Minimap({
       >
         <Svg width={MINI_W} height={MINI_H}>
           <Rect x={0} y={0} width={MINI_W} height={MINI_H} fill="#f7f4ee" />
-          {backdrop ? (
+          {backdropRect ? (
             <Rect
-              x={worldToMini(backdrop.x, backdrop.y, world, layout).x}
-              y={worldToMini(backdrop.x, backdrop.y, world, layout).y}
-              width={Math.max(2, backdrop.w * layout.scale)}
-              height={Math.max(2, backdrop.h * layout.scale)}
+              x={backdropRect.x}
+              y={backdropRect.y}
+              width={backdropRect.w}
+              height={backdropRect.h}
               fill="#fffef8"
               stroke="rgba(28, 27, 24, 0.2)"
               strokeWidth={1}
             />
           ) : null}
-          {shapes.filter(shapeRenderable).map((s) => {
-            const b = pageBounds(s)
-            const p = worldToMini(b.x, b.y, world, layout)
-            return (
-              <Rect
-                key={s.id}
-                x={p.x}
-                y={p.y}
-                width={Math.max(2, b.w * layout.scale)}
-                height={Math.max(2, b.h * layout.scale)}
-                fill="rgba(28, 27, 24, 0.35)"
-              />
-            )
-          })}
+          {dots.map((r) => (
+            <Rect
+              key={r.id}
+              x={r.x}
+              y={r.y}
+              width={r.w}
+              height={r.h}
+              fill="rgba(28, 27, 24, 0.35)"
+            />
+          ))}
           <Rect
             x={vp.x}
             y={vp.y}
@@ -110,7 +135,7 @@ export function Minimap({
       </Pressable>
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   wrap: {

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   PanResponder,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   useWindowDimensions,
   type GestureResponderEvent,
 } from 'react-native'
-import Svg, { Circle } from 'react-native-svg'
+import Svg, { Path } from 'react-native-svg'
 import type {
   Camera,
   ColorId,
@@ -20,8 +20,6 @@ import type {
 } from '@incantly/canvas/headless'
 import {
   DEFAULT_CAMERA,
-  cameraToCenter,
-  cameraViewport,
   isInkCapturingTool,
   panCamera,
   pinchCamera,
@@ -31,16 +29,37 @@ import { InkOverlay, type InkHit } from '../ink/InkOverlay.js'
 import type { DrawingStroke } from '@incantly/canvas/headless'
 import { ShapeLayer, type ShapeDraft } from '../shapes/ShapeLayer.js'
 import { TextBoxLayer } from '../shapes/TextBoxLayer.js'
-import { Minimap } from './Minimap.js'
 
-function touchesOf(e: GestureResponderEvent): { x: number; y: number }[] {
-  const t = e.nativeEvent.touches
-  if (!t || t.length === 0) return [{ x: e.nativeEvent.locationX, y: e.nativeEvent.locationY }]
-  return Array.from({ length: t.length }, (_, i) => ({
-    x: t[i]!.locationX,
-    y: t[i]!.locationY,
-  }))
+type TouchPt = { x: number; y: number }
+
+function ptOf(t: { locationX?: number; locationY?: number; pageX?: number; pageY?: number }): TouchPt | null {
+  // locationX/Y share the target's coordinate space for all touches in the
+  // same view, so pinch distance is valid. Fall back to page coords.
+  const x = typeof t.locationX === 'number' ? t.locationX : t.pageX
+  const y = typeof t.locationY === 'number' ? t.locationY : t.pageY
+  if (typeof x !== 'number' || typeof y !== 'number') return null
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  return { x, y }
 }
+
+function touchesOf(e: GestureResponderEvent): TouchPt[] {
+  const t = e.nativeEvent.touches
+  if (t && t.length > 0) {
+    const out: TouchPt[] = []
+    for (let i = 0; i < t.length; i++) {
+      const p = ptOf(t[i] as { locationX?: number; locationY?: number; pageX?: number; pageY?: number })
+      if (p) out.push(p)
+    }
+    if (out.length > 0) return out
+  }
+  const fallback = ptOf(e.nativeEvent as { locationX?: number; locationY?: number })
+  return fallback ? [fallback] : []
+}
+
+/** Max grid dots per frame — caps SVG path size on large tablets / low zoom. */
+const MAX_GRID_DOTS = 1600
+const GRID_STEP = 48
+const GRID_DOT_R = 1.2
 
 export interface BoardViewportProps {
   shapes: readonly ShapeRecord[]
@@ -101,12 +120,53 @@ export function BoardViewport({
   const toolRef = useRef(tool)
   cameraRef.current = camera
   toolRef.current = tool
-  const setCam = (next: Camera) => {
-    const c = sanitizeCamera(next)
-    cameraRef.current = c
-    setLocalCam(c)
-    onCamera?.(c)
-  }
+  const onCameraRef = useRef(onCamera)
+  onCameraRef.current = onCamera
+  const localCamRef = useRef(localCam)
+  localCamRef.current = localCam
+  // Coalesce gesture-driven camera updates to one React render per frame.
+  // cameraRef updates synchronously so gesture math stays continuous,
+  // while setLocalCam (the expensive SVG re-render) fires at most 60Hz.
+  const pendingCam = useRef<Camera | null>(null)
+  const camRaf = useRef<number | null>(null)
+  const flushCam = useCallback(() => {
+    camRaf.current = null
+    const next = pendingCam.current
+    pendingCam.current = null
+    if (!next) return
+    setLocalCam((prev) => {
+      if (prev.x === next.x && prev.y === next.y && prev.z === next.z) return prev
+      return next
+    })
+    onCameraRef.current?.(next)
+  }, [])
+  const setCam = useCallback(
+    (next: Camera) => {
+      const c = sanitizeCamera(next)
+      cameraRef.current = c
+      // Bail when nothing changed (e.g. zero-delta move events).
+      const p = pendingCam.current ?? localCamRef.current
+      if (p.x === c.x && p.y === c.y && p.z === c.z) return
+      pendingCam.current = c
+      if (camRaf.current == null) {
+        camRaf.current = requestAnimationFrame(flushCam)
+      }
+    },
+    [flushCam],
+  )
+  const flushCamSync = useCallback(() => {
+    if (camRaf.current != null) {
+      cancelAnimationFrame(camRaf.current)
+      camRaf.current = null
+    }
+    flushCam()
+  }, [flushCam])
+  useEffect(() => {
+    return () => {
+      if (camRaf.current != null) cancelAnimationFrame(camRaf.current)
+      pendingCam.current = null
+    }
+  }, [])
 
   const pinch = useRef<{
     dist: number
@@ -142,10 +202,12 @@ export function BoardViewport({
           return
         }
         pinch.current = null
-        panLast.current = { x: e.nativeEvent.locationX, y: e.nativeEvent.locationY }
+        const single = pts[0]
+        panLast.current = single ? { x: single.x, y: single.y } : null
       },
       onPanResponderMove: (e) => {
         const pts = touchesOf(e)
+        if (pts.length === 0) return
         if (pts.length >= 2) {
           const a = pts[0]!
           const b = pts[1]!
@@ -157,42 +219,55 @@ export function BoardViewport({
             pinch.current = { ...now, camera: cameraRef.current }
             return
           }
+          // Skip zero-delta move events the OS emits between real updates.
+          if (now.dist === pinch.current.dist && now.center.x === pinch.current.center.x && now.center.y === pinch.current.center.y) return
           setCam(pinchCamera(pinch.current, now))
           return
         }
         if (toolRef.current !== 'hand') return
         const last = panLast.current
-        const x = e.nativeEvent.locationX
-        const y = e.nativeEvent.locationY
-        if (last) setCam(panCamera(cameraRef.current, x - last.x, y - last.y))
+        const x = pts[0]!.x
+        const y = pts[0]!.y
+        if (last && (x !== last.x || y !== last.y)) {
+          setCam(panCamera(cameraRef.current, x - last.x, y - last.y))
+        }
         panLast.current = { x, y }
       },
       onPanResponderRelease: () => {
         pinch.current = null
         panLast.current = null
+        flushCamSync()
       },
       onPanResponderTerminate: () => {
         pinch.current = null
         panLast.current = null
+        flushCamSync()
       },
     }),
   ).current
 
-  const gridDots = useMemo(() => {
+  // Single-Path dot grid: one native node per frame instead of hundreds of
+  // <Circle> views. Screen-space `d` string, capped to bound bridge traffic.
+  const gridD = useMemo(() => {
     if (grid === 'none') return null
     const z = camera.z
-    const step = 48
-    const dots: { x: number; y: number }[] = []
-    const x0 = Math.floor(-camera.x / step) * step
-    const y0 = Math.floor(-camera.y / step) * step
-    const cols = Math.ceil(width / z / step) + 2
-    const rows = Math.ceil(height / z / step) + 2
+    if (!Number.isFinite(z) || z <= 0) return null
+    const x0 = Math.floor(-camera.x / GRID_STEP) * GRID_STEP
+    const y0 = Math.floor(-camera.y / GRID_STEP) * GRID_STEP
+    const cols = Math.ceil(width / z / GRID_STEP) + 2
+    const rows = Math.ceil(height / z / GRID_STEP) + 2
+    if (cols <= 0 || rows <= 0) return null
+    if (cols * rows > MAX_GRID_DOTS) return null
+    let d = ''
     for (let i = 0; i < cols; i++) {
       for (let j = 0; j < rows; j++) {
-        dots.push({ x: x0 + i * step, y: y0 + j * step })
+        const sx = Math.round(((x0 + i * GRID_STEP) + camera.x) * z * 10) / 10
+        const sy = Math.round(((y0 + j * GRID_STEP) + camera.y) * z * 10) / 10
+        if (sx < -8 || sy < -8 || sx > width + 8 || sy > height + 8) continue
+        d += `M${sx} ${sy}h0.01`
       }
     }
-    return dots
+    return d || null
   }, [camera.x, camera.y, camera.z, grid, width, height])
 
   const inkOn = !readonly && isInkCapturingTool(tool, pens)
@@ -200,16 +275,17 @@ export function BoardViewport({
   return (
     <View style={styles.root} {...camPan.panHandlers}>
       <View style={[styles.board, { width, height }]}>
-        <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
-          {gridDots
-            ? gridDots.map((d, i) => {
-                const sx = (d.x + camera.x) * camera.z
-                const sy = (d.y + camera.y) * camera.z
-                if (sx < -8 || sy < -8 || sx > width + 8 || sy > height + 8) return null
-                return <Circle key={i} cx={sx} cy={sy} r={1.2} fill="rgba(60,50,30,0.28)" />
-              })
-            : null}
-        </Svg>
+        {gridD ? (
+          <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Path
+              d={gridD}
+              stroke="rgba(60,50,30,0.28)"
+              strokeWidth={GRID_DOT_R * 2}
+              strokeLinecap="round"
+              fill="none"
+            />
+          </Svg>
+        ) : null}
         <ShapeLayer
           width={width}
           height={height}
@@ -257,12 +333,6 @@ export function BoardViewport({
           editingId={editingTextId}
           readonly={readonly}
           onChange={onChangeText}
-        />
-        <Minimap
-          shapes={shapes}
-          viewport={cameraViewport(camera, width, height)}
-          fallback={{ x: -200, y: -200, w: 800, h: 600 }}
-          onPanTo={(wx, wy) => setCam(cameraToCenter(wx, wy, width, height, camera.z))}
         />
       </View>
     </View>

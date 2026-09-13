@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import {
   Canvas,
+  CanvasInkToolbar,
   type CanvasRef,
   type Snapshot,
   type FormatBarConfig,
@@ -18,6 +19,8 @@ interface CanvasScreenProps {
   versionStorage?: VersionStorage
   notebookId?: string
   documentMode?: boolean
+  /** Demo: dock ink tools at the bottom instead of the default top bar. */
+  bottomInkBar?: boolean
   onReady?: (ref: CanvasRef) => void
   onError?: (message: string) => void
 }
@@ -90,6 +93,7 @@ export function CanvasScreen({
   versionStorage,
   notebookId,
   documentMode = true,
+  bottomInkBar = false,
   onReady,
   onError,
 }: CanvasScreenProps) {
@@ -103,6 +107,7 @@ export function CanvasScreen({
         documentMode={documentMode}
         hidePagesBar
         touchUi
+        hideInkBar={bottomInkBar}
         snapshot={snapshot}
         formatBar={formatBar}
         inkBar={inkBar}
@@ -113,7 +118,13 @@ export function CanvasScreen({
         onReady={() => {
           if (ref.current) onReady?.(ref.current)
         }}
-      />
+      >
+        {bottomInkBar ? (
+          <View style={styles.bottomDock} pointerEvents="box-none">
+            <CanvasInkToolbar inkBar={inkBar} style={styles.bottomBar} />
+          </View>
+        ) : null}
+      </Canvas>
     </View>
   )
 }
@@ -122,4 +133,19 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   canvas: { flex: 1 },
   glyph: { fontSize: 11, fontWeight: '700', color: '#333' },
+  bottomDock: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 20,
+  },
+  bottomBar: {
+    borderTopWidth: 0,
+    borderRadius: 18,
+    shadowColor: '#1c1b18',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
 })

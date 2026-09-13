@@ -37,6 +37,10 @@ import { PageViewport } from "./document/PageViewport.js";
 import { PAGE_FORMAT_BAR_HEIGHT } from "./document/PageRichTextEditor.js";
 import { InkToolbar } from "./ink/InkToolbar.js";
 import {
+  CanvasInkChromeProvider,
+} from "./ink/canvas-ink-chrome.js";
+import type { CanvasInkChromeProps } from "./ink/canvas-ink-chrome-context.js";
+import {
   commitDocumentInkStroke,
   eraseDocumentInkHits,
 } from "./ink/commit.js";
@@ -115,10 +119,16 @@ export {
   isEnrichedMarkdownAvailable,
   PAGE_FORMAT_BAR_HEIGHT,
 } from "./document/PageRichTextEditor.js";
-export { PageViewport } from "./document/PageViewport.js";
+  export { PageViewport, PageStepper } from "./document/PageViewport.js";
 export { PaperBackground } from "./document/PaperBackground.js";
 export { InkOverlay } from "./ink/InkOverlay.js";
 export { InkToolbar } from "./ink/InkToolbar.js";
+export {
+  CanvasInkToolbar,
+  useCanvasInkChrome,
+  type CanvasInkChromeProps,
+  type CanvasInkChromeContextValue,
+} from "./ink/canvas-ink-chrome.js";
 export { resolveInkBarItems } from "./ink/ink-bar-config.js";
 export type {
   InkBarConfig,
@@ -155,6 +165,10 @@ export const Canvas = forwardRef(function Canvas(
     formatBar,
     inkBar,
     inkPens,
+    hideInkBar = false,
+    pagerVariant = "strip",
+    renderInkBar,
+    children,
     versionStorage,
     notebookId,
     style,
@@ -610,27 +624,46 @@ export const Canvas = forwardRef(function Canvas(
     if (next !== "select" && next !== "text") setEditingTextId(null);
   }, []);
 
-  return (
-    <View style={[styles.root, style]}>
-      {!readonly ? (
-        <InkToolbar
-          tool={tool}
-          color={inkColor}
-          size={inkSize}
-          pens={pens}
-          inkBar={inkBar}
-          mode={documentMode ? "notes" : "board"}
-          geoKind={geoKind}
-          fill={toolbarFill}
-          showFill={!!selectedIsBox}
-          onTool={onToolChange}
-          onColor={setInkColor}
-          onSize={setInkSize}
-          onGeoKind={setGeoKind}
-          onFill={onFillChange}
-        />
-      ) : null}
-      {documentMode ? (
+  const inkChromeProps = useMemo<CanvasInkChromeProps>(
+    () => ({
+      tool,
+      color: inkColor,
+      size: inkSize,
+      pens,
+      inkBar,
+      mode: documentMode ? "notes" : "board",
+      geoKind,
+      fill: toolbarFill,
+      showFill: !!selectedIsBox,
+      onTool: onToolChange,
+      onColor: setInkColor,
+      onSize: setInkSize,
+      onGeoKind: setGeoKind,
+      onFill: onFillChange,
+    }),
+    [
+      tool,
+      inkColor,
+      inkSize,
+      pens,
+      inkBar,
+      documentMode,
+      geoKind,
+      toolbarFill,
+      selectedIsBox,
+      onToolChange,
+      onFillChange,
+    ],
+  );
+
+  const inkChromeContext = useMemo(
+    () => ({ ...inkChromeProps, readonly: !!readonly }),
+    [inkChromeProps, readonly],
+  );
+
+  const showDefaultInkBar = !readonly && !hideInkBar && !renderInkBar;
+
+  const viewport = documentMode ? (
         <PageViewport
           pages={pages}
           currentPageId={activeId}
@@ -648,6 +681,7 @@ export const Canvas = forwardRef(function Canvas(
           onError={onError}
           onOverflowRequest={editable ? onOverflowRequest : undefined}
           caretAtEnd={caretAtEnd}
+          pagerVariant={pagerVariant}
           shapes={pageShapes}
           geoKind={geoKind}
           fill={fill}
@@ -669,7 +703,7 @@ export const Canvas = forwardRef(function Canvas(
               : undefined
           }
         />
-      ) : (
+  ) : (
         <BoardViewport
           shapes={pageShapes}
           pageId={activeId}
@@ -693,11 +727,34 @@ export const Canvas = forwardRef(function Canvas(
           onEraseInk={onEraseHits}
           onEraseShapeIds={onEraseShapeIds}
         />
-      )}
-    </View>
+  );
+
+  return (
+    <CanvasInkChromeProvider value={inkChromeContext}>
+      <View style={[styles.root, style]}>
+        {showDefaultInkBar ? <InkToolbar {...inkChromeProps} /> : null}
+        <View style={styles.stage}>{viewport}</View>
+        {!readonly && renderInkBar ? (
+          <View style={styles.chromeOverlay} pointerEvents="box-none">
+            {renderInkBar(inkChromeProps)}
+          </View>
+        ) : null}
+        {children ? (
+          <View style={styles.chromeOverlay} pointerEvents="box-none">
+            {children}
+          </View>
+        ) : null}
+      </View>
+    </CanvasInkChromeProvider>
   );
 });
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#e8e4dc" },
+  root: { flex: 1, backgroundColor: "#e8e4dc", overflow: "hidden" },
+  stage: { flex: 1, overflow: "hidden", zIndex: 0 },
+  chromeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    elevation: 100,
+  },
 });

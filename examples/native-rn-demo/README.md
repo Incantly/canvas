@@ -16,7 +16,7 @@ npm run build:packages
 
 ## Install & run
 
-This demo targets **Expo SDK 55 / React Native 0.83** (New Architecture only).
+This demo targets **Expo SDK 57 / React Native 0.86** (New Architecture only).
 
 `react-native-enriched-markdown` is a Fabric native module. It does **not** run in Expo Go. Use a **dev client** after prebuild. `react-native-svg` is required for ink and shapes (included in this demo).
 

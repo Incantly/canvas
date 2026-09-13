@@ -1,12 +1,12 @@
 {
   "expo": {
+    "sdkVersion": "57.0.0",
     "name": "Incantly Native RN Demo",
     "slug": "incantly-native-rn-demo",
     "scheme": "incantly",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "plugins": [
       "expo-router",
       "expo-asset",

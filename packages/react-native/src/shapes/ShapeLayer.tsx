@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   PanResponder,
   StyleSheet,
@@ -390,10 +390,16 @@ export function ShapeLayer({
   ).current
 
   void tick
-  const visible = shapes.filter(shapeRenderable)
-  const cam = camera ?? { x: 0, y: 0, z: zoom }
-  const transform =
-    space === 'world' ? `scale(${cam.z}) translate(${cam.x} ${cam.y})` : `scale(${zoom})`
+  const visible = useMemo(() => shapes.filter(shapeRenderable), [shapes])
+  const transform = useMemo(() => {
+    if (space === 'world') {
+      const cx = camera?.x ?? 0
+      const cy = camera?.y ?? 0
+      const cz = camera?.z ?? zoom
+      return `scale(${cz}) translate(${cx} ${cy})`
+    }
+    return `scale(${zoom})`
+  }, [space, camera, zoom])
   const dragNow = drag.current
   const showHandles = tool === 'select'
 
