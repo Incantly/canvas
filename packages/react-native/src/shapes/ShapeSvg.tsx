@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Ellipse, G, Path, Rect } from 'react-native-svg'
 import type {
   ColorId,
@@ -69,7 +70,7 @@ function ShapePath({
   )
 }
 
-export function ShapeSvg({
+export const ShapeSvg = memo(function ShapeSvg({
   shape,
   selected,
   resizeHandles,
@@ -87,7 +88,7 @@ export function ShapeSvg({
       {selected ? <SelectionBox shape={shape} handles={!!resizeHandles} /> : null}
     </G>
   )
-}
+})
 
 function SelectionBox({ shape, handles }: { shape: ShapeRecord; handles: boolean }) {
   const b = localBounds(shape)
@@ -221,7 +222,7 @@ function ShapeInner({ shape }: { shape: ShapeRecord }) {
 }
 
 /** Live create preview (not yet in the store). */
-export function DraftSvg({
+export const DraftSvg = memo(function DraftSvg({
   draft,
 }: {
   draft:
@@ -274,5 +275,5 @@ export function DraftSvg({
       )}
     </G>
   )
-}
+})
 

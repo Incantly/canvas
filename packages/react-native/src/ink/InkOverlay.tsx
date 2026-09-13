@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   PanResponder,
   StyleSheet,
@@ -41,6 +41,8 @@ export type { InkHit } from './types.js'
 
 const MAX_LIVE_POINTS = 8_000
 const PATH_CACHE = createLruCache<string, string>(256)
+/** Shared frozen empty-hide set — keeps memoized layers stable while drawing. */
+const EMPTY_HIDE: ReadonlySet<string> = new Set<string>()
 
 export interface InkOverlayProps {
   width: number
@@ -322,24 +324,32 @@ export function InkOverlay({
     }),
   ).current
 
-  const hide = useMemo(() => {
+  const erasing = tool === 'eraser'
+  // Erase-hide set only changes while the eraser is active. While drawing,
+  // reuse a frozen empty set so the memoized committed layer stays skipped.
+  const eraseHide = useMemo(() => {
     const set = new Set<string>()
     for (const key of eraseHits.current.keys()) set.add(key)
     return set
+    // liveTick only advances while a gesture is active; reading the ref here
+    // intentionally snapshots erase targets gathered since grant.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveTick])
+  const hide: ReadonlySet<string> = erasing ? eraseHide : EMPTY_HIDE
 
-  const strokes = useMemo(() => {
+  // Committed strokes depend only on store data — NOT on liveTick — so the
+  // memoized layer below skips re-render on every live pen movement.
+  const committed = useMemo(() => {
     if (variant === 'board') return []
-    const out: Array<{ key: string; stroke: DrawingStroke; hidden: boolean }> = []
+    const out: Array<{ key: string; stroke: DrawingStroke }> = []
     blocks.forEach((block, bi) => {
       if (!isDrawingBlock(block)) return
       block.strokes.forEach((stroke, si) => {
-        const key = `${bi}:${si}`
-        out.push({ key, stroke, hidden: hide.has(key) })
+        out.push({ key: `${bi}:${si}`, stroke })
       })
     })
     return out
-  }, [blocks, hide, variant])
+  }, [blocks, variant])
 
   const livePen = isInkPenTool(tool, pens) ? resolveInkPen(pens, tool) : null
   const livePtsNow = tool === 'eraser' ? [] : livePts.current
@@ -354,70 +364,68 @@ export function InkOverlay({
       pointerEvents={capturing ? 'auto' : 'none'}
       {...(capturing ? pan.panHandlers : null)}
     >
-      <SvgStrokeLayer
-        width={width}
-        height={height}
-        transform={transform}
-        pens={pens}
-        strokes={strokes}
-        livePts={livePtsNow}
-        livePen={livePen}
-        liveColor={color}
-        liveSize={size}
-      />
+      <Svg width={width} height={height} pointerEvents="none">
+        <G transform={transform}>
+          <CommittedStrokeLayer
+            pens={pens}
+            strokes={committed}
+            hide={hide}
+          />
+          {livePen && livePtsNow.length >= 3 ? (
+            <LiveStroke
+              pts={livePtsNow}
+              size={size}
+              color={themeOf('light').colors[color]?.stroke ?? themeOf('light').colors.black.stroke}
+              pen={livePen}
+            />
+          ) : null}
+        </G>
+      </Svg>
     </View>
   )
 }
 
-function SvgStrokeLayer({
-  width,
-  height,
-  transform,
+const CommittedStrokeLayer = memo(function CommittedStrokeLayer({
   pens,
   strokes,
-  livePts,
-  livePen,
-  liveColor,
-  liveSize,
+  hide,
 }: {
-  width: number
-  height: number
-  transform: string
   pens: InkPenDefinition[]
-  strokes: Array<{ key: string; stroke: DrawingStroke; hidden: boolean }>
-  livePts: number[]
-  livePen: InkPenDefinition | null
-  liveColor: ColorId
-  liveSize: SizeId
+  strokes: Array<{ key: string; stroke: DrawingStroke }>
+  hide: ReadonlySet<string>
 }) {
   const theme = themeOf('light')
   return (
-    <Svg width={width} height={height} pointerEvents="none">
-      <G transform={transform}>
-        {strokes.map(({ key, stroke, hidden }) => {
-          if (hidden) return null
-          const pen = resolveInkPen(pens, stroke.pen, stroke.kind)
-          return (
-            <InkPath
-              key={key}
-              pts={stroke.pts}
-              size={stroke.size}
-              color={theme.colors[stroke.color]?.stroke ?? theme.colors.black.stroke}
-              pen={pen}
-            />
-          )
-        })}
-        {livePen && livePts.length >= 3 ? (
+    <>
+      {strokes.map(({ key, stroke }) => {
+        if (hide.has(key)) return null
+        const pen = resolveInkPen(pens, stroke.pen, stroke.kind)
+        return (
           <InkPath
-            pts={livePts}
-            size={liveSize}
-            color={theme.colors[liveColor]?.stroke ?? theme.colors.black.stroke}
-            pen={livePen}
+            key={key}
+            pts={stroke.pts}
+            size={stroke.size}
+            color={theme.colors[stroke.color]?.stroke ?? theme.colors.black.stroke}
+            pen={pen}
           />
-        ) : null}
-      </G>
-    </Svg>
+        )
+      })}
+    </>
   )
+})
+
+function LiveStroke({
+  pts,
+  size,
+  color,
+  pen,
+}: {
+  pts: number[]
+  size: SizeId
+  color: string
+  pen: InkPenDefinition
+}) {
+  return <InkPath pts={pts} size={size} color={color} pen={pen} />
 }
 
 function InkPath({
