@@ -147,11 +147,15 @@ interface SessionDocDrawing {
   blockIndex: number;
   strokeIndex: number;
   lastLocal: XY;
+  /** Trailing predicted points (transient — truncated on next real event). */
+  predicted: number;
 }
 interface SessionDrawing {
   type: "drawing";
   id: string;
   last: XY;
+  /** Trailing predicted points (transient — truncated on next real event). */
+  predicted: number;
 }
 interface SessionErasing {
   type: "erasing";
@@ -1585,7 +1589,7 @@ export class Editor {
       props: anyProps,
     } as ShapeRecord;
     this.store.put(shape);
-    this.session = { type: "drawing", id, last: p };
+    this.session = { type: "drawing", id, last: p, predicted: 0 };
   }
   _extendDraw(e: PointerEvent, p: XY): void {
     const ss = this.session as SessionDrawing;
@@ -1594,24 +1598,56 @@ export class Editor {
       this.session = null;
       return;
     }
+    // Drop last frame's predicted tail before appending real samples.
+    let pts = shape.props.pts as number[];
+    if (ss.predicted > 0) {
+      pts = pts.slice(0, Math.max(0, pts.length - ss.predicted * 3));
+      ss.predicted = 0;
+    } else {
+      pts = pts.slice();
+    }
     const minD = 1.25 / this.camera.z;
-    if (Math.hypot(p.x - ss.last.x, p.y - ss.last.y) < minD) return;
-    ss.last = p;
     const evs = (e as any).getCoalescedEvents
       ? (e as any).getCoalescedEvents()
       : [e];
-    const pts = shape.props.pts.slice();
     for (const ce of evs.length ? evs : [e]) {
       const r = this._evPoint(ce);
       const cp = this._pointerPagePoint(r.x, r.y);
+      const n = pts.length;
+      if (n >= 3) {
+        const lx = pts[n - 3]!;
+        const ly = pts[n - 2]!;
+        if (Math.hypot(cp.x - shape.x - lx, cp.y - shape.y - ly) < minD) continue;
+      }
       pts.push(cp.x - shape.x, cp.y - shape.y, ce.pressure || 0.5);
+    }
+    ss.last = p;
+    // Predicted tail: rendered this frame, truncated on the next real event
+    // or on release — the browser-native way to hide input latency.
+    const pevs =
+      typeof (e as any).getPredictedEvents === "function"
+        ? (e as any).getPredictedEvents()
+        : [];
+    for (const pe of pevs) {
+      const r = this._evPoint(pe);
+      const cp = this._pointerPagePoint(r.x, r.y);
+      pts.push(cp.x - shape.x, cp.y - shape.y, pe.pressure || 0.5);
+      ss.predicted++;
     }
     this.store.update(ss.id, { props: { pts } });
   }
   _endDraw(): void {
     const ss = this.session as SessionDrawing;
-    if (this.store.get(ss.id))
-      this.store.update(ss.id, { props: { done: true } });
+    const shape = this.store.get(ss.id) as ShapeRecord | undefined;
+    if (!shape || (shape.type !== "draw" && shape.type !== "highlight")) {
+      this.session = null;
+      return;
+    }
+    let pts = (shape.props as { pts: number[] }).pts;
+    if (ss.predicted > 0) {
+      pts = pts.slice(0, Math.max(0, pts.length - ss.predicted * 3));
+    }
+    this.store.update(ss.id, { props: { pts, done: true } });
     this.store.endBatch();
     this.session = null;
   }
@@ -1685,6 +1721,7 @@ export class Editor {
       blockIndex,
       strokeIndex,
       lastLocal: local,
+      predicted: 0,
     };
     if (inserted) this.pageDocUI?.syncFromStore();
     this.requestRender();
@@ -1695,34 +1732,72 @@ export class Editor {
     const pp = this._paperPointFromPage(p);
     if (!pp) return;
     const local = this._blockLocalFromPaper(pp);
+    const page = this.currentPage();
+    if (!page) return;
+    // Drop last frame's predicted tail before appending real samples.
+    if (ss.predicted > 0) {
+      this.store.truncateDocumentDrawingStroke(
+        page.id,
+        ss.blockIndex,
+        ss.strokeIndex,
+        ss.predicted,
+      );
+      ss.predicted = 0;
+    }
     const minD = 1.25 / this.camera.z;
     if (Math.hypot(local.x - ss.lastLocal.x, local.y - ss.lastLocal.y) < minD)
       return;
     ss.lastLocal = local;
-    const page = this.currentPage();
-    if (!page) return;
     const evs = (e as any).getCoalescedEvents
       ? (e as any).getCoalescedEvents()
       : [e];
+    // One store update per input event (was one per coalesced sample).
+    const triples: number[] = [];
     for (const ce of evs.length ? evs : [e]) {
       const r = this._evPoint(ce);
       const ppp = this._pointerPagePoint(r.x, r.y);
       const cpp = this._paperPointFromPage(ppp);
       if (!cpp) continue;
       const loc = this._blockLocalFromPaper(cpp);
-      this.store.extendDocumentDrawingStroke(
+      triples.push(loc.x, loc.y, ce.pressure || 0.5);
+    }
+    const pevs =
+      typeof (e as any).getPredictedEvents === "function"
+        ? (e as any).getPredictedEvents()
+        : [];
+    for (const pe of pevs) {
+      const r = this._evPoint(pe);
+      const ppp = this._pointerPagePoint(r.x, r.y);
+      const cpp = this._paperPointFromPage(ppp);
+      if (!cpp) continue;
+      const loc = this._blockLocalFromPaper(cpp);
+      triples.push(loc.x, loc.y, pe.pressure || 0.5);
+      ss.predicted++;
+    }
+    if (triples.length) {
+      this.store.appendDocumentDrawingStrokePoints(
         page.id,
         ss.blockIndex,
         ss.strokeIndex,
-        loc.x,
-        loc.y,
-        ce.pressure || 0.5,
+        triples,
       );
     }
     this.requestRender();
   }
 
   _endDocDraw(): void {
+    const ss = this.session as SessionDocDrawing | null;
+    if (ss && ss.type === "doc-drawing" && ss.predicted > 0) {
+      const page = this.currentPage();
+      if (page) {
+        this.store.truncateDocumentDrawingStroke(
+          page.id,
+          ss.blockIndex,
+          ss.strokeIndex,
+          ss.predicted,
+        );
+      }
+    }
     this.store.endBatch();
     this.session = null;
     this.pageDocUI?.syncFromStore();

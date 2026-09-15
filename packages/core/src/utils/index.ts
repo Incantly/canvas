@@ -24,6 +24,13 @@ export {
   STROKE_POINT_SOFT_CAP,
 } from "./ink/stroke-path.js";
 export {
+  interpolateGapPoints,
+  extendLivePath,
+  extendLivePathMany,
+  LIVE_GAP_MAX_POINTS,
+  type LiveGapPoint,
+} from "./ink/live-stroke.js";
+export {
   DEFAULT_INK_PENS,
   sanitizeInkPenId,
   sanitizeInkPenStyle,
