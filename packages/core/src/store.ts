@@ -51,6 +51,8 @@ import {
   textBlocksFromDocument,
   appendStrokeToDrawingBlock,
   extendDrawingStroke,
+  appendDrawingStrokePoints,
+  truncateDrawingStroke,
   emptyDrawingBlock,
   consolidateDocumentBlocks,
 } from './page-document-blocks.js'
@@ -626,6 +628,40 @@ export class Store {
     if (!block || !isDrawingBlock(block)) return
     const next = blocks.slice()
     next[blockIndex] = extendDrawingStroke(block, strokeIndex, localX, localY, pressure)
+    this.setPageDocument(pageId, next, source)
+  }
+
+  appendDocumentDrawingStrokePoints(
+    pageId: string,
+    blockIndex: number,
+    strokeIndex: number,
+    triples: number[],
+    source: DiffSource = 'user',
+  ): void {
+    if (!triples.length) return
+    if (!this.page(pageId)) return
+    const blocks = this.pageDocumentBlocks(pageId)
+    const block = blocks[blockIndex]
+    if (!block || !isDrawingBlock(block)) return
+    const next = blocks.slice()
+    next[blockIndex] = appendDrawingStrokePoints(block, strokeIndex, triples)
+    this.setPageDocument(pageId, next, source)
+  }
+
+  truncateDocumentDrawingStroke(
+    pageId: string,
+    blockIndex: number,
+    strokeIndex: number,
+    pointCount: number,
+    source: DiffSource = 'user',
+  ): void {
+    if (pointCount <= 0) return
+    if (!this.page(pageId)) return
+    const blocks = this.pageDocumentBlocks(pageId)
+    const block = blocks[blockIndex]
+    if (!block || !isDrawingBlock(block)) return
+    const next = blocks.slice()
+    next[blockIndex] = truncateDrawingStroke(block, strokeIndex, pointCount)
     this.setPageDocument(pageId, next, source)
   }
 

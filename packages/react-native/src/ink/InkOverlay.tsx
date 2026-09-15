@@ -19,11 +19,13 @@ import {
   DEFAULT_INK_MIN_DIST,
   appendPackedStrokePoint,
   createLruCache,
+  extendLivePathMany,
   hitDocumentStroke,
   hitShape,
   inkBaseWidthPaper,
   inkStrokeOpacity,
   inkWidthAtPressure,
+  interpolateGapPoints,
   isDrawingBlock,
   isInkCapturingTool,
   isInkPenTool,
@@ -146,6 +148,11 @@ export function InkOverlay({
   const pens = useMemo(() => sanitizeInkPens(pensProp), [pensProp])
   const capturing = !readonly && isInkCapturingTool(tool, pens)
   const livePts = useRef<number[]>([])
+  // Incremental live preview: plain polyline extended per event (O(1)), so
+  // fast strokes don't pay a full path rebuild per frame. The pressure
+  // ribbon is computed once at commit time.
+  const liveD = useRef('')
+  const liveLast = useRef<{ x: number; y: number; pressure: number } | null>(null)
   const lastEraseKey = useRef('')
   const eraseHits = useRef<Map<string, InkHit>>(new Map())
   const eraseShapeIds = useRef<Set<string>>(new Set())
@@ -245,6 +252,40 @@ export function InkOverlay({
     }
   }
 
+  const resetLive = () => {
+    livePts.current = []
+    liveD.current = ''
+    liveLast.current = null
+  }
+
+  /** Append one live sample: commit data + incremental preview extension. */
+  const appendLiveSample = (x: number, y: number, pressure: number, minDist: number): boolean => {
+    return appendLiveSamples([{ x, y, pressure }], minDist)
+  }
+
+  /**
+   * Batch-append live samples with a single preview-path concatenation.
+   * Fast strokes emit up to 64 gap points per bridge event — extending the
+   * SVG string per point copies the whole path each time (O(n²) over the
+   * stroke) and visibly trails the pen. Filtering still runs per point (so
+   * min-dist behavior is unchanged); only the string build is batched.
+   */
+  const appendLiveSamples = (
+    samples: ReadonlyArray<{ x: number; y: number; pressure: number }>,
+    minDist: number,
+  ): boolean => {
+    const accepted: Array<{ x: number; y: number; pressure: number }> = []
+    for (const s of samples) {
+      if (livePts.current.length / 3 >= MAX_LIVE_POINTS) break
+      if (!appendPackedStrokePoint(livePts.current, s.x, s.y, s.pressure, minDist)) continue
+      accepted.push(s)
+    }
+    if (accepted.length === 0) return false
+    liveD.current = extendLivePathMany(liveD.current, accepted)
+    liveLast.current = accepted[accepted.length - 1]!
+    return true
+  }
+
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => capturingRef.current,
@@ -255,7 +296,7 @@ export function InkOverlay({
         const p = inkPoint(e, false)
         if (!p) return
         drawing.current = true
-        livePts.current = []
+        resetLive()
         eraseHits.current.clear()
         eraseShapeIds.current.clear()
         lastEraseKey.current = ''
@@ -264,7 +305,7 @@ export function InkOverlay({
           interpolateErase(p.x, p.y)
           return
         }
-        appendPackedStrokePoint(livePts.current, p.x, p.y, pressureOf(e), 0)
+        appendLiveSample(p.x, p.y, pressureOf(e), 0)
         bumpLive()
       },
       onPanResponderMove: (e) => {
@@ -280,10 +321,28 @@ export function InkOverlay({
           variantRef.current === 'board' ? cameraRef.current?.z ?? 1 : zoomRef.current,
         )
         const minDist = DEFAULT_INK_MIN_DIST / z
-        if (livePts.current.length / 3 >= MAX_LIVE_POINTS) return
-        if (appendPackedStrokePoint(livePts.current, p.x, p.y, pressureOf(e), minDist)) {
-          bumpLive()
+        const pressure = pressureOf(e)
+        // Bridge events are sparse on fast strokes — fill the gap with
+        // interpolated samples (pressure lerped) so ink tracks the finger.
+        // Collected into one batch so the preview path pays a single string
+        // concatenation per bridge event instead of one per sample.
+        const last = liveLast.current
+        let batch: Array<{ x: number; y: number; pressure: number }>
+        if (last) {
+          const fromPressure = last.pressure
+          const dist = Math.hypot(p.x - last.x, p.y - last.y)
+          const gap = interpolateGapPoints(last.x, last.y, p.x, p.y, minDist)
+          batch = new Array(gap.length + 1)
+          for (let i = 0; i < gap.length; i++) {
+            const m = gap[i]!
+            const t = dist > 1e-6 ? Math.hypot(m.x - last.x, m.y - last.y) / dist : 1
+            batch[i] = { x: m.x, y: m.y, pressure: fromPressure + (pressure - fromPressure) * t }
+          }
+          batch[gap.length] = { x: p.x, y: p.y, pressure }
+        } else {
+          batch = [{ x: p.x, y: p.y, pressure }]
         }
+        if (appendLiveSamples(batch, minDist)) bumpLive()
       },
       onPanResponderRelease: () => {
         drawing.current = false
@@ -293,14 +352,14 @@ export function InkOverlay({
           eraseHits.current.clear()
           eraseShapeIds.current.clear()
           lastErasePt.current = null
-          livePts.current = []
+          resetLive()
           bumpLive()
           if (ids.length) onEraseShapeIdsRef.current?.(ids)
           else if (hits.length) onEraseRef.current?.(hits)
           return
         }
         const pts = livePts.current.slice()
-        livePts.current = []
+        resetLive()
         bumpLive()
         if (pts.length < 3) return
         if (!isInkPenTool(toolRef.current, pensRef.current)) return
@@ -315,7 +374,7 @@ export function InkOverlay({
       },
       onPanResponderTerminate: () => {
         drawing.current = false
-        livePts.current = []
+        resetLive()
         eraseHits.current.clear()
         eraseShapeIds.current.clear()
         lastErasePt.current = null
@@ -352,7 +411,10 @@ export function InkOverlay({
   }, [blocks, variant])
 
   const livePen = isInkPenTool(tool, pens) ? resolveInkPen(pens, tool) : null
-  const livePtsNow = tool === 'eraser' ? [] : livePts.current
+  // Incremental preview string — no path recomputation on live frames.
+  const liveDNow = tool === 'eraser' ? '' : liveD.current
+  const theme = themeOf('light')
+  const liveColor = theme.colors[color]?.stroke ?? theme.colors.black.stroke
   const cam = camera ?? { x: 0, y: 0, z: zoom }
   const transform =
     variant === 'board' ? `scale(${cam.z}) translate(${cam.x} ${cam.y})` : `scale(${zoom})`
@@ -371,12 +433,15 @@ export function InkOverlay({
             strokes={committed}
             hide={hide}
           />
-          {livePen && livePtsNow.length >= 3 ? (
-            <LiveStroke
-              pts={livePtsNow}
-              size={size}
-              color={themeOf('light').colors[color]?.stroke ?? themeOf('light').colors.black.stroke}
-              pen={livePen}
+          {livePen && liveDNow !== '' ? (
+            <Path
+              d={liveDNow}
+              fill="none"
+              stroke={liveColor}
+              strokeWidth={inkBaseWidthPaper(size, livePen.style)}
+              strokeLinecap={livePen.style.cap ?? 'round'}
+              strokeLinejoin="round"
+              strokeOpacity={inkStrokeOpacity(livePen.style)}
             />
           ) : null}
         </G>
@@ -413,20 +478,6 @@ const CommittedStrokeLayer = memo(function CommittedStrokeLayer({
     </>
   )
 })
-
-function LiveStroke({
-  pts,
-  size,
-  color,
-  pen,
-}: {
-  pts: number[]
-  size: SizeId
-  color: string
-  pen: InkPenDefinition
-}) {
-  return <InkPath pts={pts} size={size} color={color} pen={pen} />
-}
 
 function InkPath({
   pts,

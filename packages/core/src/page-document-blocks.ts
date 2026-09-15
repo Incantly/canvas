@@ -362,6 +362,51 @@ export function extendDrawingStroke(
   };
 }
 
+/**
+ * Append many packed triples (x, y, pressure, …) in one pass — one block
+ * update per input event instead of one per coalesced sample.
+ */
+export function appendDrawingStrokePoints(
+  block: DrawingBlock,
+  strokeIndex: number,
+  triples: number[],
+): DrawingBlock {
+  if (!triples.length) return block;
+  const strokes = block.strokes.map((s, i) => {
+    if (i !== strokeIndex) return s;
+    return { ...s, pts: [...s.pts, ...triples] };
+  });
+  return {
+    ...block,
+    strokes,
+    height: Math.max(block.height, strokeBoundsHeight(strokes)),
+  };
+}
+
+/**
+ * Drop the last `pointCount` packed triples — used to retract transient
+ * predicted-event tails before appending real samples or committing.
+ */
+export function truncateDrawingStroke(
+  block: DrawingBlock,
+  strokeIndex: number,
+  pointCount: number,
+): DrawingBlock {
+  if (pointCount <= 0) return block;
+  const strokes = block.strokes.map((s, i) => {
+    if (i !== strokeIndex) return s;
+    return {
+      ...s,
+      pts: s.pts.slice(0, Math.max(0, s.pts.length - pointCount * 3)),
+    };
+  });
+  return {
+    ...block,
+    strokes,
+    height: Math.max(block.height, strokeBoundsHeight(strokes)),
+  };
+}
+
 function drawStrokeInBlock(
   ctx: CanvasRenderingContext2D,
   stroke: DrawingStroke,

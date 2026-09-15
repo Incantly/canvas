@@ -87,6 +87,8 @@ export {
   removeDocumentStroke,
   appendStrokeToDrawingBlock,
   extendDrawingStroke,
+  appendDrawingStrokePoints,
+  truncateDrawingStroke,
   insertDrawingBlockAfter,
   findDrawingTarget,
 } from "./page-document-blocks.js";
