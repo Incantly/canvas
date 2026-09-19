@@ -188,6 +188,7 @@ export function createDrawShape(opts: {
   pts: number[]
   color: ColorId
   size: SizeId
+  width?: number
   dash?: DashId
 }): ShapeRecord | null {
   const packed = packedPtsToDrawLocal(opts.pts)
@@ -206,6 +207,7 @@ export function createDrawShape(opts: {
       color: opts.color,
       size: opts.size,
       done: true,
+      ...(opts.width != null ? { width: opts.width } : {}),
       ...(opts.kind === 'draw' && opts.dash ? { dash: opts.dash } : {}),
     },
   }

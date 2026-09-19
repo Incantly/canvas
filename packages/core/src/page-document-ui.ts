@@ -9,8 +9,7 @@ import {
 } from './rich-text/index.js'
 import { PAGE_DOC_FONT_SIZE, notesPageContentRect, appendPlainTextToDocument } from './page-document.js'
 import {
-  documentBlocksToDomHtml,
-  documentBlockToDomHtml,
+  createDocumentBlockElement,
   parseDocumentBlocksFromDom,
   parseSingleBlockFromDom,
   layoutPageDocument,
@@ -20,6 +19,7 @@ import { drawPageDocumentBlocks } from './page-document-blocks.js'
 import type { DocumentBlock, ImageBlock } from './rich-text/types.js'
 import { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
 import { applyPageDocumentOverflow } from './page-document-paginate.js'
+import { documentBlocksFingerprint } from './utils/document/block-fingerprint.js'
 import {
   type DocumentUiOptions,
   type SelectionToolbarHandle,
@@ -57,6 +57,11 @@ export interface PageDocumentHost {
   emitPage?(): void
   copySelection?(): Promise<void>
   pasteFromClipboard?(): Promise<void>
+  emitDocumentConflict?(details: {
+    pageId: string
+    localBlocks: DocumentBlock[]
+    remoteBlocks: DocumentBlock[]
+  }): void
 }
 
 function resolveTouchUi(hostTouchUi: boolean | undefined): boolean {
@@ -83,6 +88,10 @@ export class PageDocumentUI {
   private _renderedBlocks: DocumentBlock[] = []
   private _syncRaf: number | null = null
   private _applyingOverflow = false
+  private _dirty = false
+  private _writing = false
+  private _baseFingerprint = ''
+  private _conflictFingerprint: string | null = null
 
   private onSelectionChange = (): void => {
     this.guardSelectionInDrawing()
@@ -99,12 +108,15 @@ export class PageDocumentUI {
     this.wrap.className = 'ic-page-doc-wrap'
     this.el = document.createElement('div')
     this.el.className = 'ic-page-doc'
-    this.el.contentEditable = 'true'
+    this.el.contentEditable = host.readonly ? 'false' : 'true'
+    this.el.setAttribute('aria-readonly', String(host.readonly))
     this.el.spellcheck = true
     this.el.dataset.placeholder = 'Type on the page…'
     this.wrap.appendChild(this.el)
     this.slashMenu = document.createElement('div')
     this.slashMenu.className = 'ic-slash-menu'
+    this.slashMenu.setAttribute('role', 'listbox')
+    this.slashMenu.setAttribute('aria-label', 'Insert block')
     this.slashMenu.hidden = true
     this.touchUi = resolveTouchUi(host.touchUi)
     this.formatBar = null
@@ -151,7 +163,15 @@ export class PageDocumentUI {
   private writeBlocks(blocks: DocumentBlock[]): void {
     const id = this.host.currentPageId
     if (!id || !this.host.store.page(id)) return
-    this.host.store.setPageDocument(id, blocks)
+    this._writing = true
+    try {
+      this.host.store.setPageDocument(id, blocks)
+      this._baseFingerprint = documentBlocksFingerprint(this.blocks())
+      this._dirty = false
+      this._conflictFingerprint = null
+    } finally {
+      this._writing = false
+    }
     if (this._applyingOverflow || !this.host.documentMode) return
     this._applyingOverflow = true
     try {
@@ -174,6 +194,8 @@ export class PageDocumentUI {
 
   private bind(): void {
     this.el.addEventListener('input', () => {
+      if (this.host.readonly) return
+      this._dirty = true
       this.checkSlashTrigger()
       this.scheduleSyncToStore()
     })
@@ -256,7 +278,9 @@ export class PageDocumentUI {
   }
 
   destroy(): void {
-    if (this._syncRaf !== null) cancelAnimationFrame(this._syncRaf)
+    // Flush any deferred keystroke before teardown — cancelling here loses
+    // the final edit (R-02). syncToStore is idempotent when DOM == store.
+    this.flushPendingEdits()
     document.removeEventListener('selectionchange', this.onSelectionChange)
     if (typeof window !== 'undefined' && window.visualViewport) {
       window.visualViewport.removeEventListener('resize', this._onViewportResize)
@@ -357,21 +381,28 @@ export class PageDocumentUI {
   }
 
   private _renderBlocksRange(blocks: DocumentBlock[], from: number, to: number): void {
-    const html = documentBlocksToDomHtml(blocks.slice(from, to))
-    const frag = document.createRange().createContextualFragment(html)
-    this.el.appendChild(frag)
+    for (const [offset, block] of blocks.slice(from, to).entries()) {
+      this.el.appendChild(createDocumentBlockElement(block, from + offset))
+    }
     this._renderedBlocks = blocks
+  }
+
+  private _renderFallback(): void {
+    const fallback: DocumentBlock[] = [{ type: 'paragraph', content: [{ text: '' }] }]
+    this.el.replaceChildren(createDocumentBlockElement(fallback[0]!, 0))
+    this._renderedBlocks = fallback
+    this.layout()
   }
 
   syncFromStore(): void {
     const page = this.host.currentPage()
     if (!page) return
     const blocks = this.blocks()
+    this._baseFingerprint = documentBlocksFingerprint(blocks)
+    this._dirty = false
+    this._conflictFingerprint = null
     if (blocks.length === 0) {
-      const fallback: DocumentBlock[] = [{ type: 'paragraph', content: [{ text: '' }] }]
-      this.el.innerHTML = documentBlocksToDomHtml(fallback)
-      this._renderedBlocks = fallback
-      this.layout()
+      this._renderFallback()
       return
     }
     const prev = this._renderedBlocks
@@ -389,9 +420,7 @@ export class PageDocumentUI {
         continue
       }
       if (oldBlock === newBlock && children[i]) continue
-      const html = documentBlockToDomHtml(newBlock, i)
-      const frag = document.createRange().createContextualFragment(html)
-      const newEl = frag.firstElementChild as HTMLElement
+      const newEl = createDocumentBlockElement(newBlock, i)
       if (children[i] && this.el.contains(children[i])) {
         this.el.replaceChild(newEl, children[i])
       } else {
@@ -402,10 +431,7 @@ export class PageDocumentUI {
       this.el.lastElementChild?.remove()
     }
     if (!this.el.querySelector('[data-block]')) {
-      const fallback: DocumentBlock[] = [{ type: 'paragraph', content: [{ text: '' }] }]
-      this.el.innerHTML = documentBlocksToDomHtml(fallback)
-      this._renderedBlocks = fallback
-      this.layout()
+      this._renderFallback()
       return
     }
     this._renderedBlocks = blocks
@@ -419,6 +445,23 @@ export class PageDocumentUI {
       this._syncRaf = null
       this.syncToStore()
     })
+  }
+
+  /** True when a deferred input has not yet been committed to the Store. */
+  hasPendingEdits(): boolean {
+    return this._syncRaf !== null || this._dirty
+  }
+
+  /**
+   * Commit any deferred document input to the Store synchronously.
+   * Hosts must call this before snapshot reads, page/store switches,
+   * visibility changes, destructive commands, and teardown.
+   * No-op when no keystroke is deferred, so calling it never creates
+   * spurious history entries.
+   */
+  flushPendingEdits(): void {
+    if (this._syncRaf === null && !this._dirty) return
+    this.flushSyncToStore()
   }
 
   private flushSyncToStore(): void {
@@ -443,7 +486,20 @@ export class PageDocumentUI {
   }
 
   syncToStore(): void {
+    if (this.host.readonly) return
     const existing = this.blocks()
+    const remoteFingerprint = documentBlocksFingerprint(existing)
+    if (this._dirty && this._baseFingerprint && remoteFingerprint !== this._baseFingerprint) {
+      if (this._conflictFingerprint !== remoteFingerprint) {
+        this._conflictFingerprint = remoteFingerprint
+        this.host.emitDocumentConflict?.({
+          pageId: this.host.currentPageId,
+          localBlocks: parseDocumentBlocksFromDom(this.el, existing),
+          remoteBlocks: existing,
+        })
+      }
+      return
+    }
     const caretIdx = this._caretBlockIndex()
     if (caretIdx !== null && caretIdx < this.el.children.length) {
       const child = this.el.children[caretIdx]
@@ -501,6 +557,56 @@ export class PageDocumentUI {
         child.style.marginBottom = `${4 * z}px`
       }
     }
+  }
+
+  /** Reconcile a focused local draft after a concurrent Store update. */
+  resolveConflict(strategy: 'local' | 'remote'): void {
+    if (strategy === 'remote') {
+      this.syncFromStore()
+      return
+    }
+    const existing = this.blocks()
+    const blocks = parseDocumentBlocksFromDom(this.el, existing).map((b) =>
+      isDrawingBlock(b) || isImageBlock(b) ? b : applyMarkdownToBlock(b),
+    )
+    this._baseFingerprint = documentBlocksFingerprint(existing)
+    this._dirty = true
+    this.writeBlocks(blocks)
+    this._renderedBlocks = this.blocks()
+    this.layout()
+    this.host.requestRender()
+  }
+
+  /** Observe Store changes without replacing a focused, dirty DOM draft. */
+  onStoreChange(): void {
+    if (this._writing) return
+    const remoteFingerprint = documentBlocksFingerprint(this.blocks())
+    if (!this.focused || !this._dirty) {
+      this.syncFromStore()
+      return
+    }
+    if (remoteFingerprint !== this._baseFingerprint && this._conflictFingerprint !== remoteFingerprint) {
+      this._conflictFingerprint = remoteFingerprint
+      this.host.emitDocumentConflict?.({
+        pageId: this.host.currentPageId,
+        localBlocks: parseDocumentBlocksFromDom(this.el, this.blocks()),
+        remoteBlocks: this.blocks(),
+      })
+    }
+  }
+
+  setReadonly(readonly: boolean): void {
+    if (readonly) this.flushPendingEdits()
+    this.el.contentEditable = readonly ? 'false' : 'true'
+    this.el.setAttribute('aria-readonly', String(readonly))
+    if (readonly) {
+      this.el.blur()
+      this.hideSlashMenu()
+      this.selectionToolbar?.hide()
+    } else {
+      this.syncFromStore()
+    }
+    this.layout()
   }
 
   focusAtEnd(): void {
@@ -963,6 +1069,10 @@ export class PageDocumentUI {
             `<button type="button" class="ic-slash-item${i === this.slashIndex ? ' ic-slash-item-active' : ''}" data-slash-id="${c.id}">${c.label}${c.hint ? `<span class="ic-slash-hint">${c.hint}</span>` : ''}</button>`,
         )
         .join('')
+    this.slashMenu.querySelectorAll<HTMLButtonElement>('.ic-slash-item').forEach((button, index) => {
+      button.setAttribute('role', 'option')
+      button.setAttribute('aria-selected', String(index === this.slashIndex))
+    })
   }
 
   private hideSlashMenu(): void {

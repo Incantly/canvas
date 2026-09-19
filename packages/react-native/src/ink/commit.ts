@@ -1,8 +1,9 @@
 import type { DrawingStroke, Store } from '@incantly/canvas/headless'
-import { removeDocumentStroke, simplifyPackedStrokePts } from '@incantly/canvas/headless'
-import type { InkHit } from './types.js'
+import { removeDocumentStroke, simplifyPackedStrokePts, strokeBoundsHeight } from '@incantly/canvas/headless'
+import { DRAWING_BLOCK_MIN_HEIGHT } from '@incantly/canvas/headless'
+import type { InkHit, PixelEraseEdit } from './types.js'
 
-export type { InkHit } from './types.js'
+export type { InkHit, PixelEraseEdit } from './types.js'
 
 function packedPtsOk(pts: number[]): boolean {
   if (!Array.isArray(pts) || pts.length < 3) return false
@@ -45,6 +46,46 @@ export function eraseDocumentInkHits(store: Store, pageId: string, hits: InkHit[
     for (const hit of sortEraseHitsDescending(hits)) {
       if (hit.blockIndex < 0 || hit.strokeIndex < 0) continue
       blocks = removeDocumentStroke(blocks, hit.blockIndex, hit.strokeIndex)
+    }
+    store.setPageDocument(pageId, blocks)
+  } finally {
+    store.endBatch()
+  }
+  return true
+}
+
+/**
+ * Pixel-erase commit: splice each hit stroke's surviving pieces in place
+ * (pieces inherit color/size/pen/width; empty pieces remove the stroke).
+ * Descending index order keeps positions valid; one batch = one undo step.
+ */
+export function applyPixelEraseStrokes(
+  store: Store,
+  pageId: string,
+  edits: PixelEraseEdit[],
+): boolean {
+  if (!store.page(pageId) || edits.length === 0) return false
+  const sorted = edits.slice().sort((a, b) =>
+    a.blockIndex !== b.blockIndex ? b.blockIndex - a.blockIndex : b.strokeIndex - a.strokeIndex,
+  )
+  store.beginBatch()
+  try {
+    const blocks = store.pageDocumentBlocks(pageId).slice()
+    for (const edit of sorted) {
+      const block = blocks[edit.blockIndex]
+      if (!block || block.type !== 'drawing') continue
+      const strokes = block.strokes.slice()
+      const target = strokes[edit.strokeIndex]
+      if (!target) continue
+      const replacements = edit.pieces
+        .filter((pts) => Array.isArray(pts) && pts.length >= 6)
+        .map((pts) => ({ ...target, pts }))
+      strokes.splice(edit.strokeIndex, 1, ...replacements)
+      blocks[edit.blockIndex] = {
+        ...block,
+        strokes,
+        height: Math.max(DRAWING_BLOCK_MIN_HEIGHT, strokeBoundsHeight(strokes)),
+      }
     }
     store.setPageDocument(pageId, blocks)
   } finally {

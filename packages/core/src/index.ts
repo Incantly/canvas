@@ -18,6 +18,29 @@ export {
 } from './palette.js'
 export { pageBounds, localBounds, drawShape, hitShape } from './shapes.js'
 export { strokeOutline } from './freehand.js'
+export {
+  inkBaseWidthPaper,
+  inkWidthAtPressure,
+  inkStrokeOpacity,
+  sanitizeInkWidth,
+  widthSliderToPaper,
+  paperToWidthSlider,
+  inkOutlineWidthPaper,
+  sanitizeEraserMode,
+  sanitizeEraserRadius,
+  INK_WIDTH_MIN_PAPER,
+  INK_WIDTH_MAX_PAPER,
+  INK_WIDTH_SLIDER_MIN,
+  INK_WIDTH_SLIDER_MAX,
+  INK_WIDTH_HARD_MIN,
+  INK_WIDTH_HARD_MAX,
+  DEFAULT_ERASER_RADIUS_PAPER,
+  ERASER_RADIUS_MIN_PAPER,
+  ERASER_RADIUS_MAX_PAPER,
+  type InkPenDefinition,
+  type InkPenStyle,
+  type EraserMode,
+} from './utils/ink/ink-pen.js'
 
 import { Editor, TOOLS } from './editor.js'
 export { Editor, TOOLS }
@@ -58,6 +81,7 @@ export {
 export type { VirtualPrintPage } from './notebook-document.js'
 export {
   validateDocumentBlocks,
+  createDocumentBlockElement,
   layoutPageDocument,
   DRAWING_BLOCK_MIN_HEIGHT,
   drawingBlockHeight,
@@ -69,6 +93,15 @@ export {
   isEmptyDocument,
   validateBlocks,
   migrateTextProps,
+  sanitizeColorId,
+  sanitizeFontId,
+  sanitizeSizeId,
+  sanitizeFontSize,
+  sanitizeLinkHref,
+  sanitizeLinkTitle,
+  sanitizeImageSrc,
+  sanitizeImageAlt,
+  sanitizeImageDimension,
   layoutRichText,
   drawRichTextLayout,
 } from './rich-text/index.js'
@@ -88,7 +121,7 @@ export {
   applyPageDocumentOverflow,
   isVisuallyEmptyPage,
 } from './page-document-paginate.js'
-export { applyInlineFontSize } from './rich-text/dom.js'
+export { applyInlineFontSize, createSpanElement, createBlockElement } from './rich-text/dom.js'
 export {
   defaultDocumentBackground,
   defaultDocumentPaperColor,

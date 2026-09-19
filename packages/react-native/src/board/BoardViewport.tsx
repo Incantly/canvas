@@ -10,6 +10,7 @@ import Svg, { Path } from 'react-native-svg'
 import type {
   Camera,
   ColorId,
+  EraserMode,
   FillId,
   GeoId,
   GridId,
@@ -25,7 +26,7 @@ import {
   pinchCamera,
   sanitizeCamera,
 } from '@incantly/canvas/headless'
-import { InkOverlay, type InkHit } from '../ink/InkOverlay.js'
+import { InkOverlay, type InkHit, type PixelShapeEraseEdit } from '../ink/InkOverlay.js'
 import type { DrawingStroke } from '@incantly/canvas/headless'
 import { ShapeLayer, type ShapeDraft } from '../shapes/ShapeLayer.js'
 import { TextBoxLayer } from '../shapes/TextBoxLayer.js'
@@ -67,6 +68,9 @@ export interface BoardViewportProps {
   tool: string
   color: ColorId
   size: SizeId
+  penWidth?: number
+  eraserRadius?: number
+  eraserMode?: EraserMode
   geoKind: GeoId
   fill: FillId
   pens: readonly InkPenDefinition[]
@@ -86,6 +90,7 @@ export interface BoardViewportProps {
   onCommitInk: (stroke: DrawingStroke) => void
   onEraseInk: (hits: InkHit[]) => void
   onEraseShapeIds: (ids: string[]) => void
+  onErasePixelShapes: (edits: PixelShapeEraseEdit[]) => void
 }
 
 export function BoardViewport({
@@ -93,6 +98,9 @@ export function BoardViewport({
   tool,
   color,
   size,
+  penWidth,
+  eraserRadius,
+  eraserMode,
   geoKind,
   fill,
   pens,
@@ -112,9 +120,16 @@ export function BoardViewport({
   onCommitInk,
   onEraseInk,
   onEraseShapeIds,
+  onErasePixelShapes,
 }: BoardViewportProps) {
   const { width, height } = useWindowDimensions()
   const [localCam, setLocalCam] = useState<Camera>(cameraProp ?? DEFAULT_CAMERA)
+  // Pixel-erase live preview from InkOverlay (surviving pieces per shape).
+  // Updated per erase event; cleared on release/terminate. Never touches the store.
+  const [pixelPreview, setPixelPreview] = useState<ReadonlyMap<string, number[][]> | null>(null)
+  const handlePixelBoardPreview = useCallback((pieces: ReadonlyMap<string, number[][]> | null) => {
+    setPixelPreview(pieces)
+  }, [])
   const camera = sanitizeCamera(cameraProp ?? localCam)
   const cameraRef = useRef(camera)
   const toolRef = useRef(tool)
@@ -300,6 +315,7 @@ export function BoardViewport({
           fill={fill}
           selectedId={selectedId}
           readonly={readonly || inkOn}
+          pixelPieces={pixelPreview ?? undefined}
           onCommit={onCommitShape}
           onMove={onMoveShape}
           onSelect={onSelect}
@@ -317,6 +333,9 @@ export function BoardViewport({
           tool={tool}
           color={color}
           size={size}
+          penWidth={penWidth}
+          eraserRadius={eraserRadius}
+          eraserMode={eraserMode}
           pens={pens}
           readonly={readonly}
           variant="board"
@@ -325,6 +344,8 @@ export function BoardViewport({
           onCommitStroke={onCommitInk}
           onErase={onEraseInk}
           onEraseShapeIds={onEraseShapeIds}
+          onErasePixelShapes={onErasePixelShapes}
+          onPixelBoardPreview={handlePixelBoardPreview}
         />
         <TextBoxLayer
           shapes={shapes}

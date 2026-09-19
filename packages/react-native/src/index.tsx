@@ -13,6 +13,7 @@ import type {
   ColorId,
   DocumentBlock,
   DrawingStroke,
+  EraserMode,
   FillId,
   GeoId,
   PaperSizeId,
@@ -27,7 +28,10 @@ import {
   documentBlocksFingerprint,
   debounce,
   pageTextBlocksToPlainLines,
+  sanitizeEraserMode,
+  sanitizeEraserRadius,
   sanitizeInkPens,
+  DEFAULT_ERASER_RADIUS_PAPER,
   createGeoShape,
   createLineishShape,
   createTextShape,
@@ -43,19 +47,22 @@ import type { CanvasInkChromeProps } from "./ink/canvas-ink-chrome-context.js";
 import {
   commitDocumentInkStroke,
   eraseDocumentInkHits,
+  applyPixelEraseStrokes,
 } from "./ink/commit.js";
-import type { InkHit } from "./ink/types.js";
+import type { InkHit, PixelEraseEdit } from "./ink/types.js";
 import { BoardViewport } from "./board/BoardViewport.js";
 import type { ShapeDraft } from "./shapes/ShapeLayer.js";
 import {
   commitBoardInkStroke,
   commitShape,
   eraseShapeIds,
+  applyPixelEraseShapes,
   moveShape,
   resizeShape,
   updateShapeFill,
   updateTextShapeBlocks,
 } from "./shapes/commit.js";
+import type { PixelShapeEraseEdit } from "./ink/types.js";
 import { useCanvasStore } from "./store/use-canvas-store.js";
 import { createStoreBridge } from "./store/store-bridge.js";
 import type { CanvasProps, CanvasRef } from "./types/index.js";
@@ -179,10 +186,16 @@ export const Canvas = forwardRef(function Canvas(
   const toolRef = useRef<string>(initialTool);
   const colorRef = useRef<ColorId>("black");
   const sizeRef = useRef<SizeId>("m");
+  const penWidthRef = useRef<number | undefined>(undefined);
+  const eraserRadiusRef = useRef<number | undefined>(undefined);
+  const eraserModeRef = useRef<EraserMode>("stroke");
   const fillRef = useRef<FillId>("none");
   const [tool, setTool] = useState<string>(initialTool);
   const [inkColor, setInkColor] = useState<ColorId>("black");
   const [inkSize, setInkSize] = useState<SizeId>("m");
+  const [penWidth, setPenWidth] = useState<number | undefined>(undefined);
+  const [eraserRadius, setEraserRadius] = useState<number | undefined>(undefined);
+  const [eraserMode, setEraserMode] = useState<EraserMode>("stroke");
   const [geoKind, setGeoKind] = useState<GeoId>("rectangle");
   const [fill, setFill] = useState<FillId>("none");
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
@@ -190,6 +203,9 @@ export const Canvas = forwardRef(function Canvas(
   toolRef.current = tool;
   colorRef.current = inkColor;
   sizeRef.current = inkSize;
+  penWidthRef.current = penWidth;
+  eraserRadiusRef.current = eraserRadius;
+  eraserModeRef.current = eraserMode;
   fillRef.current = fill;
   const lastFpRef = useRef("");
   const { store, versionManager, loadSnapshot, getSnapshot, notify } =
@@ -270,10 +286,16 @@ export const Canvas = forwardRef(function Canvas(
         toolRef,
         colorRef,
         sizeRef,
+        penWidthRef,
+        eraserRadiusRef,
+        eraserModeRef,
         currentPageIdRef,
         onToolChange: setTool,
         onColorChange: setInkColor,
-        onSizeChange: setInkSize,
+        onSizeChange: onInkSizeChange,
+        onPenWidthChange: setPenWidth,
+        onEraserRadiusChange: setEraserRadius,
+        onEraserModeChange: setEraserMode,
         allowedInkTools: () => [
           "type",
           "select",
@@ -487,6 +509,18 @@ export const Canvas = forwardRef(function Canvas(
     [store, notify, syncLocalFromPage],
   );
 
+  const onErasePixel = useCallback(
+    (edits: PixelEraseEdit[]) => {
+      const pageId = currentPageIdRef.current;
+      if (!pageId || !store.page(pageId)) return;
+      if (applyPixelEraseStrokes(store, pageId, edits)) {
+        syncLocalFromPage(pageId);
+        notify();
+      }
+    },
+    [store, notify, syncLocalFromPage],
+  );
+
   const pageShapes = activeId ? store.shapesOnPage(activeId) : [];
 
   const onCommitShape = useCallback(
@@ -596,6 +630,23 @@ export const Canvas = forwardRef(function Canvas(
     [store, notify, selectedShapeId, editingTextId],
   );
 
+  const onErasePixelShapes = useCallback(
+    (edits: PixelShapeEraseEdit[]) => {
+      const result = applyPixelEraseShapes(store, edits);
+      if (!result.changed) return;
+      // Split shapes keep the original id (selection survives); fully
+      // erased shapes drop selection like the stroke-mode path.
+      if (selectedShapeId && result.removedIds.includes(selectedShapeId)) {
+        setSelectedShapeId(null);
+      }
+      if (editingTextId && result.removedIds.includes(editingTextId)) {
+        setEditingTextId(null);
+      }
+      notify();
+    },
+    [store, notify, selectedShapeId, editingTextId],
+  );
+
   const selectedRec = selectedShapeId ? store.get(selectedShapeId) : undefined;
   const selectedIsBox =
     selectedRec &&
@@ -624,11 +675,23 @@ export const Canvas = forwardRef(function Canvas(
     if (next !== "select" && next !== "text") setEditingTextId(null);
   }, []);
 
+  /**
+   * Discrete size selection resets the continuous slider override —
+   * last writer wins, so the two width controls never fight silently.
+   */
+  const onInkSizeChange = useCallback((next: SizeId) => {
+    setInkSize(next);
+    setPenWidth(undefined);
+  }, []);
+
   const inkChromeProps = useMemo<CanvasInkChromeProps>(
     () => ({
       tool,
       color: inkColor,
       size: inkSize,
+      penWidth,
+      eraserRadius: eraserRadius ?? DEFAULT_ERASER_RADIUS_PAPER,
+      eraserMode,
       pens,
       inkBar,
       mode: documentMode ? "notes" : "board",
@@ -637,7 +700,10 @@ export const Canvas = forwardRef(function Canvas(
       showFill: !!selectedIsBox,
       onTool: onToolChange,
       onColor: setInkColor,
-      onSize: setInkSize,
+      onSize: onInkSizeChange,
+      onPenWidth: setPenWidth,
+      onEraserRadius: (radius) => setEraserRadius(sanitizeEraserRadius(radius, DEFAULT_ERASER_RADIUS_PAPER)),
+      onEraserMode: (mode) => setEraserMode(sanitizeEraserMode(mode)),
       onGeoKind: setGeoKind,
       onFill: onFillChange,
     }),
@@ -645,6 +711,9 @@ export const Canvas = forwardRef(function Canvas(
       tool,
       inkColor,
       inkSize,
+      penWidth,
+      eraserRadius,
+      eraserMode,
       pens,
       inkBar,
       documentMode,
@@ -696,9 +765,13 @@ export const Canvas = forwardRef(function Canvas(
                   tool,
                   color: inkColor,
                   size: inkSize,
+                  penWidth,
+                  eraserRadius,
+                  eraserMode,
                   pens,
                   onCommitStroke,
                   onErase: onEraseHits,
+                  onErasePixel,
                 }
               : undefined
           }
@@ -710,6 +783,9 @@ export const Canvas = forwardRef(function Canvas(
           tool={tool}
           color={inkColor}
           size={inkSize}
+          penWidth={penWidth}
+          eraserRadius={eraserRadius}
+          eraserMode={eraserMode}
           geoKind={geoKind}
           fill={fill}
           pens={pens}
@@ -726,6 +802,7 @@ export const Canvas = forwardRef(function Canvas(
           onCommitInk={onCommitBoardInk}
           onEraseInk={onEraseHits}
           onEraseShapeIds={onEraseShapeIds}
+          onErasePixelShapes={onErasePixelShapes}
         />
   );
 

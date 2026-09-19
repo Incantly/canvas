@@ -1,5 +1,95 @@
 import type { ColorId, FontId, SizeId } from '../types/base.js'
 import type { InlineSpan, TextBlock, BlockType } from './types.js'
+import { COLOR_IDS, FONT_IDS, SIZE_IDS } from '../palette.js'
+
+const COLOR_SET = new Set<string>(COLOR_IDS)
+const FONT_SET = new Set<string>(FONT_IDS)
+const SIZE_SET = new Set<string>(SIZE_IDS)
+
+/** Inline font sizes are clamped to prevent layout blowup from hostile snapshots. */
+export const MAX_INLINE_FONT_SIZE = 256
+export const MIN_INLINE_FONT_SIZE = 1
+
+/** Link schemes that may appear in rich-text snapshots. Everything else is dropped. */
+export const ALLOWED_LINK_SCHEMES: readonly string[] = ['http:', 'https:', 'mailto:', 'tel:']
+
+export function sanitizeColorId(v: unknown): ColorId | undefined {
+  return typeof v === 'string' && COLOR_SET.has(v) ? (v as ColorId) : undefined
+}
+
+export function sanitizeFontId(v: unknown): FontId | undefined {
+  return typeof v === 'string' && FONT_SET.has(v) ? (v as FontId) : undefined
+}
+
+export function sanitizeSizeId(v: unknown): SizeId | undefined {
+  return typeof v === 'string' && SIZE_SET.has(v) ? (v as SizeId) : undefined
+}
+
+export function sanitizeFontSize(v: unknown): number | undefined {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return undefined
+  if (v < MIN_INLINE_FONT_SIZE || v > MAX_INLINE_FONT_SIZE) return undefined
+  return v
+}
+
+function schemeOf(href: string): string | null {
+  const m = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(href)
+  return m ? m[1]!.toLowerCase() + ':' : null
+}
+
+export function sanitizeLinkHref(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const href = v.trim()
+  if (!href || href.length > 4096) return null
+  // Disallow control characters and embedded whitespace that browsers may normalize.
+  if (/[\u0000-\u0020\u007f]/.test(href) && !/^mailto:/i.test(href) && !/^tel:/i.test(href)) {
+    // mailto:/tel: may legitimately contain no spaces; any control char rejects.
+    // For http(s) also reject. Relative URLs with spaces are rejected too.
+    return null
+  }
+  const scheme = schemeOf(href)
+  if (scheme) {
+    return (ALLOWED_LINK_SCHEMES as readonly string[]).includes(scheme) ? href : null
+  }
+  // Relative URL, fragment, or absolute path without a scheme — safe as long as
+  // it does not start a scriptable scheme with leading whitespace/control chars.
+  if (/^(\/|#|\?|[A-Za-z0-9._~%+-])/.test(href)) return href
+  return null
+}
+
+export function sanitizeLinkTitle(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined
+  const t = v.slice(0, 500)
+  if (!t) return undefined
+  return t
+}
+
+/** Image sources may additionally be inline data images or blob URLs. */
+export function sanitizeImageSrc(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const src = v.trim()
+  if (!src || src.length > 20_000_000) return null
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(src)) return null
+  if (/^data:image\//i.test(src)) return src
+  if (/^blob:/i.test(src)) return src
+  const scheme = schemeOf(src)
+  if (scheme) {
+    return scheme === 'http:' || scheme === 'https:' ? src : null
+  }
+  if (/^(\/|#|\?|[A-Za-z0-9._~%+-])/.test(src)) return src
+  return null
+}
+
+export function sanitizeImageAlt(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined
+  const alt = v.slice(0, 500)
+  return alt ? alt : undefined
+}
+
+export function sanitizeImageDimension(v: unknown): number | undefined {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return undefined
+  if (v <= 0 || v > 10000) return undefined
+  return v
+}
 
 const BLOCK_TYPES: readonly BlockType[] = [
   'paragraph',
@@ -58,17 +148,18 @@ function normalizeSpan(raw: unknown): InlineSpan | null {
   if (s.underline === true) span.underline = true
   if (s.strikethrough === true) span.strikethrough = true
   if (s.code === true) span.code = true
-  if (s.font === 'draw' || s.font === 'sans' || s.font === 'serif' || s.font === 'mono')
-    span.font = s.font
-  if (typeof s.fontSize === 'number' && Number.isFinite(s.fontSize) && s.fontSize > 0)
-    span.fontSize = s.fontSize
-  if (typeof s.color === 'string') span.color = s.color as ColorId
+  const font = sanitizeFontId(s.font)
+  if (font) span.font = font
+  const fontSize = sanitizeFontSize(s.fontSize)
+  if (fontSize !== undefined) span.fontSize = fontSize
+  const color = sanitizeColorId(s.color)
+  if (color) span.color = color
   if (s.link && typeof s.link === 'object') {
-    const href = (s.link as { href?: unknown }).href
-    if (typeof href === 'string' && href.length > 0) {
+    const href = sanitizeLinkHref((s.link as { href?: unknown }).href)
+    if (href) {
       span.link = { href }
-      const title = (s.link as { title?: unknown }).title
-      if (typeof title === 'string') span.link.title = title
+      const title = sanitizeLinkTitle((s.link as { title?: unknown }).title)
+      if (title !== undefined) span.link.title = title
     }
   }
   return span
@@ -141,9 +232,9 @@ export function migrateTextProps(props: Record<string, unknown>): RichTextShapeF
       : textToBlocks(typeof props.text === 'string' ? props.text : '')
   const next: RichTextShapeFields = {
     blocks,
-    color: (props.color as ColorId) || 'black',
-    size: (props.size as SizeId) || 'm',
-    font: (props.font as FontId) || 'sans',
+    color: sanitizeColorId(props.color) ?? 'black',
+    size: sanitizeSizeId(props.size) ?? 'm',
+    font: sanitizeFontId(props.font) ?? 'sans',
   }
   if (props.autosize === false) next.autosize = false
   if (typeof props.scale === 'number') next.scale = props.scale

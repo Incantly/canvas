@@ -8,6 +8,11 @@ import {
   validateDocumentBlocks,
   consolidateDocumentBlocks,
 } from '../page-document-blocks.js'
+import {
+  sanitizeImageAlt,
+  sanitizeImageDimension,
+  sanitizeImageSrc,
+} from '../rich-text/document.js'
 
 function pageBlocks(page: PageRecord, override?: unknown) {
   const raw = override ?? page.document?.blocks
@@ -75,12 +80,15 @@ registerMigration({
     for (const block of nb.document.blocks) {
       if (block.type === 'image') {
         const img = block as ImageBlock
-        const src = typeof img.src === 'string' ? img.src.trim() : ''
+        const src = sanitizeImageSrc(img.src)
         if (!src) continue
         const normalized: ImageBlock = { type: 'image', src }
-        if (typeof img.alt === 'string') normalized.alt = img.alt
-        if (typeof img.width === 'number' && img.width > 0) normalized.width = img.width
-        if (typeof img.height === 'number' && img.height > 0) normalized.height = img.height
+        const alt = sanitizeImageAlt(img.alt)
+        if (alt !== undefined) normalized.alt = alt
+        const w = sanitizeImageDimension(img.width)
+        if (w !== undefined) normalized.width = w
+        const h = sanitizeImageDimension(img.height)
+        if (h !== undefined) normalized.height = h
         blocks.push(normalized)
       } else {
         blocks.push(block)

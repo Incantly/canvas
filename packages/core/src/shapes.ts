@@ -14,12 +14,10 @@ import type {
 } from './types/index.js'
 import {
   SIZES,
-  INK_SIZES,
   FONT_SIZES,
   NOTE_FONT_SIZES,
   FONTS,
   HIGHLIGHT_ALPHA,
-  HIGHLIGHT_SCALE,
   themeOf,
 } from './palette.js'
 import {
@@ -41,6 +39,7 @@ import {
   marqueeHits,
 } from './utils/shapes/hit.js'
 import { strokeOutline } from './freehand.js'
+import { inkBaseWidthPaper, inkOutlineWidthPaper } from './utils/ink/ink-pen.js'
 import {
   getShapeBlocks,
   layoutRichText,
@@ -393,7 +392,10 @@ function drawPath(shape: ShapeRecord): Path2D {
     if (hit) return hit
   }
   const path = new Path2D()
-  const outline = strokeOutline(p.pts, { size: INK_SIZES[p.size as SizeId], simulate: !p.isPen })
+  const outline = strokeOutline(p.pts, {
+    size: inkOutlineWidthPaper(p.size as SizeId, p.width as number | undefined),
+    simulate: !p.isPen,
+  })
   traceSmooth(path as any, outline, true)
   path.closePath()
   if (p.done) outlineCache.set(p, path)
@@ -450,7 +452,7 @@ export function drawShape(
       ctx.globalAlpha = (opts.ghost ? 0.3 : 1) * HIGHLIGHT_ALPHA
       ctx.globalCompositeOperation = theme.id === 'dark' ? 'lighten' : 'multiply'
       ctx.strokeStyle = col.stroke
-      ctx.lineWidth = SIZES[p.size as SizeId] * HIGHLIGHT_SCALE
+      ctx.lineWidth = inkBaseWidthPaper(p.size as SizeId, { kind: 'highlight' }, p.width as number | undefined)
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       ctx.beginPath()

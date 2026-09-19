@@ -169,6 +169,7 @@ export function createDefaultSelectionToolbar(
     btn.className = 'ic-doc-selection-btn'
     btn.dataset.actionId = action.id
     btn.title = action.title ?? action.label
+    btn.setAttribute('aria-label', btn.title)
     btn.textContent = action.label
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault()

@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type ForwardedRef,
 } from 'react'
-import type { Editor, BoardUI } from '@incantly/canvas'
+import type { Editor, BoardUI, Diff, DiffSource, GridId, Snapshot, ThemeId } from '@incantly/canvas'
 import { Editor as EditorCtor, Store, buildUI, buildWatermark } from '@incantly/canvas'
 import type { CanvasProps, CanvasRef } from './types/index.js'
 
@@ -27,8 +27,11 @@ export const Canvas = forwardRef(function Canvas(
     gridControl = true,
     watermark = true,
     store,
+    initialSnapshot,
     snapshot,
+    initialCamera,
     camera,
+    initialStyles,
     styles,
     documentMode = false,
     uiTools,
@@ -39,6 +42,8 @@ export const Canvas = forwardRef(function Canvas(
     touchUi = false,
     documentUi,
     autoFit = false,
+    fitOnMount = autoFit,
+    fitOnResize = autoFit,
     onMount,
     onChange,
     onSelectionChange,
@@ -52,13 +57,14 @@ export const Canvas = forwardRef(function Canvas(
   const hostRef = useRef<HTMLDivElement | null>(null)
   const editorRef = useRef<Editor | null>(null)
   const uiRef = useRef<BoardUI | null>(null)
+  const watermarkRef = useRef<HTMLElement | null>(null)
 
   const cbRef = useRef<{
     onMount?: (editor: Editor, ui: BoardUI) => void
-    onChange?: (diff: any, source: any, editor: Editor) => void
+    onChange?: (diff: Diff, source: DiffSource, editor: Editor) => void
     onSelectionChange?: (ids: string[], editor: Editor) => void
-    onThemeChange?: (themeId: any, editor: Editor) => void
-    onGridChange?: (gridId: any, editor: Editor) => void
+    onThemeChange?: (themeId: ThemeId, editor: Editor) => void
+    onGridChange?: (gridId: GridId, editor: Editor) => void
     onSave?: (blob: Blob, background: boolean) => void
   }>({})
   cbRef.current = { onMount, onChange, onSelectionChange, onThemeChange, onGridChange, onSave }
@@ -73,14 +79,14 @@ export const Canvas = forwardRef(function Canvas(
       theme,
       grid,
       readonly,
-      camera,
-      styles,
+      camera: initialCamera ?? camera,
+      styles: initialStyles ?? styles,
       documentMode,
       documentBackground: documentBackground ?? undefined,
       documentPaperColor: documentPaperColor ?? undefined,
       touchUi,
       documentUi,
-    } as any)
+    })
     host.dataset.icTheme = editor.theme.id
     const ui = buildUI(editor, {
       hidden: hideUi || readonly,
@@ -103,14 +109,14 @@ export const Canvas = forwardRef(function Canvas(
     })
     editorRef.current = editor
     uiRef.current = ui
-    const mark = watermark ? buildWatermark(editor) : null
+    watermarkRef.current = watermark ? buildWatermark(editor) : null
 
-    if (!store && snapshot) {
-      editor.store.loadSnapshot(snapshot, 'remote')
-      if (autoFit) editor.fitContent()
+    const startingSnapshot = initialSnapshot ?? snapshot
+    if (!store && startingSnapshot) {
+      editor.store.loadSnapshot(startingSnapshot, 'remote')
     }
 
-    const unsubChange = editor.store.listen((diff: any, source: any) => {
+    const unsubChange = editor.store.listen((diff: Diff, source: DiffSource) => {
       cbRef.current.onChange?.(diff, source, editor)
     })
     const unsubSel = editor.on('selection', () => {
@@ -124,26 +130,24 @@ export const Canvas = forwardRef(function Canvas(
       cbRef.current.onGridChange?.(editor.grid, editor)
     })
 
-    let ro: ResizeObserver | null = null
-    if (autoFit) {
-      editor.fitContent()
-      ro = new ResizeObserver(() => {
-        editor.resize()
-        editor.fitContent()
-      })
-      ro.observe(host)
-    }
-
     cbRef.current.onMount?.(editor, ui)
 
     return () => {
-      ro?.disconnect()
       unsubChange()
       unsubSel()
       unsubTheme()
       unsubGrid()
-      mark?.remove()
+      watermarkRef.current?.remove()
+      watermarkRef.current = null
       ui.destroy()
+      // Commit any deferred keystroke before teardown (R-02). destroy()
+      // also flushes, but this makes the boundary explicit for hosts reading
+      // the Store during unmount.
+      try {
+        editor.flushPendingEdits()
+      } catch {
+        /* best-effort during teardown */
+      }
       editor.destroy()
       editorRef.current = null
       uiRef.current = null
@@ -181,8 +185,42 @@ export const Canvas = forwardRef(function Canvas(
   }, [readonly, hideUi])
 
   useEffect(() => {
-    uiRef.current?.setOptions({ themeToggle, gridControl })
-  }, [themeToggle, gridControl])
+    uiRef.current?.setOptions({
+      themeToggle,
+      gridControl,
+      tools: uiTools,
+      icons: uiIcons,
+      hidePagesBar,
+    })
+  }, [themeToggle, gridControl, uiTools, uiIcons, hidePagesBar])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    watermarkRef.current?.remove()
+    watermarkRef.current = watermark ? buildWatermark(editor) : null
+  }, [watermark])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    const host = hostRef.current
+    if (!editor || !host) return
+    if (fitOnMount) editor.fitContent()
+    if (!fitOnResize) return
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const ro = new ResizeObserver(() => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        editor.resize()
+        editor.fitContent()
+      }, 100)
+    })
+    ro.observe(host)
+    return () => {
+      ro.disconnect()
+      if (timer) clearTimeout(timer)
+    }
+  }, [store, fitOnMount, fitOnResize])
 
   useImperativeHandle(
     ref,
@@ -192,6 +230,17 @@ export const Canvas = forwardRef(function Canvas(
       },
       get ui() {
         return uiRef.current
+      },
+      getSnapshot() {
+        const editor = editorRef.current
+        return editor ? editor.getSnapshot() : null
+      },
+      loadSnapshot(next: Snapshot, fit = false) {
+        const editor = editorRef.current
+        if (!editor) return
+        editor.flushPendingEdits()
+        editor.store.loadSnapshot(next, 'remote')
+        if (fit) editor.fitContent()
       },
     }),
     [],

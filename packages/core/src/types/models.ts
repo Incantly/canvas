@@ -36,6 +36,11 @@ export interface DrawShapeProps {
   dash?: DashId
   done: boolean
   isPen?: boolean
+  /**
+   * Explicit base width in paper units (replaces the `SIZES[size]` lookup).
+   * Optional — absent means legacy `SizeId` rendering.
+   */
+  width?: number
 }
 
 export interface LineishShapeProps {

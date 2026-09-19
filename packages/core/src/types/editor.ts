@@ -10,6 +10,7 @@ import type {
 import type { Diff, DiffSource, Snapshot } from './operations.js'
 import type { Theme } from './themes.js'
 import type { DocumentUiOptions } from '../document-ui-config.js'
+import type { EraserMode } from '../utils/ink/ink-pen.js'
 
 export interface EditorOptions {
   container: HTMLElement
@@ -20,6 +21,8 @@ export interface EditorOptions {
   camera?: Camera
   styles?: Partial<Styles>
   geoKind?: GeoId
+  eraserRadius?: number
+  eraserMode?: EraserMode
   /** Apple Notes / OpenNote style: page body is the primary surface; pen only when draw tool active. */
   documentMode?: boolean
   /** Viewport/canvas color around the page sheet (documentMode). */
@@ -51,6 +54,14 @@ export type EditorEvent =
   | 'edit'
   | 'scribbles'
   | 'penmode'
+
+export interface CanvasPerformanceSnapshot {
+  sampleCount: number
+  lastFrameMs: number
+  averageFrameMs: number
+  p95FrameMs: number
+  totalShapes: number
+}
 
 type BoardPatchProps = Partial<ShapeProps> & { [key: string]: unknown }
 
@@ -206,6 +217,9 @@ export interface Editor {
   setTool(tool: ToolId): void
   focusPageDocument(): void
   refreshPageDocument(): void
+  hasPendingEdits(): boolean
+  flushPendingEdits(): void
+  getSnapshot(): Snapshot
   setGeoKind(kind: GeoId): void
   setTheme(id: ThemeId | string): void
   setGrid(id: GridId): void
@@ -226,7 +240,7 @@ export interface Editor {
   bringToFront(): void
   sendToBack(): void
   shapesSorted(): ShapeRecord[]
-  hitTest(px: number, py: number): ShapeRecord | null
+  hitTest(px: number, py: number, tolerance?: number): ShapeRecord | null
 
   setRemoteScribbles(list: ScribbleStroke[]): void
   getScribbles(): ScribbleStroke[]
@@ -245,6 +259,7 @@ export interface Editor {
 
   requestRender(): void
   render(): void
+  getPerformanceSnapshot(reset?: boolean): CanvasPerformanceSnapshot
   resize(): void
   renderScene(
     ctx: CanvasRenderingContext2D,

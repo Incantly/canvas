@@ -14,6 +14,7 @@ import type {
   ColorId,
   DocumentBlock,
   DrawingStroke,
+  EraserMode,
   FillId,
   GeoId,
   InkPenDefinition,
@@ -34,7 +35,7 @@ import {
 import type { PageRecord, ShapeRecord } from "@incantly/canvas/headless";
 import { PageRichTextEditor } from "./PageRichTextEditor.js";
 import { PaperBackground } from "./PaperBackground.js";
-import { InkOverlay, type InkHit } from "../ink/InkOverlay.js";
+import { InkOverlay, type InkHit, type PixelEraseEdit } from "../ink/InkOverlay.js";
 import { ShapeLayer, type ShapeDraft } from "../shapes/ShapeLayer.js";
 import type { FormatBarConfig } from "./format-bar-config.js";
 
@@ -79,9 +80,13 @@ export interface PageViewportProps {
     tool: string;
     color: ColorId;
     size: SizeId;
+    penWidth?: number;
+    eraserRadius?: number;
+    eraserMode?: EraserMode;
     pens?: readonly InkPenDefinition[];
     onCommitStroke: (stroke: DrawingStroke) => void;
     onErase: (hits: InkHit[]) => void;
+    onErasePixel?: (edits: PixelEraseEdit[]) => void;
   };
   shapes?: readonly ShapeRecord[];
   geoKind?: GeoId;
@@ -149,6 +154,9 @@ export function PageViewport({
   const tool = ink?.tool ?? "type";
   const inkColor = ink?.color ?? "black";
   const inkSize = ink?.size ?? "m";
+  const inkPenWidth = ink?.penWidth;
+  const inkEraserRadius = ink?.eraserRadius;
+  const inkEraserMode = ink?.eraserMode ?? "stroke";
   const chromeLocked =
     !!ink &&
     !readonly &&
@@ -323,6 +331,9 @@ export function PageViewport({
             tool={tool}
             inkColor={inkColor}
             inkSize={inkSize}
+            inkPenWidth={inkPenWidth}
+            inkEraserRadius={inkEraserRadius}
+            inkEraserMode={inkEraserMode}
             inkPens={inkPens}
             ink={ink}
             pageShapes={shapesByPage.get(page.id) ?? EMPTY_SHAPES}
@@ -481,6 +492,9 @@ const PageSheet = memo(function PageSheet({
   tool,
   inkColor,
   inkSize,
+  inkPenWidth,
+  inkEraserRadius,
+  inkEraserMode,
   inkPens,
   ink,
   pageShapes,
@@ -509,6 +523,9 @@ const PageSheet = memo(function PageSheet({
   tool: string;
   inkColor: ColorId;
   inkSize: SizeId;
+  inkPenWidth?: number;
+  inkEraserRadius?: number;
+  inkEraserMode: EraserMode;
   inkPens: readonly InkPenDefinition[];
   ink?: PageViewportProps["ink"];
   pageShapes: readonly ShapeRecord[];
@@ -601,10 +618,14 @@ const PageSheet = memo(function PageSheet({
           tool={tool}
           color={inkColor}
           size={inkSize}
+          penWidth={inkPenWidth}
+          eraserRadius={inkEraserRadius}
+          eraserMode={inkEraserMode}
           pens={inkPens}
           readonly={!ink || readonly || !active}
           onCommitStroke={ink?.onCommitStroke}
           onErase={ink?.onErase}
+          onErasePixel={ink?.onErasePixel}
         />
       </View>
     </Pressable>

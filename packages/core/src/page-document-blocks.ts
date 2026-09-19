@@ -15,10 +15,19 @@ import {
   isImageBlock,
   isTextBlock,
 } from "./rich-text/types.js";
-import { emptyParagraph, validateBlocks } from "./rich-text/document.js";
+import {
+  emptyParagraph,
+  sanitizeColorId,
+  sanitizeImageAlt,
+  sanitizeImageDimension,
+  sanitizeImageSrc,
+  sanitizeSizeId,
+  validateBlocks,
+} from "./rich-text/document.js";
 import { layoutRichText, drawRichTextLayout } from "./rich-text/layout.js";
-import { blocksToHtml, htmlToBlocks } from "./rich-text/dom.js";
+import { blocksToHtml, createBlockElement, htmlToBlocks } from "./rich-text/dom.js";
 import { sanitizeInkPenId } from "./ink-pen-id.js";
+import { sanitizeInkWidth, inkBaseWidthPaper } from "./utils/ink/ink-pen.js";
 import {
   PAGE_DOC_FONT_SIZE,
   pageContentRect,
@@ -33,21 +42,28 @@ export const DRAWING_BLOCK_TOP_GAP = 28;
 const IMAGE_BLOCK_MARGIN = 8;
 
 function escapeHtmlAttr(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function normalizeImageBlock(raw: unknown): ImageBlock | null {
   if (!raw || typeof raw !== "object") return null;
   const b = raw as Record<string, unknown>;
   if (b.type !== "image") return null;
-  const src = typeof b.src === "string" ? b.src.trim() : "";
+  const src = sanitizeImageSrc(b.src);
   if (!src) return null;
-  const alt = typeof b.alt === "string" ? b.alt : undefined;
-  const width =
-    typeof b.width === "number" && b.width > 0 ? b.width : undefined;
-  const height =
-    typeof b.height === "number" && b.height > 0 ? b.height : undefined;
-  return { type: "image", src, alt, width, height };
+  const block: ImageBlock = { type: "image", src };
+  const alt = sanitizeImageAlt(b.alt);
+  if (alt !== undefined) block.alt = alt;
+  const width = sanitizeImageDimension(b.width);
+  if (width !== undefined) block.width = width;
+  const height = sanitizeImageDimension(b.height);
+  if (height !== undefined) block.height = height;
+  return block;
 }
 
 export function imageBlockHeight(block: ImageBlock, contentW: number): number {
@@ -83,10 +99,14 @@ function normalizeStroke(raw: unknown): DrawingStroke | null {
   );
   if (pts.length < 3) return null;
   const kind = s.kind === "highlight" ? "highlight" : "draw";
-  const color = typeof s.color === "string" ? (s.color as ColorId) : "black";
-  const size = typeof s.size === "string" ? (s.size as SizeId) : "m";
+  const color = sanitizeColorId(s.color) ?? "black";
+  const size = sanitizeSizeId(s.size) ?? "m";
   const pen = sanitizeInkPenId(s.pen);
-  return pen ? { pts, color, size, kind, pen } : { pts, color, size, kind };
+  const stroke: DrawingStroke = pen ? { pts, color, size, kind, pen } : { pts, color, size, kind };
+  if (typeof s.width === "number" && Number.isFinite(s.width)) {
+    stroke.width = sanitizeInkWidth(s.width, SIZES[size] ?? SIZES.m);
+  }
+  return stroke;
 }
 
 function normalizeDrawingBlock(raw: unknown): DrawingBlock | null {
@@ -423,11 +443,11 @@ function drawStrokeInBlock(
     ctx.globalAlpha = (ghost ? 0.3 : 1) * HIGHLIGHT_ALPHA;
     ctx.globalCompositeOperation = theme.id === "dark" ? "lighten" : "multiply";
     ctx.strokeStyle = col.stroke;
-    ctx.lineWidth = SIZES[stroke.size as SizeId] * HIGHLIGHT_SCALE;
+    ctx.lineWidth = inkBaseWidthPaper(stroke.size, { kind: "highlight" }, stroke.width);
   } else {
     ctx.globalAlpha = ghost ? 0.35 : 1;
     ctx.strokeStyle = col.stroke;
-    ctx.lineWidth = SIZES[stroke.size as SizeId] * 0.75;
+    ctx.lineWidth = inkBaseWidthPaper(stroke.size, { kind: "draw" }, stroke.width);
   }
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -546,33 +566,62 @@ export function drawPageDocumentBlocks(
   return layout;
 }
 
+export function createDocumentBlockElement(
+  block: DocumentBlock,
+  index: number,
+): HTMLElement {
+  if (isDrawingBlock(block)) {
+    const slot = document.createElement("div");
+    slot.className = "ic-drawing-slot ic-drawing-overlay";
+    slot.dataset.docIndex = String(index);
+    slot.hidden = true;
+    slot.setAttribute("aria-hidden", "true");
+    return slot;
+  }
+  if (isImageBlock(block)) {
+    const cleanSrc = sanitizeImageSrc(block.src);
+    const wrap = document.createElement("div");
+    wrap.className = "ic-rt-block ic-rt-image-block";
+    wrap.setAttribute("data-block", "image");
+    wrap.dataset.docIndex = String(index);
+    wrap.setAttribute("contenteditable", "false");
+    if (cleanSrc) {
+      const img = document.createElement("img");
+      img.setAttribute("src", cleanSrc);
+      const alt = sanitizeImageAlt(block.alt);
+      if (alt !== undefined) img.setAttribute("alt", alt);
+      const w = sanitizeImageDimension(block.width);
+      const h = sanitizeImageDimension(block.height);
+      if (w !== undefined && h !== undefined) {
+        img.setAttribute("width", String(Math.floor(w)));
+        img.setAttribute("height", String(Math.floor(h)));
+      }
+      img.setAttribute("draggable", "false");
+      wrap.appendChild(img);
+    }
+    return wrap;
+  }
+  const el = createBlockElement(block);
+  el.dataset.docIndex = String(index);
+  return el;
+}
+
 export function documentBlockToDomHtml(
   block: DocumentBlock,
   index: number,
 ): string {
-  if (isDrawingBlock(block)) {
-    return `<div class="ic-drawing-slot ic-drawing-overlay" data-doc-index="${index}" hidden aria-hidden="true"></div>`;
-  }
-  if (isImageBlock(block)) {
-    const alt = block.alt ? ` alt="${escapeHtmlAttr(block.alt)}"` : "";
-    const dims =
-      block.width && block.height
-        ? ` width="${block.width}" height="${block.height}"`
-        : "";
-    return (
-      `<div class="ic-rt-block ic-rt-image-block" data-block="image" data-doc-index="${index}" contenteditable="false">` +
-      `<img src="${escapeHtmlAttr(block.src)}"${alt}${dims} draggable="false" />` +
-      `</div>`
-    );
-  }
-  const html = blocksToHtml([block]);
-  return html.replace(/^<\w+\s/, (open) => `${open}data-doc-index="${index}" `);
+  // Compat serializer — builds via DOM APIs then serializes, so the output
+  // cannot carry injected nodes/attributes from hostile snapshots.
+  const el = createDocumentBlockElement(block, index);
+  const tmp = document.createElement("div");
+  tmp.appendChild(el);
+  return tmp.innerHTML;
 }
 
 export function documentBlocksToDomHtml(blocks: DocumentBlock[]): string {
-  return blocks
-    .map((block, index) => documentBlockToDomHtml(block, index))
-    .join("");
+  const tmp = document.createElement("div");
+  blocks.forEach((block, index) => tmp.appendChild(createDocumentBlockElement(block, index)));
+  return tmp.innerHTML;
 }
 
 export function parseSingleBlockFromDom(
@@ -589,11 +638,12 @@ export function parseSingleBlockFromDom(
     child.classList.contains("ic-rt-image-block")
   ) {
     const img = child.querySelector("img");
-    const src = img?.getAttribute("src") ?? "";
+    const rawSrc = img?.getAttribute("src") ?? "";
+    const src = sanitizeImageSrc(rawSrc);
     if (!src) return null;
-    const alt = img?.getAttribute("alt") ?? undefined;
-    const width = img?.width || undefined;
-    const height = img?.height || undefined;
+    const alt = sanitizeImageAlt(img?.getAttribute("alt") ?? undefined);
+    const width = sanitizeImageDimension(img?.width || undefined);
+    const height = sanitizeImageDimension(img?.height || undefined);
     return {
       type: "image",
       src,

@@ -4,8 +4,6 @@
    light glass on the light one. Theme switches animate because the surfaces
    transition background/color/border while the variables flip. */
 
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:wght@400;500;600&display=swap');
-
 .ic-root {
   position: relative;
   width: 100%;

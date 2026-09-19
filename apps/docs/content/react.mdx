@@ -40,13 +40,19 @@ real dimensions.
 | `hideUi` | `boolean` | `false` | Hide the stock toolbar — [bring your own](/docs/headless/) |
 | `themeToggle` | `boolean` | `true` | Show the theme switch in the board menu |
 | `gridControl` | `boolean` | `true` | Show the grid switch in the board menu |
-| `watermark` | `boolean` | `true` | The [corner mark](/docs/watermark/); mount-time only |
+| `watermark` | `boolean` | `true` | The [corner mark](/docs/watermark/); live-switchable |
 | `store` | `Store` | — | External store for [controlled usage](#controlled-usage) |
-| `snapshot` | JSON | — | Document loaded on mount (ignored when `store` is given) |
-| `camera` | `{ x, y, z }` | — | Initial camera |
-| `styles` | `{ color, size, dash, fill, font }` | — | Initial pen styles |
-| `autoFit` | `boolean` | `false` | Fit content on mount and container resize |
+| `initialSnapshot` | JSON | — | Uncontrolled document loaded once (ignored when `store` is given) |
+| `initialCamera` | `{ x, y, z }` | — | Initial camera |
+| `initialStyles` | `{ color, size, dash, fill, font }` | — | Initial pen styles |
+| `fitOnMount` | `boolean` | `false` | Fit content once after mount |
+| `fitOnResize` | `boolean` | `false` | Fit again when the host resizes |
+| `uiTools`, `uiIcons`, `hidePagesBar` | — | — | Live toolbar configuration |
 | `className`, `style` | — | — | Applied to the host div |
+
+`snapshot`, `camera`, `styles`, and `autoFit` remain as deprecated aliases.
+`documentMode`, `touchUi`, and `documentUi` are initialization-only; remount the
+component (usually by changing its React `key`) to change them.
 
 ## Callbacks
 
@@ -82,6 +88,10 @@ ref.current.editor.setTool('draw')
 ref.current.editor.fitContent({ animate: 220 })
 ref.current.editor.store.undo()
 ref.current.ui.setHidden(true)
+
+// Safe persistence boundaries: pending rich-text input is flushed first.
+const snapshot = ref.current.getSnapshot()
+ref.current.loadSnapshot(nextSnapshot, true)
 ```
 
 ## Controlled usage
@@ -100,3 +110,18 @@ function App({ savedSnapshot }) {
 
 Two components rendering the same `store` show the same live document —
 that's the quickest way to see the [sync model](/docs/sync/) working.
+
+If a remote store update arrives while the rich-text document has a focused
+local draft, the editor preserves both versions and emits `documentconflict`.
+Resolve it explicitly with `editor.resolveDocumentConflict('local')` or
+`editor.resolveDocumentConflict('remote')`.
+
+## Rendering and fonts
+
+`Canvas` requires the browser DOM, so render it from a client component in SSR
+frameworks. The package CSS uses system fallbacks and makes no runtime font
+request. Load any preferred web fonts in your application shell.
+
+React Strict Mode's development mount-cleanup-mount cycle is supported. Keep an
+external `Store` when document state must survive a remount; the component
+flushes pending rich-text input during cleanup.

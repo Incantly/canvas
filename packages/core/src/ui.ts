@@ -302,6 +302,8 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
         const gb = el<HTMLButtonElement>('button', 'ic-tool' + (editor.geoKind === g ? ' on' : ''))
         gb.innerHTML = ICONS[g] || ''
         gb.title = g
+        gb.type = 'button'
+        gb.setAttribute('aria-label', g)
         gb.addEventListener('click', (ev) => {
           ev.stopPropagation()
           editor.setGeoKind(g)
@@ -318,6 +320,8 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     b.dataset.name = name
     b.innerHTML = iconFor(name)
     b.title = (TIPS as any)[name] || name
+    b.type = 'button'
+    b.setAttribute('aria-label', b.title)
     b.addEventListener('pointerdown', (e) => e.stopPropagation())
     b.addEventListener('click', (e) => {
       e.stopPropagation()
@@ -426,6 +430,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
   const addPageBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-add')
   addPageBtn.type = 'button'
   addPageBtn.title = isDocMode ? 'Add page' : 'Add page (stay on current view)'
+  addPageBtn.setAttribute('aria-label', addPageBtn.title)
   addPageBtn.textContent = '+'
   addPageBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
   addPageBtn.addEventListener('click', (e) => {
@@ -443,6 +448,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     'ic-page-btn ic-page-remove',
   )
   removePageBtn.title = 'Delete page'
+  removePageBtn.setAttribute('aria-label', removePageBtn.title)
   pagesBar.appendChild(removePageBtn)
 
   const PAPER_SIZES: PaperSizeId[] = ['letter', 'a4']
@@ -534,9 +540,11 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     paperSizeBtn.title = sizeId
       ? `Paper size ${SIZE_LABEL[sizeId]} — click to change`
       : 'Paper size'
+    paperSizeBtn.setAttribute('aria-label', paperSizeBtn.title)
     const style = page && validatePaperStyle(page.paperStyle) ? page.paperStyle : 'plain'
     paperStyleBtn.textContent = STYLE_LABEL[style]
     paperStyleBtn.title = `Paper ${STYLE_LABEL[style]} — click to change`
+    paperStyleBtn.setAttribute('aria-label', paperStyleBtn.title)
   }
   const refreshLayout = (): void => {
     const layout = editor.pageLayout()
@@ -545,6 +553,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
       layout === 'vertical'
         ? 'Vertical — new pages below. Click for horizontal.'
         : 'Horizontal — pages in a row (1, 2, 3…). Click for vertical.'
+    layoutBtn.setAttribute('aria-label', layoutBtn.title)
   }
   const refreshGap = (): void => {
     const gap = editor.pageGap()
@@ -845,6 +854,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
       if (!b) continue
       if (n === 'image') continue
       b.classList.toggle('on', editor.tool === n)
+      b.setAttribute('aria-pressed', String(editor.tool === n))
     }
     const geoBtn = dockBtns.get('geo')!
     geoBtn.innerHTML = (ICONS as any)[editor.geoKind] || ''
@@ -857,12 +867,16 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     toolsBtn.innerHTML =
       iconFor(editor.tool === 'geo' ? editor.geoKind : editor.tool) || iconFor('select')
     toolsBtn.classList.toggle('on', popover?.name === 'tools')
+    toolsBtn.setAttribute('aria-expanded', String(popover?.name === 'tools'))
     const curStyles = editor.currentStyles()
     styleDot.style.background =
       editor.theme.colors[((curStyles.color || 'blue') as ColorId)].stroke
     menuBtn.classList.toggle('on', popover?.name === 'menu')
     styleBtn.classList.toggle('on', popover?.name === 'styles')
     moreBtn.classList.toggle('on', popover?.name === 'more')
+    menuBtn.setAttribute('aria-expanded', String(popover?.name === 'menu'))
+    styleBtn.setAttribute('aria-expanded', String(popover?.name === 'styles'))
+    moreBtn.setAttribute('aria-expanded', String(popover?.name === 'more'))
   }
   const offs: Array<() => void> = [
     editor.on('tool', refresh),

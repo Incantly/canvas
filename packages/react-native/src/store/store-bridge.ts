@@ -1,12 +1,13 @@
 import type { MutableRefObject } from "react";
 import type {
   ColorId,
+  EraserMode,
   SizeId,
   Snapshot,
   VersionManager,
   Store,
 } from "@incantly/canvas/headless";
-import { COLOR_IDS, SIZE_IDS } from "@incantly/canvas/headless";
+import { COLOR_IDS, SIZE_IDS, sanitizeEraserMode, sanitizeEraserRadius, sanitizeInkWidth, SIZES, DEFAULT_ERASER_RADIUS_PAPER } from "@incantly/canvas/headless";
 import type { CanvasRef, VersionSummary } from "../types/index.js";
 
 export interface StoreBridgeDeps {
@@ -18,10 +19,16 @@ export interface StoreBridgeDeps {
   toolRef: MutableRefObject<string>;
   colorRef?: MutableRefObject<ColorId>;
   sizeRef?: MutableRefObject<SizeId>;
+  penWidthRef?: MutableRefObject<number | undefined>;
+  eraserRadiusRef?: MutableRefObject<number | undefined>;
+  eraserModeRef?: MutableRefObject<EraserMode>;
   currentPageIdRef?: MutableRefObject<string>;
   onToolChange?: (tool: string) => void;
   onColorChange?: (color: ColorId) => void;
   onSizeChange?: (size: SizeId) => void;
+  onPenWidthChange?: (width: number) => void;
+  onEraserRadiusChange?: (radius: number) => void;
+  onEraserModeChange?: (mode: EraserMode) => void;
   allowedInkTools?: () => string[];
 }
 
@@ -35,10 +42,16 @@ export function createStoreBridge(deps: StoreBridgeDeps): CanvasRef {
     toolRef,
     colorRef,
     sizeRef,
+    penWidthRef,
+    eraserRadiusRef,
+    eraserModeRef,
     currentPageIdRef,
     onToolChange,
     onColorChange,
     onSizeChange,
+    onPenWidthChange,
+    onEraserRadiusChange,
+    onEraserModeChange,
     allowedInkTools,
   } = deps;
 
@@ -66,6 +79,24 @@ export function createStoreBridge(deps: StoreBridgeDeps): CanvasRef {
         sizeRef.current = value as SizeId;
         onSizeChange?.(value as SizeId);
       }
+      notify();
+    },
+    setPenWidth(width) {
+      if (!penWidthRef) return;
+      penWidthRef.current = sanitizeInkWidth(width, SIZES.m);
+      onPenWidthChange?.(penWidthRef.current);
+      notify();
+    },
+    setEraserRadius(radius) {
+      if (!eraserRadiusRef) return;
+      eraserRadiusRef.current = sanitizeEraserRadius(radius, DEFAULT_ERASER_RADIUS_PAPER);
+      onEraserRadiusChange?.(eraserRadiusRef.current);
+      notify();
+    },
+    setEraserMode(mode) {
+      if (!eraserModeRef) return;
+      eraserModeRef.current = sanitizeEraserMode(mode);
+      onEraserModeChange?.(eraserModeRef.current);
       notify();
     },
     setDocumentBackground(_color) {

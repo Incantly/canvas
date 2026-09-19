@@ -17,6 +17,8 @@ import type {
 export interface CanvasRef {
   readonly editor: Editor | null
   readonly ui: BoardUI | null
+  getSnapshot(): Snapshot | null
+  loadSnapshot(snapshot: Snapshot, fit?: boolean): void
 }
 
 export interface CanvasProps {
@@ -28,11 +30,25 @@ export interface CanvasProps {
   gridControl?: boolean
   watermark?: boolean
   store?: Store
+  /** Initial uncontrolled snapshot. Ignored when `store` is provided and after mount. */
+  initialSnapshot?: Snapshot
+  /** @deprecated Use `initialSnapshot`. */
   snapshot?: Snapshot
+  /** Initial camera only; use the Editor ref for later camera changes. */
+  initialCamera?: Camera
+  /** @deprecated Use `initialCamera`. */
   camera?: Camera
+  /** Initial drawing styles only; use the Editor ref for later style changes. */
+  initialStyles?: Partial<Styles>
+  /** @deprecated Use `initialStyles`. */
   styles?: Partial<Styles>
+  /** Fit once after mount. */
+  fitOnMount?: boolean
+  /** Refit whenever the host element is resized. */
+  fitOnResize?: boolean
+  /** @deprecated Use `fitOnMount` and `fitOnResize`. */
   autoFit?: boolean
-  /** Page body is the primary typing surface (OpenNote / Apple Notes style). */
+  /** Initialization-only. Page body is the primary typing surface. */
   documentMode?: boolean
   /** Primary dock tools (notes preset when documentMode). */
   uiTools?: ToolId[]
@@ -44,9 +60,9 @@ export interface CanvasProps {
   documentBackground?: string | null
   /** Page sheet color behind rich text (documentMode). */
   documentPaperColor?: string | null
-  /** Touch-first formatting bar (default: auto-detect). Set false on desktop web. */
+  /** Initialization-only touch-first formatting bar. */
   touchUi?: boolean
-  /** Slash menu and selection toolbar for document mode (fully customizable). */
+  /** Initialization-only slash menu and selection toolbar configuration. */
   documentUi?: DocumentUiOptions
   onMount?: (editor: Editor, ui: BoardUI) => void
   onChange?: (diff: Diff, source: DiffSource, editor: Editor) => void

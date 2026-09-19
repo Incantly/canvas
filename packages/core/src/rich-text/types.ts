@@ -44,6 +44,12 @@ export interface DrawingStroke {
   kind: 'draw' | 'highlight'
   /** Host pen id. Optional; web ignores it and renders via `kind`. */
   pen?: string
+  /**
+   * Explicit base width in paper units (replaces the `SIZES[size]` lookup).
+   * Optional — absent means legacy `SizeId` rendering, so old snapshots and
+   * old readers are unaffected.
+   */
+  width?: number
 }
 
 export interface DrawingBlock {

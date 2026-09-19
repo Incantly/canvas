@@ -1,5 +1,13 @@
 import type { BlockType, InlineSpan, TextBlock } from './types.js'
-import { mergeAdjacentSpans, validateBlocks } from './document.js'
+import {
+  mergeAdjacentSpans,
+  sanitizeColorId,
+  sanitizeFontId,
+  sanitizeFontSize,
+  sanitizeLinkHref,
+  sanitizeLinkTitle,
+  validateBlocks,
+} from './document.js'
 
 const BLOCK_TAGS: Record<BlockType, string> = {
   paragraph: 'div',
@@ -13,48 +21,85 @@ const BLOCK_TAGS: Record<BlockType, string> = {
   divider: 'div',
 }
 
-function spanToHtml(span: InlineSpan): string {
-  let html = escapeHtml(span.text)
-  if (span.code) html = `<code>${html}</code>`
-  if (span.bold) html = `<b>${html}</b>`
-  if (span.italic) html = `<i>${html}</i>`
-  if (span.underline) html = `<u>${html}</u>`
-  if (span.strikethrough) html = `<s>${html}</s>`
-  if (span.link?.href) {
-    html = `<a href="${escapeAttr(span.link.href)}"${span.link.title ? ` title="${escapeAttr(span.link.title)}"` : ''}>${html}</a>`
+/**
+ * Build a span element through DOM APIs only. Text is assigned via
+ * `textContent`, styles via the `style` object, and link attributes via
+ * `setAttribute` after allowlist validation — never via HTML strings.
+ */
+export function createSpanElement(span: InlineSpan): Node {
+  // Base text node — safe by construction.
+  let node: Node = document.createTextNode(span.text ?? '')
+  const wrap = (tag: string): void => {
+    const el = document.createElement(tag)
+    el.appendChild(node)
+    node = el
   }
-  const style: string[] = []
-  if (span.fontSize) style.push(`font-size:${span.fontSize}px`)
-  if (span.font) style.push(`font-family:var(--ic-font-${span.font})`)
-  if (span.color) style.push(`color:var(--ic-color-${span.color})`)
-  if (style.length) html = `<span style="${style.join(';')}">${html}</span>`
-  return html || '<br>'
+  if (span.code) wrap('code')
+  if (span.bold) wrap('b')
+  if (span.italic) wrap('i')
+  if (span.underline) wrap('u')
+  if (span.strikethrough) wrap('s')
+  if (span.link) {
+    const href = sanitizeLinkHref(span.link.href)
+    if (href) {
+      const a = document.createElement('a')
+      a.setAttribute('href', href)
+      const title = sanitizeLinkTitle(span.link.title)
+      if (title !== undefined) a.setAttribute('title', title)
+      // Links from snapshots never get scriptable targets; when a host opens
+      // them in a new context, `noopener` prevents window.opener abuse.
+      a.setAttribute('rel', 'noopener noreferrer')
+      a.appendChild(node)
+      node = a
+    }
+  }
+  const color = sanitizeColorId(span.color)
+  const font = sanitizeFontId(span.font)
+  const fontSize = sanitizeFontSize(span.fontSize)
+  if (color !== undefined || font !== undefined || fontSize !== undefined) {
+    const outer = document.createElement('span')
+    if (fontSize !== undefined) outer.style.fontSize = `${fontSize}px`
+    if (font !== undefined) outer.style.fontFamily = `var(--ic-font-${font})`
+    if (color !== undefined) outer.style.color = `var(--ic-color-${color})`
+    outer.appendChild(node)
+    node = outer
+  }
+  return node
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-function escapeAttr(s: string): string {
-  return escapeHtml(s).replace(/"/g, '&quot;')
+export function createBlockElement(block: TextBlock): HTMLElement {
+  const tag = BLOCK_TAGS[block.type] ?? 'div'
+  const el = document.createElement(tag)
+  el.className = `ic-rt-block ic-rt-${block.type}`
+  el.setAttribute('data-block', block.type)
+  if (typeof block.indent === 'number' && Number.isFinite(block.indent) && block.indent > 0) {
+    el.setAttribute('data-indent', String(Math.floor(block.indent)))
+  }
+  if (block.type === 'divider') {
+    const hr = document.createElement('hr')
+    hr.setAttribute('contenteditable', 'false')
+    el.appendChild(hr)
+    return el
+  }
+  if (!block.content.length || block.content.every((s) => !s.text)) {
+    el.appendChild(document.createElement('br'))
+    return el
+  }
+  for (const span of block.content) {
+    if (!span.text) continue
+    el.appendChild(createSpanElement(span))
+  }
+  if (!el.hasChildNodes()) el.appendChild(document.createElement('br'))
+  return el
 }
 
 export function blocksToHtml(blocks: TextBlock[]): string {
-  return blocks
-    .map((block) => {
-      const tag = BLOCK_TAGS[block.type]
-      const cls = `ic-rt-block ic-rt-${block.type}`
-      const indent = block.indent ? ` data-indent="${block.indent}"` : ''
-      const inner =
-        block.type === 'divider'
-          ? '<hr contenteditable="false">'
-          : block.content.map(spanToHtml).join('') || '<br>'
-      return `<${tag} class="${cls}" data-block="${block.type}"${indent}>${inner}</${tag}>`
-    })
-    .join('')
+  // Compat serializer: builds via DOM APIs above, then serializes. The
+  // resulting HTML cannot contain nodes/attributes outside the validated
+  // model because the DOM was constructed element-by-element.
+  const container = document.createElement('div')
+  for (const block of blocks) container.appendChild(createBlockElement(block))
+  return container.innerHTML
 }
 
 function nodeToSpans(node: Node, inherited: InlineSpan = { text: '' }): InlineSpan[] {
@@ -75,13 +120,15 @@ function nodeToSpans(node: Node, inherited: InlineSpan = { text: '' }): InlineSp
   if (tag === 'code') span.code = true
   if (tag === 'a') {
     const href = el.getAttribute('href')
-    if (href) span.link = { href, title: el.getAttribute('title') || undefined }
+    const clean = href ? sanitizeLinkHref(href) : null
+    if (clean) span.link = { href: clean, title: sanitizeLinkTitle(el.getAttribute('title')) }
     span.underline = true
   }
   const fs = el.style.fontSize
   if (fs && fs.endsWith('px')) {
     const n = parseFloat(fs)
-    if (Number.isFinite(n)) span.fontSize = n
+    const clean = sanitizeFontSize(n)
+    if (clean !== undefined) span.fontSize = clean
   }
   const out: InlineSpan[] = []
   for (const child of Array.from(el.childNodes)) out.push(...nodeToSpans(child, span))
@@ -133,7 +180,8 @@ export function createRichEditElement(): HTMLDivElement {
 
 export function execFormat(cmd: string, value?: string): void {
   if (cmd === 'createLink') {
-    document.execCommand('createLink', false, value || 'https://')
+    const clean = value ? sanitizeLinkHref(value) : null
+    document.execCommand('createLink', false, clean ?? 'https://')
     return
   }
   document.execCommand(cmd, false, value)
@@ -141,14 +189,15 @@ export function execFormat(cmd: string, value?: string): void {
 
 /** Apply pixel font size to the current non-collapsed selection (page doc + shape editors). */
 export function applyInlineFontSize(px: number): boolean {
-  if (!Number.isFinite(px) || px <= 0) return false
+  const clean = sanitizeFontSize(px)
+  if (clean === undefined) return false
   const sel = window.getSelection()
   if (!sel?.rangeCount || sel.isCollapsed) return false
   const range = sel.getRangeAt(0)
   if (!range.toString()) return false
 
   const span = document.createElement('span')
-  span.style.fontSize = `${px}px`
+  span.style.fontSize = `${clean}px`
 
   try {
     range.surroundContents(span)

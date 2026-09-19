@@ -4,6 +4,7 @@ import type {
   DashId,
   Diff,
   DiffSource,
+  EraserMode,
   FillId,
   FontId,
   GridId,
@@ -40,6 +41,12 @@ export interface CanvasRef {
   applyDiff(diff: Diff): void
   setTool(tool: ToolId | string): void
   setStyle(key: keyof Styles, value: ColorId | SizeId | DashId | FillId | FontId): void
+  /** Continuous pen width in paper units (slider). */
+  setPenWidth(width: number): void
+  /** Eraser footprint radius in paper units. */
+  setEraserRadius(radius: number): void
+  /** Eraser behavior: whole-stroke vs pixel erase. */
+  setEraserMode(mode: EraserMode): void
   setDocumentBackground(color: string | null): void
   setDocumentPaperColor(color: string | null): void
   setGrid(grid: GridId): void

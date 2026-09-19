@@ -19,6 +19,7 @@ import type {
   PageLayout,
   Diff,
   Theme,
+  EditorOptions,
 } from "./types/index.js";
 import { Store, newId } from "./store.js";
 import {
@@ -79,6 +80,8 @@ import {
   layoutPageDocument,
   drawPageDocumentBlocks,
   drawDocumentInkOverlay,
+  strokeBoundsHeight,
+  DRAWING_BLOCK_MIN_HEIGHT,
 } from "./page-document-blocks.js";
 import type { DocumentBlock } from "./rich-text/types.js";
 import {
@@ -94,6 +97,27 @@ import {
   clamp,
   rotWith,
 } from "./geometry.js";
+import { createDrawShape } from "./utils/shapes/create.js";
+import type { EraserMode } from "./utils/ink/ink-pen.js";
+import {
+  DEFAULT_ERASER_RADIUS_PAPER,
+  sanitizeEraserMode,
+  sanitizeEraserRadius,
+  sanitizeInkWidth,
+  inkBaseWidthPaper,
+  inkOutlineWidthPaper,
+} from "./utils/ink/ink-pen.js";
+import {
+  eraseCirclesHitBounds,
+  erasedPointRanges,
+  hitEraseStroke,
+  isErasureFragment,
+  keptPointRuns,
+  mergeEraseRanges,
+  slicePackedRuns,
+  splitStrokeByEraser,
+  type EraseCircle,
+} from "./utils/ink/erase.js";
 
 const ZOOM_MIN = 0.05;
 const ZOOM_MAX = 8;
@@ -269,24 +293,6 @@ const bendMidpoint = (pr: { dx: number; dy: number; bend?: number }): XY => {
   return { x: mid[mi], y: mid[mi + 1] };
 };
 
-interface EditorCtorOpts {
-  container: HTMLElement;
-  store?: Store;
-  theme?: ThemeId | string;
-  grid?: GridId;
-  readonly?: boolean;
-  camera?: Camera;
-  styles?: Partial<Styles>;
-  geoKind?: GeoId;
-  documentMode?: boolean;
-  documentBackground?: string | null;
-  documentPaperColor?: string | null;
-  touchUi?: boolean;
-  documentUi?: import("./document-ui-config.js").DocumentUiOptions;
-  promptLink?: () => Promise<string | null>;
-  readClipboard?: () => Promise<string>;
-}
-
 export class Editor {
   container: HTMLElement;
   canvas: HTMLCanvasElement;
@@ -308,6 +314,10 @@ export class Editor {
   tool: ToolId;
   selection: Set<string>;
   currentPageId: string;
+  /** Eraser footprint radius in paper/world units (both erase modes). */
+  eraserRadius: number;
+  /** Eraser behavior: whole strokes vs cut segments. */
+  eraserMode: EraserMode;
   session!: Session | null;
   editing!: Editing | null;
   scribbles!: ScribbleStroke[];
@@ -321,6 +331,7 @@ export class Editor {
   _penDown!: boolean;
   _events!: Map<string, Set<(...args: any[]) => void>>;
   _raf!: number;
+  private _frameTimes: number[] = [];
   _camAnim!: number;
   _fitEaseRaf!: number;
   _laserRaf!: number;
@@ -371,6 +382,8 @@ export class Editor {
       camera,
       styles,
       geoKind,
+      eraserRadius,
+      eraserMode,
       documentMode = false,
       documentBackground = null,
       documentPaperColor = null,
@@ -378,7 +391,7 @@ export class Editor {
       documentUi,
       promptLink,
       readClipboard,
-    }: EditorCtorOpts = {} as EditorCtorOpts,
+    }: Omit<EditorOptions, "store"> & { store?: Store },
   ) {
     this.container = container;
     this.store = store || new Store();
@@ -389,6 +402,8 @@ export class Editor {
     this.camera = camera || { x: 0, y: 0, z: 1 };
     this.styles = { ...DEFAULT_STYLES, ...(styles || {}) };
     this.geoKind = geoKind || "rectangle";
+    this.eraserRadius = sanitizeEraserRadius(eraserRadius, DEFAULT_ERASER_RADIUS_PAPER);
+    this.eraserMode = sanitizeEraserMode(eraserMode);
     this.documentMode = !!documentMode;
     this._touchUi = touchUi;
     this._documentUi = documentUi;
@@ -477,6 +492,7 @@ export class Editor {
       emitPage: () => self.emit("page", self.currentPageId),
       copySelection: () => self.copySelection(),
       pasteFromClipboard: () => self.pasteFromClipboard(),
+      emitDocumentConflict: (details) => self.emit("documentconflict", details),
     };
     this.pageDocUI = new PageDocumentUI(host);
     this.pageDocUI.setDocumentMode(this.documentMode);
@@ -499,7 +515,7 @@ export class Editor {
         this.currentPageId = pages[0].id;
       }
       this._pruneSelection();
-      if (!this.pageDocUI.focused) this.pageDocUI.syncFromStore();
+      this.pageDocUI.onStoreChange();
       this.requestRender();
       this.emit("change");
     });
@@ -657,6 +673,7 @@ export class Editor {
     }: { fit?: boolean; animate?: number; preserveZoom?: boolean } = {},
   ): void {
     if (!this.store.page(id) || id === this.currentPageId) return;
+    this.flushPendingEdits();
     this._cancelSession();
     this._commitText();
     this.pageDocUI?.blur();
@@ -715,6 +732,7 @@ export class Editor {
       paperSize?: PaperSizeId;
     },
   ): boolean {
+    if (pageId === this.currentPageId) this.flushPendingEdits();
     const ok = this.store.setPagePaper(pageId, opts);
     if (!ok) return false;
     this._cachedPaperH = null;
@@ -737,6 +755,7 @@ export class Editor {
     if (idx < 0) return false;
     const next =
       pages[idx + 1]?.id ?? pages[idx - 1]?.id ?? this.currentPageId;
+    if (id === this.currentPageId) this.flushPendingEdits();
     if (!this.store.removePage(id)) return false;
     if (this.currentPageId === id) this.setPage(next, { fit: true });
     else this.emit("page", this.currentPageId);
@@ -991,6 +1010,16 @@ export class Editor {
       this.emit("tool");
     }
   }
+  setEraserRadius(radius: number): void {
+    this.eraserRadius = sanitizeEraserRadius(radius, DEFAULT_ERASER_RADIUS_PAPER);
+    this.emit("tool");
+    this.requestRender();
+  }
+  setEraserMode(mode: EraserMode): void {
+    this.eraserMode = sanitizeEraserMode(mode);
+    this.emit("tool");
+    this.requestRender();
+  }
   setTheme(id: ThemeId | string): void {
     const t = themeOf(id);
     if (t === this.theme) return;
@@ -1084,13 +1113,45 @@ export class Editor {
     this.emit("grid");
   }
   setReadonly(ro: boolean): void {
+    if (ro) this.flushPendingEdits();
     this.readonly = !!ro;
     if (ro) {
       this._cancelSession();
       this._commitText();
       this.setSelection([]);
     }
+    this.pageDocUI?.setReadonly(this.readonly);
     this._syncCursor();
+  }
+  /** Resolve a focused document conflict by keeping the local draft or the Store value. */
+  resolveDocumentConflict(strategy: "local" | "remote"): void {
+    this.pageDocUI?.resolveConflict(strategy);
+  }
+  /**
+   * True when a document keystroke is deferred via rAF and not yet in the Store.
+   */
+  hasPendingEdits(): boolean {
+    return this.pageDocUI?.hasPendingEdits() ?? false;
+  }
+  /**
+   * Synchronously commit any deferred document input to the Store.
+   * Call before snapshot reads, page/store switches, visibility changes,
+   * destructive commands, and teardown (unmount/destroy).
+   */
+  flushPendingEdits(): void {
+    try {
+      this.pageDocUI?.flushPendingEdits();
+    } catch {
+      /* flush is best-effort during teardown */
+    }
+  }
+  /**
+   * Flush pending edits, then return the Store snapshot. Use this instead of
+   * `store.getSnapshot()` when the editor may have an uncommitted keystroke.
+   */
+  getSnapshot(): import("./types/operations.js").Snapshot {
+    this.flushPendingEdits();
+    return this.store.getSnapshot();
   }
   setPenMode(on: boolean): void {
     on = !!on;
@@ -1167,6 +1228,7 @@ export class Editor {
     return b;
   }
   undo(): void {
+    this.flushPendingEdits();
     this.store.undo();
     if (this.documentMode) {
       this.pageDocUI?.syncFromStore();
@@ -1174,6 +1236,7 @@ export class Editor {
     }
   }
   redo(): void {
+    this.flushPendingEdits();
     this.store.redo();
     if (this.documentMode) {
       this.pageDocUI?.syncFromStore();
@@ -1191,6 +1254,7 @@ export class Editor {
   }
   clearBoard(): void {
     if (!this._pageShapes().length) return;
+    this.flushPendingEdits();
     this._cancelSession();
     this._commitText();
     this.store.clearPage(this.currentPageId);
@@ -1250,8 +1314,8 @@ export class Editor {
           (a.id < b.id ? -1 : 1),
       );
   }
-  hitTest(px: number, py: number): ShapeRecord | null {
-    const tol = 8 / this.camera.z;
+  hitTest(px: number, py: number, tolerance?: number): ShapeRecord | null {
+    const tol = tolerance ?? 8 / this.camera.z;
     const list = this.shapesSorted();
     for (let i = list.length - 1; i >= 0; i--) {
       if (hitShape(list[i], px, py, tol, this.store)) return list[i];
@@ -1841,7 +1905,11 @@ export class Editor {
       this._eraseDocStrokeAt(p);
       return;
     }
-    const hit = this.hitTest(p.x, p.y);
+    if (this.eraserMode === "pixel") {
+      this._eraseBoardPixelAt(p);
+      return;
+    }
+    const hit = this.hitTest(p.x, p.y, this.eraserRadius);
     if (hit) (this.session as SessionErasing).hits.add(hit.id);
   }
   _eraseDocStrokeAt(p: XY): void {
@@ -1849,13 +1917,93 @@ export class Editor {
     if (!pp) return;
     const page = this.currentPage();
     if (!page) return;
-    const blocks = this.store.pageDocumentBlocks(page.id);
-    const tol = 10 / this.camera.z;
-    const hit = hitDocumentStroke(blocks, pp.px, pp.py, tol);
-    if (hit) {
-      const next = removeDocumentStroke(blocks, hit.blockIndex, hit.strokeIndex);
-      this.store.setPageDocument(page.id, next);
+    const radius = this.eraserRadius;
+    if (this.eraserMode === "pixel") {
+      const circles = [{ x: pp.px, y: pp.py, r: radius }];
+      const diameter = radius * 2;
+      const blocks = this.store.pageDocumentBlocks(page.id);
+      let changed = false;
+      const next = blocks.map((block) => {
+        if (block.type !== "drawing") return block;
+        const strokes: typeof block.strokes = [];
+        let blockChanged = false;
+        for (const stroke of block.strokes) {
+          const hw = inkBaseWidthPaper(stroke.size, { kind: stroke.kind }, stroke.width) / 2;
+          const split = splitStrokeByEraser(stroke.pts, circles, hw);
+          if (split.length === 1 && split[0] === stroke.pts) {
+            strokes.push(stroke);
+            continue;
+          }
+          blockChanged = true;
+          for (const piece of split) {
+            if (isErasureFragment(piece, diameter)) continue;
+            strokes.push({ ...stroke, pts: piece });
+          }
+        }
+        if (!blockChanged) return block;
+        changed = true;
+        return {
+          ...block,
+          strokes,
+          height: Math.max(DRAWING_BLOCK_MIN_HEIGHT, strokeBoundsHeight(strokes)),
+        };
+      });
+      if (changed) this.store.setPageDocument(page.id, next);
+      return;
     }
+    const blocks = this.store.pageDocumentBlocks(page.id);
+    for (let bi = 0; bi < blocks.length; bi++) {
+      const block = blocks[bi];
+      if (!block || block.type !== "drawing") continue;
+      for (let si = block.strokes.length - 1; si >= 0; si--) {
+        const stroke = block.strokes[si]!;
+        const hw = inkBaseWidthPaper(stroke.size, { kind: stroke.kind }, stroke.width) / 2;
+        if (!hitEraseStroke(stroke.pts, pp.px, pp.py, radius, hw)) continue;
+        this.store.setPageDocument(page.id, removeDocumentStroke(blocks, bi, si));
+        return;
+      }
+    }
+  }
+  /** Board pixel erase: split the topmost draw/highlight shape under the stamp immediately. */
+  _eraseBoardPixelAt(p: XY): void {
+    const hit = this.hitTest(p.x, p.y, this.eraserRadius);
+    if (!hit || (hit.type !== "draw" && hit.type !== "highlight")) return;
+    if (hit.rot || !hit.parentId) return; // rotated shapes fall back to whole-shape erase at release
+    const props = hit.props as {
+      pts?: number[]
+      color?: ColorId
+      size?: SizeId
+      width?: number
+    };
+    const pts = props.pts;
+    if (!pts || pts.length < 3) return;
+    const radius = this.eraserRadius;
+    const local = [{ x: p.x - hit.x, y: p.y - hit.y, r: radius }];
+    const hw = inkOutlineWidthPaper(props.size ?? "m", props.width) / 2;
+    const split = splitStrokeByEraser(pts, local, hw);
+    if (split.length === 1 && split[0] === pts) return;
+    const diameter = radius * 2;
+    const valid = split.filter((piece) => !isErasureFragment(piece, diameter));
+    if (!valid.length) {
+      this.store.remove([hit.id]);
+      this.requestRender();
+      return;
+    }
+    this.store.update(hit.id, { props: { ...props, pts: valid[0] } });
+    valid.slice(1).forEach((piece, k) => {
+      const shape = createDrawShape({
+        id: newId(),
+        parentId: hit.parentId as string,
+        z: hit.z + (k + 1) * 0.001,
+        kind: hit.type as "draw" | "highlight",
+        pts: piece,
+        color: props.color ?? "black",
+        size: props.size ?? "m",
+        ...(props.width != null ? { width: props.width } : {}),
+      });
+      if (shape) this.store.put(shape);
+    });
+    this.requestRender();
   }
   _endErase(): void {
     const hits = [...(this.session as SessionErasing).hits];
@@ -2078,6 +2226,8 @@ export class Editor {
     if (this._destroyed || !this.documentMode) return;
     if (typeof document === "undefined" || document.visibilityState !== "visible")
       return;
+    // Commit any keystroke deferred while hidden before re-syncing DOM.
+    this.flushPendingEdits();
     this.pageDocUI?.refresh();
     this.fitDocumentView({ animate: 0 });
     this.requestRender();
@@ -3616,6 +3766,7 @@ export class Editor {
 
   render(): void {
     if (this._destroyed) return;
+    const frameStartedAt = performance.now();
     if (this._pendingFit) {
       const { w: pw, h: ph } = this.viewSize();
       if (pw > 1 && ph > 1) {
@@ -3638,6 +3789,33 @@ export class Editor {
     this._renderCaptureFn();
     if (this.editing) this._layoutTextEditor();
     this.pageDocUI?.layout();
+    this._frameTimes.push(performance.now() - frameStartedAt);
+    if (this._frameTimes.length > 120) this._frameTimes.shift();
+  }
+
+  /** Recent production-style render timing for diagnostics and regression tooling. */
+  getPerformanceSnapshot(reset = false): {
+    sampleCount: number;
+    lastFrameMs: number;
+    averageFrameMs: number;
+    p95FrameMs: number;
+    totalShapes: number;
+  } {
+    const samples = this._frameTimes.slice();
+    const sorted = samples.slice().sort((a, b) => a - b);
+    const result = {
+      sampleCount: samples.length,
+      lastFrameMs: samples.at(-1) ?? 0,
+      averageFrameMs: samples.length
+        ? samples.reduce((sum, value) => sum + value, 0) / samples.length
+        : 0,
+      p95FrameMs: sorted.length
+        ? sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)]!
+        : 0,
+      totalShapes: this.store.shapes().length,
+    };
+    if (reset) this._frameTimes = [];
+    return result;
   }
 
   _renderOverlayFn(w: number, h: number, dpr: number): void {
@@ -3862,6 +4040,8 @@ export class Editor {
   destroy(): void {
     this._destroyed = true;
     this._commitText();
+    // Flush deferred document input before PageDocumentUI tears down.
+    this.flushPendingEdits();
     this.pageDocUI?.destroy();
     this._themeFade?.remove();
     this._themeFade = null;

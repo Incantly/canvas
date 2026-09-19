@@ -97,6 +97,11 @@ export interface ShapeLayerProps {
   onPlaceText?: (x: number, y: number) => void
   onResize?: (id: string, box: { x: number; y: number; w: number; h: number }) => void
   onEditText?: (id: string | null) => void
+  /**
+   * Pixel-erase preview: surviving local-coord pieces per draw/highlight
+   * shape. Present-but-empty hides the shape (fully erased this drag).
+   */
+  pixelPieces?: ReadonlyMap<string, number[][]>
 }
 
 export function ShapeLayer({
@@ -121,6 +126,7 @@ export function ShapeLayer({
   onPlaceText,
   onResize,
   onEditText,
+  pixelPieces,
 }: ShapeLayerProps) {
   const live = useRef<ShapeDraft | null>(null)
   const geoOrigin = useRef<{ x: number; y: number } | null>(null)
@@ -433,6 +439,7 @@ export function ShapeLayer({
                 shape={preview}
                 selected={s.id === selectedId}
                 resizeHandles={showHandles && resizable(s) && s.id === selectedId}
+                pixelPieces={pixelPieces?.get(s.id)}
               />
             )
           })}
