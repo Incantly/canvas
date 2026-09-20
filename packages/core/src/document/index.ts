@@ -75,6 +75,28 @@ export {
 } from './normalize.js'
 
 export {
+  DocumentSerializationError,
+  parseIncantlyDocument,
+  serializeIncantlyDocument,
+  type DocumentSerializationIssueCode,
+  type ParseIncantlyDocumentOptions,
+  type ParseIncantlyDocumentResult,
+  type SerializeIncantlyDocumentOptions,
+} from './serialize.js'
+
+export {
+  DOCUMENT_MIGRATIONS,
+  DOCUMENT_SCHEMA_BOUNDARIES,
+  DOCUMENT_V1_SCHEMA,
+  detectDocumentSchemaVersion,
+  migrateDocumentToCurrent,
+  type DocumentMigration,
+  type DocumentMigrationResult,
+  type DocumentSchemaBoundary,
+  type LegacyCanvasPageDocumentAdapter,
+} from './migrations/index.js'
+
+export {
   assetsHaveSameContent,
   contentAddressedAssetKey,
   type AssetBinary,

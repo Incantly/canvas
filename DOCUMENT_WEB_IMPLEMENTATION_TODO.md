@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1 and 2 complete
+**Status:** Implementation in progress; Milestones 1–3 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -210,16 +210,16 @@ For every node:
 
 ## 7. Milestone 3 — serialization and migrations
 
-- [ ] Implement deterministic JSON serialization.
-- [ ] Confirm serialization never includes functions, DOM references, Tiptap instances, or binary asset bodies.
-- [ ] Implement `parseIncantlyDocument` with schema-version detection.
-- [ ] Implement forward-only migration orchestration.
-- [ ] Add the initial v1 migration boundary even if no older standalone document format exists yet.
-- [ ] Define a later migration adapter boundary for legacy canvas `PageDocumentRecord` data without implementing destructive removal.
-- [ ] Create representative golden fixtures for every supported node and mark.
-- [ ] Test parse → normalize → serialize stability.
-- [ ] Test current JSON → migration pipeline → current JSON.
-- [ ] Verify fixtures in Node and browser test environments.
+- [x] Implement deterministic JSON serialization.
+- [x] Confirm serialization never includes functions, DOM references, Tiptap instances, or binary asset bodies.
+- [x] Implement `parseIncantlyDocument` with schema-version detection.
+- [x] Implement forward-only migration orchestration.
+- [x] Add the initial v1 migration boundary even if no older standalone document format exists yet.
+- [x] Define a later migration adapter boundary for legacy canvas `PageDocumentRecord` data without implementing destructive removal.
+- [x] Create representative golden fixtures for every supported node and mark.
+- [x] Test parse → normalize → serialize stability.
+- [x] Test current JSON → migration pipeline → current JSON.
+- [x] Verify fixtures in Node and browser test environments.
 
 **Exit criterion:** persisted documents have a documented, stable, versioned contract independent of Tiptap.
 

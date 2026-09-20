@@ -168,7 +168,7 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
   })
 }
 
-interface ValidationState { nodeIds: Set<string>; nodeCount: number; totalText: number }
+interface ValidationState { nodeIds: Set<string>; objectNodes: Set<object>; nodeCount: number; totalText: number }
 
 function allowedInContext(type: string, context: ChildContext): boolean {
   if (context === 'root' || context === 'blocks') return BLOCK_TYPES.has(type)
@@ -202,6 +202,8 @@ function validateNode(value: unknown, path: string, issues: DocumentValidationIs
   if (depth > DOCUMENT_LIMITS.maxDepth) { issue(issues, 'limit_depth', path, 'Maximum document depth exceeded'); return }
   if (++state.nodeCount > DOCUMENT_LIMITS.maxNodes) { issue(issues, 'limit_nodes', path, 'Maximum node count exceeded'); return }
   if (!isRecord(value)) { issue(issues, 'invalid_type', path, 'Document node must be an object'); return }
+  if (state.objectNodes.has(value)) { issue(issues, 'invalid_value', path, 'Cyclic or reused node object is not allowed'); return }
+  state.objectNodes.add(value)
   if (typeof value.type !== 'string' || !NODE_TYPES.has(value.type)) {
     issue(issues, 'unknown_node', `${path}.type`, 'Unknown document node'); return
   }
@@ -326,7 +328,7 @@ export function validateDocument(value: unknown): DocumentValidationResult {
     issue(issues, 'unsupported_schema_version', '$.schemaVersion', `Expected schema version ${CURRENT_DOCUMENT_SCHEMA_VERSION}`)
   if (value.type !== 'document') issue(issues, 'invalid_value', '$.type', 'Document type must be "document"')
   requiredString(value, 'id', '$', issues)
-  const state: ValidationState = { nodeIds: new Set(), nodeCount: 0, totalText: 0 }
+  const state: ValidationState = { nodeIds: new Set(), objectNodes: new Set(), nodeCount: 0, totalText: 0 }
   validateMetadata(value.metadata, '$.metadata', issues, state)
   if (typeof value.createdAt !== 'string' || !ISO_DATE_RE.test(value.createdAt)) issue(issues, 'invalid_value', '$.createdAt', 'createdAt must be an ISO UTC timestamp')
   if (typeof value.updatedAt !== 'string' || !ISO_DATE_RE.test(value.updatedAt)) issue(issues, 'invalid_value', '$.updatedAt', 'updatedAt must be an ISO UTC timestamp')
