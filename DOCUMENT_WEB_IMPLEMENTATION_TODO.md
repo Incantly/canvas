@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–5 and Milestone 6.1 complete
+**Status:** Implementation in progress; Milestones 1–5 and Milestones 6.1–6.2 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -280,14 +280,14 @@ For every node:
 
 ### 10.2 Bidirectional conversion
 
-- [ ] Convert an `IncantlyDocument` to valid ProseMirror JSON.
-- [ ] Convert ProseMirror JSON back to an `IncantlyDocument`.
-- [ ] Keep Incantly node IDs unchanged.
-- [ ] Produce an adapter report for unsupported or repaired content.
-- [ ] Never silently emit raw HTML into the canonical model.
-- [ ] Add round-trip fixtures for every supported node, nesting combination, and mark combination.
-- [ ] Test `Incantly → ProseMirror → Incantly` semantic equality.
-- [ ] Test `ProseMirror → Incantly → ProseMirror` for all supported editor constructs.
+- [x] Convert an `IncantlyDocument` to valid ProseMirror JSON.
+- [x] Convert ProseMirror JSON back to an `IncantlyDocument`.
+- [x] Keep Incantly node IDs unchanged.
+- [x] Produce an adapter report for unsupported or repaired content.
+- [x] Never silently emit raw HTML into the canonical model.
+- [x] Add round-trip fixtures for every supported node, nesting combination, and mark combination.
+- [x] Test `Incantly → ProseMirror → Incantly` semantic equality.
+- [x] Test `ProseMirror → Incantly → ProseMirror` for all supported editor constructs.
 
 ### 10.3 Transaction mapping
 

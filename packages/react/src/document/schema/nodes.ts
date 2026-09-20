@@ -20,7 +20,18 @@ const leaf = (name: string, tag: string, attributes: Record<string, { default: u
   renderHTML: ({ HTMLAttributes }) => [tag, mergeAttributes(HTMLAttributes, { 'data-incantly-node': name })],
 })
 
-const Document = Node.create({ name: 'doc', topNode: true, content: 'block+' })
+const Document = Node.create({
+  name: 'doc',
+  topNode: true,
+  content: 'block+',
+  addAttributes: () => ({
+    schemaVersion: { default: 1, rendered: false },
+    documentId: { default: null, rendered: false },
+    metadata: { default: null, rendered: false },
+    createdAt: { default: null, rendered: false },
+    updatedAt: { default: null, rendered: false },
+  }),
+})
 const Text = Node.create({ name: 'text', group: 'inline' })
 
 const Paragraph = Node.create({
