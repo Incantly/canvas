@@ -2,3 +2,4 @@
 export * from '@incantly/canvas/document'
 export * from './conversion.js'
 export * from './schema/index.js'
+export * from './transactionMapping.js'

@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–5 and Milestones 6.1–6.2 complete
+**Status:** Implementation in progress; Milestones 1–5 and Milestone 6 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -291,11 +291,11 @@ For every node:
 
 ### 10.3 Transaction mapping
 
-- [ ] Tag Tiptap transactions with a typed origin.
-- [ ] Translate editor changes into canonical document change events.
-- [ ] Avoid reparsing and emitting the entire document on every keystroke where incremental information is available.
-- [ ] Define when a full canonical checkpoint is produced.
-- [ ] Preserve undo/redo semantics without putting transient history in document JSON.
+- [x] Tag Tiptap transactions with a typed origin.
+- [x] Translate editor changes into canonical document change events.
+- [x] Avoid reparsing and emitting the entire document on every keystroke where incremental information is available.
+- [x] Define when a full canonical checkpoint is produced.
+- [x] Preserve undo/redo semantics without putting transient history in document JSON.
 
 **Exit criterion:** Tiptap is a replaceable editing adapter and cannot introduce unrecognized persisted structures silently.
 
