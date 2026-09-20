@@ -88,6 +88,26 @@ export {
 } from './commands.js'
 
 export {
+  createCollapsedTextSelection,
+  mapDocumentSelection,
+  resolveDocumentSelection,
+  type DocumentBlockRangeSelection,
+  type DocumentNodeSelection,
+  type DocumentSelection,
+  type DocumentSelectionAffinity,
+  type DocumentSelectionIssue,
+  type DocumentSelectionIssueCode,
+  type DocumentSelectionMappingFailure,
+  type DocumentSelectionMappingFailureCode,
+  type DocumentTextPoint,
+  type DocumentTextSelection,
+  type MapDocumentSelectionResult,
+  type NoDocumentSelection,
+  type ResolveDocumentSelectionResult,
+  type ResolvedDocumentSelection,
+} from './selection.js'
+
+export {
   createDocument,
   createParagraph,
   type CreateDocumentOptions,

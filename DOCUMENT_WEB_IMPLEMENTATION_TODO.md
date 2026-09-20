@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–3 and Milestones 4.1–4.2 complete
+**Status:** Implementation in progress; Milestones 1–4 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -246,9 +246,9 @@ For every node:
 
 ### 8.3 Selection contract
 
-- [ ] Define a portable selection description suitable for toolbar state, AI operations, and a future React Native bridge.
-- [ ] Keep ProseMirror numeric positions internal to the adapter where possible.
-- [ ] Define mapping failures explicitly when content changes invalidate a selection.
+- [x] Define a portable selection description suitable for toolbar state, AI operations, and a future React Native bridge.
+- [x] Keep ProseMirror numeric positions internal to the adapter where possible.
+- [x] Define mapping failures explicitly when content changes invalidate a selection.
 
 **Exit criterion:** application code can describe edits through core commands and transactions without mutating JSON directly.
 
