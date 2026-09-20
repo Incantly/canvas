@@ -27,11 +27,12 @@ describe('React package entry points', () => {
     expect(root.Store).toBeTypeOf('function')
   })
 
-  it('keeps the document entry headless until the Tiptap adapter milestone', async () => {
+  it('exposes the isolated document model and Tiptap schema without canvas UI', async () => {
     const documentApi = await import('../src/document/index.js')
 
     expect(documentApi.createDocument).toBeTypeOf('function')
     expect(documentApi.executeDocumentCommand).toBeTypeOf('function')
+    expect(documentApi.incantlyDocumentExtensions).toBeInstanceOf(Array)
     expect('Canvas' in documentApi).toBe(false)
   })
 

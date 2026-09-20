@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–5 complete
+**Status:** Implementation in progress; Milestones 1–5 and Milestone 6.1 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -270,13 +270,13 @@ For every node:
 
 ### 10.1 Dependencies and schema
 
-- [ ] Add pinned compatible versions of Tiptap core, React integration, StarterKit, and only the extensions required by the first milestone.
-- [ ] Add Yjs-related dependencies only when collaboration work begins; do not include them accidentally in the first local editor bundle.
-- [ ] Build an explicit Tiptap extension list matching the Incantly v1 schema.
-- [ ] Disable or replace StarterKit behavior that conflicts with canonical rules.
-- [ ] Implement stable node-ID attributes and repair rules.
-- [ ] Define content expressions that mirror core nesting rules.
-- [ ] Ensure tables, lists, checklists, code, math, links, images, attachments, and page breaks have intentional schemas.
+- [x] Add pinned compatible versions of Tiptap core, React integration, StarterKit, and only the extensions required by the first milestone.
+- [x] Add Yjs-related dependencies only when collaboration work begins; do not include them accidentally in the first local editor bundle.
+- [x] Build an explicit Tiptap extension list matching the Incantly v1 schema.
+- [x] Disable or replace StarterKit behavior that conflicts with canonical rules.
+- [x] Implement stable node-ID attributes and repair rules.
+- [x] Define content expressions that mirror core nesting rules.
+- [x] Ensure tables, lists, checklists, code, math, links, images, attachments, and page breaks have intentional schemas.
 
 ### 10.2 Bidirectional conversion
 
