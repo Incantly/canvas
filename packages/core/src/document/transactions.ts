@@ -267,6 +267,9 @@ function applyOperation(document: IncantlyDocument, operation: DocumentOperation
       changed.add(operation.nodeId)
       return null
     }
+    case 'setPageSetup':
+      document.metadata.pageSetup = JSON.parse(JSON.stringify(operation.pageSetup)) as typeof operation.pageSetup
+      return null
   }
 }
 

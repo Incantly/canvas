@@ -1,5 +1,5 @@
 import type { AssetId, DocumentNodeId } from './ids.js'
-import type { DocumentNode, TextMark } from './types.js'
+import type { DocumentNode, PageSetup, TextMark } from './types.js'
 
 export interface InsertDocumentNodeOperation {
   type: 'insertNode'
@@ -55,6 +55,11 @@ export interface ClearDocumentAssetReferenceOperation {
   slot: 'preview'
 }
 
+export interface SetDocumentPageSetupOperation {
+  type: 'setPageSetup'
+  pageSetup: PageSetup
+}
+
 export type DocumentOperation =
   | InsertDocumentNodeOperation
   | UpdateDocumentNodeOperation
@@ -63,3 +68,4 @@ export type DocumentOperation =
   | ReplaceDocumentTextOperation
   | SetDocumentAssetReferenceOperation
   | ClearDocumentAssetReferenceOperation
+  | SetDocumentPageSetupOperation

@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–3 and Milestone 4.1 complete
+**Status:** Implementation in progress; Milestones 1–3 and Milestones 4.1–4.2 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -237,12 +237,12 @@ For every node:
 
 ### 8.2 Shared commands
 
-- [ ] Define serializable command payloads, separate from Tiptap command functions.
-- [ ] Add commands for paragraphs, headings, marks, lists, checklists, blockquotes, dividers, code, math, tables, media references, attachments, and page breaks.
-- [ ] Add commands for indentation, alignment, deletion, replacement, and page setup.
-- [ ] Define command capability/query results so toolbars can enable and disable actions.
-- [ ] Ensure command behavior is deterministic when invoked outside React.
-- [ ] Test commands against fixtures without mounting a browser editor.
+- [x] Define serializable command payloads, separate from Tiptap command functions.
+- [x] Add commands for paragraphs, headings, marks, lists, checklists, blockquotes, dividers, code, math, tables, media references, attachments, and page breaks.
+- [x] Add commands for indentation, alignment, deletion, replacement, and page setup.
+- [x] Define command capability/query results so toolbars can enable and disable actions.
+- [x] Ensure command behavior is deterministic when invoked outside React.
+- [x] Test commands against fixtures without mounting a browser editor.
 
 ### 8.3 Selection contract
 
