@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–4 complete
+**Status:** Implementation in progress; Milestones 1–5 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -254,15 +254,15 @@ For every node:
 
 ## 9. Milestone 5 — package exports and dependency boundaries
 
-- [ ] Export the document model through `@incantly/canvas/document`.
-- [ ] Export the portable subset through `@incantly/canvas/headless` where appropriate.
-- [ ] Preserve current root exports for compatibility.
-- [ ] Add `@incantly/canvas-react/canvas` as the explicit canvas-only React entry point.
-- [ ] Add `@incantly/canvas-react/document` as the Tiptap document entry point.
-- [ ] Decide whether the root React export temporarily re-exports both or remains canvas-only for bundle compatibility.
-- [ ] Configure package `exports`, declaration output, CSS exports, and `sideEffects` correctly.
-- [ ] Add an import test proving core document modules do not touch `window` or `document`.
-- [ ] Add a bundle inspection proving the canvas subpath does not include Tiptap/ProseMirror.
+- [x] Export the document model through `@incantly/canvas/document`.
+- [x] Export the portable subset through `@incantly/canvas/headless` where appropriate.
+- [x] Preserve current root exports for compatibility.
+- [x] Add `@incantly/canvas-react/canvas` as the explicit canvas-only React entry point.
+- [x] Add `@incantly/canvas-react/document` as the isolated document entry point reserved for the Milestone 6 Tiptap adapter.
+- [x] Keep the root React export canvas-only for bundle compatibility while preserving its existing core re-exports.
+- [x] Configure package `exports`, declaration output, CSS exports, and `sideEffects` correctly.
+- [x] Add an import test proving core document modules do not touch `window` or `document`.
+- [x] Add a bundle inspection proving the canvas subpath does not include Tiptap/ProseMirror.
 
 **Exit criterion:** consumers can install one SDK but import canvas and document implementations independently.
 

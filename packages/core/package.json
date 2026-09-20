@@ -4,7 +4,7 @@
   "description": "Framework-free infinite-canvas whiteboard engine — the heart of Incantly Canvas, the MIT-licensed drawing SDK.",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node -e \"const fs=require('node:fs');fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc -p tsconfig.json",
     "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -19,6 +19,10 @@
     "./headless": {
       "types": "./dist/headless.d.ts",
       "default": "./dist/headless.js"
+    },
+    "./document": {
+      "types": "./dist/document/index.d.ts",
+      "default": "./dist/document/index.js"
     },
     "./canvas.css": "./src/canvas.css",
     "./styles.css": "./src/canvas.css",
