@@ -1,9 +1,4 @@
 export {
-  createNotebookPersistence,
-  type NotebookPersistence,
-  type NotebookPersistenceOptions,
-} from './notebook-persistence.js'
-export {
   createSqliteVersionStorage,
   type SqliteVersionStorageOptions,
 } from './sqlite-version-storage.js'

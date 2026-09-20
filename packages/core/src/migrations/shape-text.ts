@@ -1,6 +1,6 @@
 import type { Snapshot } from '../types/operations.js'
 import type { ShapeRecord } from '../types/models.js'
-import { migrateTextProps } from '../rich-text/document.js'
+import { migrateCanvasTextProps } from '../canvas-text.js'
 import { registerMigration } from './sequences.js'
 
 registerMigration({
@@ -14,8 +14,8 @@ registerMigration({
       if (shape.type !== 'text' && shape.type !== 'note') continue
       const props = shape.props as unknown as Record<string, unknown>
       if (props.text !== undefined || props.blocks !== undefined) {
-        const migrated = migrateTextProps(props)
-        store[shape.id] = { ...shape, props: migrated } as ShapeRecord
+        const migrated = migrateCanvasTextProps(props)
+        store[shape.id] = { ...shape, props: migrated } as unknown as ShapeRecord
       }
     }
   },

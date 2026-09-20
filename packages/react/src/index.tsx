@@ -33,14 +33,9 @@ export const Canvas = forwardRef(function Canvas(
     camera,
     initialStyles,
     styles,
-    documentMode = false,
     uiTools,
     uiIcons,
     hidePagesBar,
-    documentBackground,
-    documentPaperColor,
-    touchUi = false,
-    documentUi,
     autoFit = false,
     fitOnMount = autoFit,
     fitOnResize = autoFit,
@@ -81,11 +76,6 @@ export const Canvas = forwardRef(function Canvas(
       readonly,
       camera: initialCamera ?? camera,
       styles: initialStyles ?? styles,
-      documentMode,
-      documentBackground: documentBackground ?? undefined,
-      documentPaperColor: documentPaperColor ?? undefined,
-      touchUi,
-      documentUi,
     })
     host.dataset.icTheme = editor.theme.id
     const ui = buildUI(editor, {
@@ -153,18 +143,6 @@ export const Canvas = forwardRef(function Canvas(
       uiRef.current = null
     }
   }, [store])
-
-  useEffect(() => {
-    const editor = editorRef.current
-    if (!editor || documentBackground === undefined) return
-    editor.setDocumentBackground(documentBackground)
-  }, [documentBackground])
-
-  useEffect(() => {
-    const editor = editorRef.current
-    if (!editor || documentPaperColor === undefined) return
-    editor.setDocumentPaperColor(documentPaperColor)
-  }, [documentPaperColor])
 
   useEffect(() => {
     const editor = editorRef.current

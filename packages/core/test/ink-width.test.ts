@@ -17,7 +17,6 @@ import {
 } from '../src/utils/ink/ink-pen.js'
 import { HIGHLIGHT_SCALE, INK_SIZES, SIZES } from '../src/palette.js'
 import { createDrawShape } from '../src/utils/shapes/create.js'
-import { validateDocumentBlocks } from '../src/page-document-blocks.js'
 
 describe('inkBaseWidthPaper width override', () => {
   it('renders legacy widths when no override is stored', () => {
@@ -100,30 +99,7 @@ describe('eraser chrome settings', () => {
   })
 })
 
-describe('stroke width persistence', () => {
-  const stroke = (overrides: Record<string, unknown> = {}) => ({
-    type: 'drawing',
-    height: 120,
-    strokes: [
-      { pts: [0, 0, 0.5, 10, 0, 0.5], color: 'black', size: 'm', kind: 'draw', ...overrides },
-    ],
-  })
-
-  it('normalize preserves a valid width', () => {
-    const [block] = validateDocumentBlocks([stroke({ width: 8 })])
-    expect(block?.type).toBe('drawing')
-    if (block?.type === 'drawing') {
-      expect(block.strokes[0]?.width).toBe(8)
-    }
-  })
-
-  it('normalize clamps an out-of-range width and drops garbage', () => {
-    const [big] = validateDocumentBlocks([stroke({ width: 1e9 })])
-    const [junk] = validateDocumentBlocks([stroke({ width: 'huge' })])
-    if (big?.type === 'drawing') expect(big.strokes[0]?.width).toBe(INK_WIDTH_HARD_MAX)
-    if (junk?.type === 'drawing') expect(junk.strokes[0]?.width).toBeUndefined()
-  })
-
+describe('canvas stroke width persistence', () => {
   it('createDrawShape passes width to board shapes', () => {
     const shape = createDrawShape({
       id: 's1',

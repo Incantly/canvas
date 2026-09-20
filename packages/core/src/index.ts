@@ -1,15 +1,27 @@
 export { Store, newId, isDiffEmpty, invertDiff, composeDiff } from './store.js'
+export * from './document/index.js'
+export {
+  blocksToPlainText,
+  emptyCanvasText,
+  getShapeBlocks,
+  migrateCanvasTextProps,
+  textToBlocks,
+  type CanvasTextBlock,
+  type CanvasTextSpan,
+  type TextBlock,
+} from './canvas-text.js'
+export {
+  isDrawingBlock,
+  type CanvasInkGroup,
+  type CanvasInkStroke,
+  type DocumentBlock,
+  type DrawingStroke,
+} from './canvas-ink.js'
 export {
   PAGE_GAP_PRESETS,
   PAGE_GAP_STEP,
   DEFAULT_PAGE_GAP,
   MAX_PAGE_GAP,
-  PAPER_SIZE_PRESETS,
-  paperSizePreset,
-  validatePaperStyle,
-  validatePaperSizeId,
-  paperStyleToGridId,
-  inferPaperSizeId,
 } from './pages.js'
 export { buildUI } from './ui.js'
 export {
@@ -47,7 +59,6 @@ export { Editor, TOOLS }
 
 export type {
   Camera, ToolId, ColorId, SizeId, FontId, DashId, FillId, GeoId, ThemeId, GridId, PageLayout, PageGapPreset,
-  PaperStyleId, PaperSizeId,
   Bounds,
 } from './types/base.js'
 export type { Styles, ScribbleStroke } from './types/styles.js'
@@ -55,94 +66,7 @@ export type {
   ShapeType, ShapeRecord, AssetRecord, BoardRecord, PageRecord, NotebookRecord,
   DrawShapeProps, LineishShapeProps, GeoShapeProps,
   TextShapeProps, NoteShapeProps, ImageShapeProps,
-  PageDocumentRecord,
 } from './types/models.js'
-export type { BlockType, InlineSpan, TextBlock, DrawingBlock, DrawingStroke, ImageBlock, DocumentBlock, RichTextLink } from './rich-text/types.js'
-export { isDrawingBlock, isImageBlock, isTextBlock } from './rich-text/types.js'
-export {
-  PAGE_DOC_MARGIN_X,
-  PAGE_DOC_MARGIN_Y,
-  PAGE_DOC_FONT_SIZE,
-  pageContentRect,
-  getPageDocument,
-  pointInPageContent,
-  notesPageContentRect,
-  pointInNotesContent,
-  pointInNotesPaper,
-} from './page-document.js'
-export {
-  NOTES_MIN_BODY_HEIGHT,
-  notesContentWidth,
-  notesPaperHeight,
-  notesPaperBounds,
-  virtualPrintPages,
-  mergePageDocumentsIntoNotebook,
-} from './notebook-document.js'
-export type { VirtualPrintPage } from './notebook-document.js'
-export {
-  validateDocumentBlocks,
-  createDocumentBlockElement,
-  layoutPageDocument,
-  DRAWING_BLOCK_MIN_HEIGHT,
-  drawingBlockHeight,
-} from './page-document-blocks.js'
-export {
-  emptyDocument,
-  textToBlocks,
-  blocksToPlainText,
-  isEmptyDocument,
-  validateBlocks,
-  migrateTextProps,
-  sanitizeColorId,
-  sanitizeFontId,
-  sanitizeSizeId,
-  sanitizeFontSize,
-  sanitizeLinkHref,
-  sanitizeLinkTitle,
-  sanitizeImageSrc,
-  sanitizeImageAlt,
-  sanitizeImageDimension,
-  layoutRichText,
-  drawRichTextLayout,
-} from './rich-text/index.js'
-export {
-  pageTextBlocksToMarkdown,
-  markdownToPageTextBlocks,
-  mergeMarkdownIntoPageDocument,
-  pageTextBlocksToPlainLines,
-  applyInlineMarkToPageRange,
-} from './rich-text/page-markdown.js'
-export {
-  estimateTextBlockHeight,
-  estimateDocumentHeight,
-  splitBlocksToFitContent,
-  paginateBlocks,
-  planPageOverflow,
-  applyPageDocumentOverflow,
-  isVisuallyEmptyPage,
-} from './page-document-paginate.js'
-export { applyInlineFontSize, createSpanElement, createBlockElement } from './rich-text/dom.js'
-export {
-  defaultDocumentBackground,
-  defaultDocumentPaperColor,
-  normalizeCssColor,
-  contrastDocumentText,
-} from './document-background.js'
-export {
-  type DocumentUiOptions,
-  type DocumentEditorApi,
-  type SlashCommand,
-  type SelectionToolbarOptions,
-  type SelectionToolbarAction,
-  type SelectionToolbarHandle,
-  type SlashMenuRenderContext,
-  DEFAULT_SLASH_COMMANDS,
-  DEFAULT_SELECTION_ACTIONS,
-  createDefaultSelectionToolbar,
-  createDocumentEditorApi,
-  defaultSelectionToolbarPosition,
-  defaultSlashMenuPosition,
-} from './document-ui-config.js'
 export type { DiffSource, Diff, Snapshot } from './types/operations.js'
 export type { SerializedSchema } from './types/schema.js'
 export { CURRENT_SCHEMA } from './types/schema.js'
@@ -192,9 +116,6 @@ export function createCanvas(opts: CreateCanvasOptions): CanvasInstance {
     onSave: opts.onSave,
     themeToggle: opts.themeToggle,
     gridControl: opts.gridControl,
-    tools: opts.uiTools,
-    icons: opts.uiIcons,
-    hidePagesBar: opts.hidePagesBar,
   })
   const watermark = opts.watermark === false ? null : buildWatermark(editor)
   return {

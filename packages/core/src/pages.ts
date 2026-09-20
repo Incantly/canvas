@@ -6,7 +6,6 @@ import type {
   PaperStyleId,
 } from './types/base.js'
 import type { NotebookRecord, PageRecord, ShapeRecord } from './types/models.js'
-import { emptyDocument } from './rich-text/document.js'
 import { newId } from './utils/id.js'
 
 export const NOTEBOOK_ID = 'notebook:main'
@@ -82,7 +81,6 @@ export function createPage(index: number, opts: CreatePageOpts = {}): PageRecord
     ...(opts.paperStyle && validatePaperStyle(opts.paperStyle)
       ? { paperStyle: opts.paperStyle }
       : {}),
-    document: { blocks: emptyDocument() },
   }
 }
 

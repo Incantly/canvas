@@ -141,12 +141,12 @@ describe('<Canvas />', () => {
 
   it('exposes safe snapshot methods and keeps initialization-only props stable', () => {
     const ref = createRef()
-    const { rerender } = render(<Canvas ref={ref} documentMode initialCamera={{ x: 1, y: 2, z: 1 }} />)
+    const { rerender } = render(<Canvas ref={ref} initialCamera={{ x: 1, y: 2, z: 1 }} />)
     expect(ref.current.getSnapshot()).toBeTruthy()
     const editor = ref.current.editor
-    rerender(<Canvas ref={ref} documentMode={false} initialCamera={{ x: 9, y: 9, z: 2 }} />)
+    rerender(<Canvas ref={ref} initialCamera={{ x: 9, y: 9, z: 2 }} />)
     expect(ref.current.editor).toBe(editor)
-    expect(ref.current.editor.documentMode).toBe(true)
+    expect(ref.current.editor.camera).toEqual({ x: 1, y: 2, z: 1 })
   })
 
   it('survives the Strict Mode mount-cleanup-mount lifecycle', () => {

@@ -3,7 +3,6 @@ import type {
   Camera,
   Diff,
   DiffSource,
-  DocumentUiOptions,
   Editor,
   BoardUI,
   GridId,
@@ -48,22 +47,12 @@ export interface CanvasProps {
   fitOnResize?: boolean
   /** @deprecated Use `fitOnMount` and `fitOnResize`. */
   autoFit?: boolean
-  /** Initialization-only. Page body is the primary typing surface. */
-  documentMode?: boolean
-  /** Primary dock tools (notes preset when documentMode). */
+  /** Primary canvas dock tools. */
   uiTools?: ToolId[]
   /** Custom dock icon SVG inner HTML. */
   uiIcons?: Partial<Record<string, string>>
-  /** Hide page navigation bar (default true when documentMode). */
+  /** Hide canvas page navigation. */
   hidePagesBar?: boolean
-  /** Viewport/canvas color around the page sheet (documentMode). */
-  documentBackground?: string | null
-  /** Page sheet color behind rich text (documentMode). */
-  documentPaperColor?: string | null
-  /** Initialization-only touch-first formatting bar. */
-  touchUi?: boolean
-  /** Initialization-only slash menu and selection toolbar configuration. */
-  documentUi?: DocumentUiOptions
   onMount?: (editor: Editor, ui: BoardUI) => void
   onChange?: (diff: Diff, source: DiffSource, editor: Editor) => void
   onSelectionChange?: (ids: string[], editor: Editor) => void

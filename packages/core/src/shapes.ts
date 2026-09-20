@@ -42,10 +42,12 @@ import { strokeOutline } from './freehand.js'
 import { inkBaseWidthPaper, inkOutlineWidthPaper } from './utils/ink/ink-pen.js'
 import {
   getShapeBlocks,
+} from './canvas-text.js'
+import {
   layoutRichText,
   drawRichTextLayout,
   type RichTextLayout,
-} from './rich-text/index.js'
+} from './canvas-text-layout.js'
 
 export {
   NOTE_W,

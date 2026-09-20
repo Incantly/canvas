@@ -27,7 +27,7 @@ import {
   rotWith,
   segIntersectsBounds,
 } from '../../geometry.js'
-import { getShapeBlocks } from '../../rich-text/document.js'
+import { getShapeBlocks } from '../../canvas-text.js'
 
 export const NOTE_W = 200
 

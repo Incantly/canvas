@@ -1,6 +1,5 @@
 import type { Editor, BuildUIOptions, BoardUI, ToolId, GeoId, GridId, ThemeId, ColorId } from './types/index.js'
-import { PAGE_GAP_STEP, inferPaperSizeId, validatePaperStyle } from './pages.js'
-import type { PaperSizeId, PaperStyleId } from './types/base.js'
+import { PAGE_GAP_STEP } from './pages.js'
 import { COLOR_IDS, SIZE_IDS, DASH_IDS, FILL_IDS, GEO_IDS, GRID_IDS, THEMES } from './palette.js'
 
 const SVG = (inner: string): string =>
@@ -210,9 +209,6 @@ const DOCK_NAMES: readonly ToolId[] = [
   'note',
   'image',
 ]
-
-/** Minimal dock for notes / documentMode. */
-const NOTES_DOCK_TOOLS: readonly ToolId[] = ['select', 'hand', 'draw', 'highlight', 'eraser']
 const DROP_ORDER: readonly ToolId[] = [
   'hand',
   'laser',
@@ -235,27 +231,9 @@ interface Popover {
 
 type BuildUIArgs = [Editor, BuildUIOptions?]
 
-export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
-  const {
-    hidden = false,
-    onSave,
-    themeToggle = true,
-    gridControl = true,
-    tools: toolsOpt,
-    icons: iconsOpt,
-    hidePagesBar: hidePagesBarOpt,
-  } = options
-  const isDocMode = !!(editor as { documentMode?: boolean }).documentMode
+export function buildUI(...[editor, { hidden = false, onSave, themeToggle = true, gridControl = true } = {}]: BuildUIArgs): BoardUI {
   const root = editor.container
-  const opts = {
-    themeToggle: themeToggle !== false,
-    gridControl: gridControl !== false,
-    tools: toolsOpt ?? (isDocMode ? [...NOTES_DOCK_TOOLS] : undefined),
-    icons: iconsOpt ?? {},
-    hidePagesBar: hidePagesBarOpt ?? false,
-  }
-  const iconFor = (name: string): string =>
-    opts.icons[name] || (ICONS as Record<string, string>)[name] || ''
+  const opts = { themeToggle: themeToggle !== false, gridControl: gridControl !== false }
   const ui = el<HTMLDivElement>('div', 'ic-ui')
   root.appendChild(ui)
 
@@ -318,7 +296,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
   const makeBtn = (name: string, onClick: (e: Event, b: HTMLButtonElement) => void, cls: string = 'ic-tool'): HTMLButtonElement => {
     const b = el<HTMLButtonElement>('button', cls)
     b.dataset.name = name
-    b.innerHTML = iconFor(name)
+    b.innerHTML = (ICONS as any)[name] || ''
     b.title = (TIPS as any)[name] || name
     b.type = 'button'
     b.setAttribute('aria-label', b.title)
@@ -363,17 +341,6 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
   addBtn('image')
   divider()
 
-  const applyToolFilter = (): void => {
-    if (!opts.tools) return
-    const keep = new Set(opts.tools)
-    for (const [n, b] of dockBtns) {
-      if ((DOCK_NAMES as readonly string[]).includes(n)) {
-        b.style.display = keep.has(n as ToolId) ? '' : 'none'
-      }
-    }
-  }
-  applyToolFilter()
-
   const toolsBtn = makeBtn('tools', (e, b) => openPopover('tools', (p) => buildGrid(p, [...DOCK_NAMES]), b))
   dock.appendChild(toolsBtn)
 
@@ -399,19 +366,13 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     actBtns.set(name, b)
     return b
   }
-  addAction('undo', () => editor.undo())
-  addAction('redo', () => editor.redo())
+  addAction('undo', () => editor.store.undo())
+  addAction('redo', () => editor.store.redo())
   actionBar.appendChild(el('i', 'ic-div'))
-  const dupBtn = addAction('duplicate', () => {
-    if (isDocMode) void editor.copySelection()
-    else editor.duplicateSelection()
-  })
-  if (isDocMode) dupBtn.title = 'Copy — ⌘C'
+  addAction('duplicate', () => editor.duplicateSelection())
   addAction('delete', () => editor.deleteSelection())
 
   const pagesBar = el<HTMLDivElement>('div', 'ic-pages')
-  if (isDocMode) pagesBar.classList.add('ic-notes-pages')
-  if (opts.hidePagesBar) pagesBar.style.display = 'none'
   ui.appendChild(pagesBar)
   const prevPageBtn = makeBtn('chevronLeft', () => {
     const pages = editor.pages()
@@ -429,8 +390,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
   pagesBar.appendChild(nextPageBtn)
   const addPageBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-add')
   addPageBtn.type = 'button'
-  addPageBtn.title = isDocMode ? 'Add page' : 'Add page (stay on current view)'
-  addPageBtn.setAttribute('aria-label', addPageBtn.title)
+  addPageBtn.title = 'Add page (stay on current view)'
   addPageBtn.textContent = '+'
   addPageBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
   addPageBtn.addEventListener('click', (e) => {
@@ -450,42 +410,6 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
   removePageBtn.title = 'Delete page'
   removePageBtn.setAttribute('aria-label', removePageBtn.title)
   pagesBar.appendChild(removePageBtn)
-
-  const PAPER_SIZES: PaperSizeId[] = ['letter', 'a4']
-  const PAPER_STYLES: PaperStyleId[] = ['plain', 'ruled', 'grid', 'dots']
-  const SIZE_LABEL: Record<PaperSizeId, string> = { letter: 'Letter', a4: 'A4' }
-  const STYLE_LABEL: Record<PaperStyleId, string> = {
-    plain: 'Plain',
-    ruled: 'Rule',
-    grid: 'Grid',
-    dots: 'Dot',
-  }
-
-  const paperSizeBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-paper-size')
-  paperSizeBtn.type = 'button'
-  paperSizeBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
-  paperSizeBtn.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const page = editor.currentPage()
-    if (!page) return
-    const cur = inferPaperSizeId(page.width, page.height) ?? 'letter'
-    const next = PAPER_SIZES[(PAPER_SIZES.indexOf(cur) + 1) % PAPER_SIZES.length]!
-    editor.setPagePaper(page.id, { paperSize: next })
-  })
-  pagesBar.appendChild(paperSizeBtn)
-
-  const paperStyleBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-paper-style')
-  paperStyleBtn.type = 'button'
-  paperStyleBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
-  paperStyleBtn.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const page = editor.currentPage()
-    if (!page) return
-    const cur = validatePaperStyle(page.paperStyle) ? page.paperStyle : 'plain'
-    const next = PAPER_STYLES[(PAPER_STYLES.indexOf(cur) + 1) % PAPER_STYLES.length]!
-    editor.setPagePaper(page.id, { paperStyle: next })
-  })
-  pagesBar.appendChild(paperStyleBtn)
 
   const layoutBtn = el<HTMLButtonElement>('button', 'ic-page-btn ic-page-layout')
   layoutBtn.type = 'button'
@@ -534,17 +458,6 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     prevPageBtn.disabled = idx <= 0
     nextPageBtn.disabled = idx < 0 || idx >= pages.length - 1
     removePageBtn.disabled = pages.length <= 1
-    const page = editor.currentPage()
-    const sizeId = page ? inferPaperSizeId(page.width, page.height) : null
-    paperSizeBtn.textContent = sizeId ? SIZE_LABEL[sizeId] : 'Size'
-    paperSizeBtn.title = sizeId
-      ? `Paper size ${SIZE_LABEL[sizeId]} — click to change`
-      : 'Paper size'
-    paperSizeBtn.setAttribute('aria-label', paperSizeBtn.title)
-    const style = page && validatePaperStyle(page.paperStyle) ? page.paperStyle : 'plain'
-    paperStyleBtn.textContent = STYLE_LABEL[style]
-    paperStyleBtn.title = `Paper ${STYLE_LABEL[style]} — click to change`
-    paperStyleBtn.setAttribute('aria-label', paperStyleBtn.title)
   }
   const refreshLayout = (): void => {
     const layout = editor.pageLayout()
@@ -861,11 +774,10 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     actBtns.get('undo')!.disabled = !editor.store.canUndo
     actBtns.get('redo')!.disabled = !editor.store.canRedo
     const hasSel = editor.selection.size > 0
-    const docTextSel = isDocMode && editor.hasDocumentTextSelection()
-    actBtns.get('duplicate')!.disabled = isDocMode ? !docTextSel : !hasSel
-    actBtns.get('delete')!.disabled = isDocMode ? !docTextSel && !hasSel : !hasSel
+    actBtns.get('duplicate')!.disabled = !hasSel
+    actBtns.get('delete')!.disabled = !hasSel
     toolsBtn.innerHTML =
-      iconFor(editor.tool === 'geo' ? editor.geoKind : editor.tool) || iconFor('select')
+      (ICONS as any)[editor.tool === 'geo' ? editor.geoKind : editor.tool] || ICONS.select
     toolsBtn.classList.toggle('on', popover?.name === 'tools')
     toolsBtn.setAttribute('aria-expanded', String(popover?.name === 'tools'))
     const curStyles = editor.currentStyles()
@@ -883,7 +795,6 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     editor.on('styles', refresh),
     editor.on('history', refresh),
     editor.on('selection', refresh),
-    editor.on('edit', refresh),
     editor.on('theme', refresh),
     editor.on('grid', refresh),
     editor.on('page', refreshPages),
@@ -914,15 +825,7 @@ export function buildUI(...[editor, options = {}]: BuildUIArgs): BoardUI {
     } = {}): void {
       if ('themeToggle' in next) opts.themeToggle = next.themeToggle !== false
       if ('gridControl' in next) opts.gridControl = next.gridControl !== false
-      if ('tools' in next) opts.tools = next.tools
-      if ('icons' in next) opts.icons = { ...opts.icons, ...next.icons }
-      if ('hidePagesBar' in next) {
-        opts.hidePagesBar = !!next.hidePagesBar
-        pagesBar.style.display = opts.hidePagesBar ? 'none' : ''
-      }
-      applyToolFilter()
       if (popover?.name === 'menu') closePopover()
-      refresh()
     },
     destroy(): void {
       offs.forEach((f) => f())

@@ -9,8 +9,6 @@ import type {
 } from './models.js'
 import type { Diff, DiffSource, Snapshot } from './operations.js'
 import type { Theme } from './themes.js'
-import type { DocumentUiOptions } from '../document-ui-config.js'
-import type { EraserMode } from '../utils/ink/ink-pen.js'
 
 export interface EditorOptions {
   container: HTMLElement
@@ -21,22 +19,6 @@ export interface EditorOptions {
   camera?: Camera
   styles?: Partial<Styles>
   geoKind?: GeoId
-  eraserRadius?: number
-  eraserMode?: EraserMode
-  /** Apple Notes / OpenNote style: page body is the primary surface; pen only when draw tool active. */
-  documentMode?: boolean
-  /** Viewport/canvas color around the page sheet (documentMode). */
-  documentBackground?: string | null
-  /** Page sheet color behind rich text (documentMode). */
-  documentPaperColor?: string | null
-  /** Touch-first UI (mobile formatting bar). Defaults to ontouchstart detection. */
-  touchUi?: boolean
-  /** Slash menu + selection toolbar for page document mode. Fully customizable. */
-  documentUi?: DocumentUiOptions
-  /** Native link prompt (RN WebView); falls back to window.prompt on web. */
-  promptLink?: () => Promise<string | null>
-  /** Clipboard read for Cmd+V in non-secure contexts; falls back to navigator.clipboard. */
-  readClipboard?: () => Promise<string>
 }
 
 export type EditorEvent =
@@ -178,33 +160,12 @@ export interface Editor {
     animate?: number
     ease?: number
   }): void
-  fitDocumentView(opts?: { animate?: number }): void
   followBounds(b: import('./base.js').Bounds, opts?: { animate?: number; ease?: number }): void
-
-  documentBackgroundColor(): string
-  setDocumentBackground(color: string | null): void
-  documentPaperColor(): string
-  setDocumentPaperColor(color: string | null): void
 
   pages(): PageRecord[]
   currentPage(): PageRecord | null
   setPage(id: string, opts?: { fit?: boolean; animate?: number; preserveZoom?: boolean }): void
-  addPage(opts?: {
-    width?: number
-    height?: number
-    name?: string
-    paperStyle?: import('./base.js').PaperStyleId
-    paperSize?: import('./base.js').PaperSizeId
-  }): PageRecord
-  setPagePaper(
-    pageId: string,
-    opts: {
-      width?: number
-      height?: number
-      paperStyle?: import('./base.js').PaperStyleId
-      paperSize?: import('./base.js').PaperSizeId
-    },
-  ): boolean
+  addPage(opts?: { width?: number; height?: number; name?: string }): PageRecord
   removePage(id: string): boolean
   pageLayout(): import('./base.js').PageLayout
   setPageLayout(layout: import('./base.js').PageLayout): void
@@ -215,11 +176,6 @@ export interface Editor {
   adjustPageGap(delta: number): void
 
   setTool(tool: ToolId): void
-  focusPageDocument(): void
-  refreshPageDocument(): void
-  hasPendingEdits(): boolean
-  flushPendingEdits(): void
-  getSnapshot(): Snapshot
   setGeoKind(kind: GeoId): void
   setTheme(id: ThemeId | string): void
   setGrid(id: GridId): void
@@ -230,9 +186,6 @@ export interface Editor {
 
   setSelection(ids: string[]): void
   selectionBounds(): import('./base.js').Bounds | null
-  undo(): void
-  redo(): void
-  hasDocumentTextSelection(): boolean
   deleteSelection(): void
   clearBoard(): void
   selectAll(): void
@@ -291,11 +244,8 @@ export interface BuildUIOptions {
   onSave?: (blob: Blob, background: boolean) => void
   themeToggle?: boolean
   gridControl?: boolean
-  /** Primary dock tools (default: notes preset in documentMode, full dock otherwise). */
   tools?: ToolId[]
-  /** Custom SVG inner HTML per tool or chrome icon key. */
   icons?: Partial<Record<string, string>>
-  /** Hide page navigation bar (default false). */
   hidePagesBar?: boolean
 }
 
@@ -311,18 +261,5 @@ export interface CreateCanvasOptions extends EditorOptions {
   themeToggle?: boolean
   gridControl?: boolean
   watermark?: boolean
-  /** Primary dock tools (see BuildUIOptions.tools). */
-  uiTools?: ToolId[]
-  /** Custom dock icons (see BuildUIOptions.icons). */
-  uiIcons?: Partial<Record<string, string>>
-  /** Hide page bar (default false). */
-  hidePagesBar?: boolean
-  /** Viewport/canvas color around the page sheet (documentMode). */
-  documentBackground?: string | null
-  /** Page sheet color behind rich text (documentMode). */
-  documentPaperColor?: string | null
-  touchUi?: boolean
-  promptLink?: () => Promise<string | null>
-  readClipboard?: () => Promise<string>
 }
 export type { EditorListenerMap }

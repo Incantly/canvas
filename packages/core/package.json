@@ -34,12 +34,8 @@
     "./dist/**/*.css",
     "./src/migrations/store.ts",
     "./src/migrations/shape-text.ts",
-    "./src/migrations/page-document.ts",
-    "./src/migrations/notebook-document.ts",
     "./dist/migrations/store.js",
-    "./dist/migrations/shape-text.js",
-    "./dist/migrations/page-document.js",
-    "./dist/migrations/notebook-document.js"
+    "./dist/migrations/shape-text.js"
   ],
   "keywords": [
     "whiteboard",

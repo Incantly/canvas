@@ -13,8 +13,6 @@ export {
   type Point2,
   type Point3,
 } from "./ink/point-filter.js";
-export { strokeBoundsHeight } from "./ink/stroke-bounds.js";
-export { hitDocumentStroke, removeDocumentStroke } from "./ink/hit-stroke.js";
 export {
   splitStrokeByEraser,
   strokePointsBounds,
@@ -77,12 +75,6 @@ export {
   type InkStrokeCap,
   type EraserMode,
 } from "./ink/ink-pen.js";
-export { documentBlocksFingerprint } from "./document/block-fingerprint.js";
-export {
-  findLastDrawingBlockIndex,
-  replaceBlockAt,
-  insertBlockAfter,
-} from "./document/block-index.js";
 export { createLruCache, type LruCache } from "./cache/lru.js";
 export {
   createSubscriptionBag,
