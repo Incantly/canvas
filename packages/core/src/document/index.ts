@@ -55,6 +55,26 @@ export {
 } from './nodes.js'
 
 export {
+  DOCUMENT_LIMITS,
+  type DocumentLimits,
+} from './limits.js'
+
+export {
+  DOCUMENT_ALLOWED_URL_PROTOCOLS,
+  validateDocument,
+  type DocumentValidationIssue,
+  type DocumentValidationIssueCode,
+  type DocumentValidationResult,
+} from './validate.js'
+
+export {
+  normalizeDocument,
+  recoverDocument,
+  type DocumentRecoveryResult,
+  type UnsupportedDocumentContent,
+} from './normalize.js'
+
+export {
   assetsHaveSameContent,
   contentAddressedAssetKey,
   type AssetBinary,

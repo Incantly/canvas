@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Planning complete; implementation not started
+**Status:** Implementation in progress; Milestones 1 and 2 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -194,17 +194,17 @@ For every node:
 
 ## 6. Milestone 2 — validation, normalization, and security
 
-- [ ] Implement runtime validation for the document envelope, metadata, nodes, marks, and attributes.
-- [ ] Return structured validation issues with paths and error codes.
-- [ ] Distinguish strict validation from safe normalization/recovery.
-- [ ] Enforce maximum document depth, node count, text length, table size, URL length, and attribute size.
-- [ ] Enforce node-specific child rules.
-- [ ] Enforce unique node IDs and repair duplicates during explicit recovery only.
-- [ ] Remove unknown executable attributes and reject inline event handlers.
-- [ ] Restrict external URLs to explicit schemes and providers.
-- [ ] Validate colors, dimensions, language identifiers, MIME types, and filenames.
-- [ ] Preserve unsupported imported content through explicit fallback records or import reports instead of silently deleting it.
-- [ ] Add hostile-input tests for deep nesting, oversized tables, invalid URLs, duplicate IDs, prototype-pollution-shaped objects, and unknown nodes.
+- [x] Implement runtime validation for the document envelope, metadata, nodes, marks, and attributes.
+- [x] Return structured validation issues with paths and error codes.
+- [x] Distinguish strict validation from safe normalization/recovery.
+- [x] Enforce maximum document depth, node count, text length, table size, URL length, and attribute size.
+- [x] Enforce node-specific child rules.
+- [x] Enforce unique node IDs and repair duplicates during explicit recovery only.
+- [x] Remove unknown executable attributes and reject inline event handlers.
+- [x] Restrict external URLs to explicit schemes and providers.
+- [x] Validate colors, dimensions, language identifiers, MIME types, and filenames.
+- [x] Preserve unsupported imported content through explicit fallback records or import reports instead of silently deleting it.
+- [x] Add hostile-input tests for deep nesting, oversized tables, invalid URLs, duplicate IDs, prototype-pollution-shaped objects, and unknown nodes.
 
 **Exit criterion:** untrusted JSON cannot reach the React editor without deterministic validation or a reported recovery path.
 
