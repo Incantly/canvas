@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–3 complete
+**Status:** Implementation in progress; Milestones 1–3 and Milestone 4.1 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -227,13 +227,13 @@ For every node:
 
 ### 8.1 Operations and transactions
 
-- [ ] Define typed insert, update, move, delete, and text-replacement operations.
-- [ ] Define asset-reference operations.
-- [ ] Define `DocumentTransaction` with ID, document ID, origin, timestamp, and operations.
-- [ ] Define transaction origins: user, remote, AI, import, migration, and system.
-- [ ] Implement atomic operation application with rollback on invalid output.
-- [ ] Return a structured result containing changed node IDs and validation issues.
-- [ ] Define transaction batching limits for large import and AI operations.
+- [x] Define typed insert, update, move, delete, and text-replacement operations.
+- [x] Define asset-reference operations.
+- [x] Define `DocumentTransaction` with ID, document ID, origin, timestamp, and operations.
+- [x] Define transaction origins: user, remote, AI, import, migration, and system.
+- [x] Implement atomic operation application with rollback on invalid output.
+- [x] Return a structured result containing changed node IDs and validation issues.
+- [x] Define transaction batching limits for large import and AI operations.
 
 ### 8.2 Shared commands
 

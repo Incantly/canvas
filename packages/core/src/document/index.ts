@@ -11,15 +11,40 @@ export {
   commentId,
   createDocumentId,
   createDocumentNodeId,
+  createDocumentTransactionId,
   documentId,
   documentNodeId,
+  documentTransactionId,
   type AssetId,
   type BrandedId,
   type CitationId,
   type CommentId,
   type DocumentId,
   type DocumentNodeId,
+  type DocumentTransactionId,
 } from './ids.js'
+
+export type {
+  ClearDocumentAssetReferenceOperation,
+  DeleteDocumentNodeOperation,
+  DocumentOperation,
+  InsertDocumentNodeOperation,
+  MoveDocumentNodeOperation,
+  ReplaceDocumentTextOperation,
+  SetDocumentAssetReferenceOperation,
+  UpdateDocumentNodeOperation,
+} from './operations.js'
+
+export {
+  DOCUMENT_TRANSACTION_LIMITS,
+  applyDocumentTransaction,
+  type ApplyDocumentTransactionResult,
+  type DocumentTransaction,
+  type DocumentTransactionBatchLimits,
+  type DocumentTransactionIssue,
+  type DocumentTransactionIssueCode,
+  type DocumentTransactionOrigin,
+} from './transactions.js'
 
 export {
   createDocument,
