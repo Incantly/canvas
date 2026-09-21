@@ -1,7 +1,7 @@
 # Incantly Document Web Implementation Checklist
 
 **Branch:** `codex/document-web-foundation`
-**Status:** Implementation in progress; Milestones 1–5 and Milestone 6 complete
+**Status:** Implementation in progress; Milestones 1–6 and Milestone 7.1 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
 **Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
 
@@ -303,14 +303,14 @@ For every node:
 
 ### 11.1 Component API
 
-- [ ] Define `DocumentEditorProps` and `DocumentEditorRef`.
-- [ ] Support uncontrolled initialization with `initialDocument`.
-- [ ] Support a clearly documented controlled mode without recreating the editor on every change.
-- [ ] Add `readonly`, `autofocus`, `editable`, `className`, `style`, and accessibility properties.
-- [ ] Add `onReady`, `onChange`, `onTransaction`, `onSelectionChange`, `onValidationIssue`, and `onError` callbacks.
-- [ ] Expose imperative focus, blur, command execution, state query, get-document, replace-document, and destroy-safe methods.
-- [ ] Define behavior when the document ID or schema version changes.
-- [ ] Do not recreate the Tiptap editor for ordinary prop or toolbar changes.
+- [x] Define `DocumentEditorProps` and `DocumentEditorRef`.
+- [x] Support uncontrolled initialization with `initialDocument`.
+- [x] Support a clearly documented controlled mode without recreating the editor on every change.
+- [x] Add `readonly`, `autofocus`, `editable`, `className`, `style`, and accessibility properties.
+- [x] Add `onReady`, `onChange`, `onTransaction`, `onSelectionChange`, `onValidationIssue`, and `onError` callbacks.
+- [x] Expose imperative focus, blur, command execution, state query, get-document, replace-document, and destroy-safe methods.
+- [x] Define behavior when the document ID or schema version changes.
+- [x] Do not recreate the Tiptap editor for ordinary prop or toolbar changes.
 
 ### 11.2 Continuous writing experience
 
