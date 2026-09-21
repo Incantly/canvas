@@ -1,4 +1,8 @@
-export { incantlyDocumentExtensions } from './extensions.js'
+export {
+  createIncantlyDocumentExtensions,
+  incantlyDocumentExtensions,
+  type IncantlyDocumentExtensionOptions,
+} from './extensions.js'
 export { incantlyDocumentMarks } from './marks.js'
 export {
   IncantlyNodeIds,

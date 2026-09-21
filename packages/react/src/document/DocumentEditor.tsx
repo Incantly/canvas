@@ -18,7 +18,7 @@ import {
   type IncantlyDocument,
 } from '@incantly/canvas/document'
 import { incantlyDocumentToProseMirror, type DocumentAdapterIssue } from './conversion.js'
-import { incantlyDocumentExtensions } from './schema/index.js'
+import { createIncantlyDocumentExtensions } from './schema/index.js'
 import {
   DocumentCheckpointTracker,
   mapProseMirrorTransaction,
@@ -44,6 +44,7 @@ export interface DocumentEditorError {
 
 export type DocumentEditorCommand<TResult = boolean> = (editor: Editor) => TResult
 export type DocumentEditorStateQuery<TResult> = (editor: Editor) => TResult
+export type DocumentEditorTheme = 'light' | 'dark'
 
 export interface ReplaceDocumentOptions {
   /** Defaults to false. Host-driven replacement is not reported as a user edit. */
@@ -73,6 +74,10 @@ export interface DocumentEditorProps extends Pick<AriaAttributes,
   editable?: boolean
   /** Initial focus behavior. Later changes do not recreate or refocus the editor. */
   autofocus?: FocusPosition
+  /** Visual document theme. This is independent from the Canvas theme. */
+  theme?: DocumentEditorTheme
+  /** Transient empty-block hint. It is never written to canonical document JSON. */
+  placeholder?: string
   id?: string
   role?: string
   className?: string
@@ -135,13 +140,18 @@ export const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>
   const checkpointTrackerRef = useRef(new DocumentCheckpointTracker())
   const apiRef = useRef<DocumentEditorRef | null>(null)
   const readyEditorRef = useRef<Editor | null>(null)
+  const placeholderRef = useRef(props.placeholder ?? 'Start writing…')
+  placeholderRef.current = props.placeholder ?? 'Start writing…'
+  const extensionsRef = useRef(createIncantlyDocumentExtensions({
+    placeholder: () => placeholderRef.current,
+  }))
 
   const editable = props.readonly === true ? false : props.editable ?? true
   const initialEditableRef = useRef(editable)
   const initialAutofocusRef = useRef(props.autofocus ?? false)
 
   const editor = useEditor({
-    extensions: incantlyDocumentExtensions,
+    extensions: extensionsRef.current,
     content: incantlyDocumentToProseMirror(initialRef.current.document).value,
     editable: initialEditableRef.current,
     autofocus: initialAutofocusRef.current,
@@ -272,13 +282,21 @@ export const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>
     }
   }, [editor, props.document])
 
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    // Placeholder decorations are derived UI. An empty transaction asks the
+    // plugin to redraw after a host changes the text without touching content.
+    editor.view.dispatch(editor.state.tr.setMeta('incantly:placeholder-change', true))
+  }, [editor, props.placeholder])
+
   const wrapperProps = useMemo(() => ({
     id: props.id,
-    className: props.className,
+    className: ['incantly-document-editor', props.className].filter(Boolean).join(' '),
     style: props.style,
     'data-incantly-document-editor': '',
+    'data-theme': props.theme ?? 'light',
     'data-readonly': !editable ? 'true' : 'false',
-  }), [props.id, props.className, props.style, editable])
+  }), [props.id, props.className, props.style, props.theme, editable])
 
-  return <div {...wrapperProps}><EditorContent editor={editor} /></div>
+  return <div {...wrapperProps}><EditorContent className="incantly-document-editor__content" editor={editor} /></div>
 })

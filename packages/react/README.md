@@ -31,6 +31,7 @@ Use `initialDocument` for an editor that owns its state:
 
 ```tsx
 import { DocumentEditor, createDocument } from '@incantly/canvas-react/document'
+import '@incantly/canvas-react/document.css'
 
 const initialDocument = createDocument({ title: 'Research notes' })
 
@@ -54,3 +55,8 @@ so undo cannot cross between documents.
 
 Changing `readonly`, `editable`, callbacks, classes, styles, or accessibility properties
 also keeps the same editor instance. `autofocus` and `initialDocument` are initialization-only.
+
+The document theme is independent from the Canvas theme. Use `theme="dark"`, change
+`placeholder`, or override the documented `--incantly-document-*` CSS variables on the
+wrapper. The editor does not render a toolbar, so hosts can supply any command UI through
+the imperative ref without changing the writing surface.

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, waitFor } from '@testing-library/react'
-import { createRef } from 'react'
+import { createRef, type CSSProperties } from 'react'
 import { renderToString } from 'react-dom/server'
 import { createDocument, createParagraph } from '@incantly/canvas/document'
 import {
@@ -111,6 +111,72 @@ describe('<DocumentEditor />', () => {
     expect(ref.current?.focus()).toBe(false)
     expect(ref.current?.getDocument()).toBeNull()
     expect(ref.current?.replaceDocument(documentFixture('document:later', 'Later'))).toBe(false)
+  })
+
+  it('renders the responsive writing surface and switches its independent theme', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const initialDocument = documentFixture('document:surface', 'First paragraph')
+    const { container, rerender } = render(
+      <DocumentEditor ref={ref} initialDocument={initialDocument} theme="light" className="host-surface"
+        style={{ '--incantly-document-content-width': '42rem' } as CSSProperties} />,
+    )
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+    const editor = ref.current?.editor
+    const host = container.querySelector('[data-incantly-document-editor]')
+
+    expect(host?.classList.contains('incantly-document-editor')).toBe(true)
+    expect(host?.classList.contains('host-surface')).toBe(true)
+    expect(host?.getAttribute('data-theme')).toBe('light')
+    expect((host as HTMLElement | null)?.style.getPropertyValue('--incantly-document-content-width')).toBe('42rem')
+    expect(container.querySelector('.incantly-document-editor__content .ProseMirror')).toBeTruthy()
+
+    rerender(<DocumentEditor ref={ref} initialDocument={initialDocument} theme="dark" />)
+    expect(ref.current?.editor).toBe(editor)
+    expect(container.querySelector('[data-incantly-document-editor]')?.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('uses transient, updateable placeholders without persisting them', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const initialDocument = createDocument({ id: 'document:empty', now: '2026-09-21T10:00:00.000Z' })
+    const { container, rerender } = render(
+      <DocumentEditor ref={ref} initialDocument={initialDocument} placeholder="Write a finding…" />,
+    )
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+
+    expect(container.querySelector('.ProseMirror .is-empty')?.getAttribute('data-placeholder')).toBe('Write a finding…')
+    expect(JSON.stringify(ref.current?.getDocument())).not.toContain('Write a finding…')
+
+    rerender(<DocumentEditor ref={ref} initialDocument={initialDocument} placeholder="Start a research note…" />)
+    await waitFor(() => {
+      expect(container.querySelector('.ProseMirror .is-empty')?.getAttribute('data-placeholder'))
+        .toBe('Start a research note…')
+    })
+    expect(JSON.stringify(ref.current?.getDocument())).not.toContain('Start a research note…')
+  })
+
+  it('keeps one native selection model across paragraphs', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const onSelectionChange = vi.fn()
+    const document = createDocument({
+      id: 'document:selection',
+      now: '2026-09-21T10:00:00.000Z',
+      content: [
+        createParagraph({ id: 'node:first', text: 'First' }),
+        createParagraph({ id: 'node:second', text: 'Second' }),
+      ],
+    })
+    render(<DocumentEditor ref={ref} initialDocument={document} onSelectionChange={onSelectionChange} />)
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+
+    const end = ref.current!.editor!.state.doc.content.size - 1
+    act(() => { ref.current?.executeCommand((editor) => editor.commands.setTextSelection({ from: 1, to: end })) })
+
+    expect(ref.current?.editor?.state.selection.empty).toBe(false)
+    expect(ref.current?.editor?.state.selection.$from.parent).not.toBe(ref.current?.editor?.state.selection.$to.parent)
+    expect(onSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({ from: 1, to: end, empty: false }),
+      ref.current?.editor,
+    )
   })
 
   it('reports command errors without throwing into the host application', async () => {

@@ -3,7 +3,7 @@
 **Branch:** `codex/document-web-foundation`
 **Status:** Implementation in progress; Milestones 1–6 and Milestone 7.1 complete
 **Scope:** Shared document model in `packages/core` and the React web document editor in `packages/react`
-**Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and complete DOCX/PDF import
+**Out of scope:** New React Native document UI, the future document WebView bridge, Liveblocks production integration, and DOCX/PDF import. Export is planned below as a separate, model-driven pipeline.
 
 ## How this checklist must be maintained
 
@@ -32,6 +32,8 @@ At completion:
 - The React editor maps losslessly between the Incantly model and ProseMirror.
 - Canvas and document exports are split so canvas-only applications do not load Tiptap.
 - The initial editor supports continuous writing, core formatting, basic rich blocks, controlled state, and autosave hooks.
+- Page layout is stored portably, live web pagination is an adapter over core layout contracts, and generated page boundaries never become canonical content.
+- TXT, Markdown, HTML, PDF, and DOCX exports originate from the canonical model and report lossy conversions.
 - Fixtures and tests prove that content round-trips without semantic loss.
 
 This branch is the foundation for the later React Native implementation. React Native will reuse the core types and behavior rather than importing the React editor or Tiptap UI directly.
@@ -69,6 +71,18 @@ packages/core/src/document/
 ├── assets.ts
 ├── serialize.ts
 ├── limits.ts
+├── layout/
+│   ├── types.ts
+│   ├── units.ts
+│   ├── pageFormats.ts
+│   ├── measurement.ts
+│   └── paginate.ts
+├── export/
+│   ├── types.ts
+│   ├── project.ts
+│   ├── text.ts
+│   ├── markdown.ts
+│   └── html.ts
 └── migrations/
     ├── index.ts
     └── v1.ts
@@ -98,6 +112,15 @@ packages/react/src/document/
 │   ├── pasteSanitizer.ts
 │   ├── transactionOrigin.ts
 │   └── stableNodeIds.ts
+├── pagination/
+│   ├── WebMeasurementAdapter.ts
+│   ├── PaginationPlugin.ts
+│   ├── PageLayout.tsx
+│   └── PageSettings.tsx
+├── export/
+│   ├── createPrintSnapshot.ts
+│   ├── renderPagedPreview.ts
+│   └── printToPdf.ts
 ├── components/
 │   ├── DocumentContent.tsx
 │   ├── DocumentToolbar.tsx
@@ -120,6 +143,8 @@ examples/document-web-demo/
     ├── demoAssetRepository.ts
     └── styles.css
 ```
+
+An optional `packages/document-export` package may contain heavy, dynamically loaded DOCX/ZIP dependencies. Its public API must depend on `packages/core`, not React or a mounted editor.
 
 The final filenames can change during implementation when the code demonstrates a simpler boundary, but the ownership boundaries above must remain.
 
@@ -314,12 +339,12 @@ For every node:
 
 ### 11.2 Continuous writing experience
 
-- [ ] Render one continuous writing surface without visible Notion-style block cards.
-- [ ] Provide readable content width, typography, selection colors, focus states, and mobile-responsive spacing.
-- [ ] Support cross-paragraph selection and native browser keyboard behavior.
-- [ ] Add placeholders without persisting them.
-- [ ] Add light and dark theme variables without coupling to the canvas theme implementation.
-- [ ] Keep the editor usable with its toolbar hidden or replaced.
+- [x] Render one continuous writing surface without visible Notion-style block cards.
+- [x] Provide readable content width, typography, selection colors, focus states, and mobile-responsive spacing.
+- [x] Support cross-paragraph selection and native browser keyboard behavior.
+- [x] Add placeholders without persisting them.
+- [x] Add light and dark theme variables without coupling to the canvas theme implementation.
+- [x] Keep the editor usable with its toolbar hidden or replaced.
 
 ### 11.3 Formatting UI
 
@@ -346,7 +371,139 @@ For every node:
 
 **Exit criterion:** a host React application can render and edit a standalone Incantly document without creating a Canvas instance.
 
-## 12. Milestone 8 — clipboard, drag/drop, and assets
+## 12. Milestone 8 — composable page layout and web pagination
+
+Paged editing must be built as an Incantly capability, not as Tiptap-specific stored state. Tiptap/ProseMirror remains the web editing adapter. Paged.js is not used inside the live editable DOM because its generated page fragments would conflict with editor selection, transactions, and node identity.
+
+### 12.1 Canonical layout and section model
+
+- [ ] Add a versioned page-layout model to `packages/core`, with continuous and paginated presentation modes.
+- [ ] Store physical page width, height, margins, header distance, and footer distance in points; convert cm, mm, inches, and CSS pixels only at UI boundaries.
+- [ ] Provide presets for A4, Letter, Legal, and other approved formats plus validated custom dimensions.
+- [ ] Model portrait/landscape orientation without destructively rewriting the selected preset.
+- [ ] Add document defaults and explicit section boundaries so page setup can later vary within one document.
+- [ ] Store only explicit user-created page/section breaks; never persist calculated automatic page boundaries.
+- [ ] Model default, first-page, odd-page, and even-page header/footer variants as canonical Incantly document fragments.
+- [ ] Model page number, total page count, document title, date, and similar header/footer fields semantically rather than as frozen text.
+- [ ] Keep editor zoom, page gap, ruler visibility, and “link margins” UI state outside the canonical document.
+- [ ] Add validation, normalization, migration, serialization, and hostile-input limits for all layout records.
+- [ ] Add core fixtures covering custom paper, mirrored margins, headers/footers, explicit breaks, and multiple sections.
+
+### 12.2 Portable pagination contracts
+
+- [ ] Define framework-independent measurement input/output types in core for blocks, line fragments, intrinsic media size, keep rules, and available page regions.
+- [ ] Define a deterministic pagination result containing derived page ranges, overflow diagnostics, and layout warnings without mutating the document.
+- [ ] Support keep-with-next, keep-lines-together, widows/orphans, explicit breaks, unbreakable blocks, tables, media, and header/footer reserved space incrementally.
+- [ ] Make the pagination algorithm consume injected measurements so the web DOM adapter and a future native adapter can share the same decisions.
+- [ ] Give every calculated page and fragment a stable derivation key for caching and debugging, not a persisted document ID.
+- [ ] Add invalidation ranges so edits repaginate from the earliest affected block rather than from page one.
+- [ ] Specify fallback behavior and warnings for content that cannot fit on a page.
+- [ ] Add deterministic core tests using synthetic measurements, independent of browser font rendering.
+
+### 12.3 Live web pagination adapter
+
+- [ ] Build a ProseMirror plugin that observes transactions and schedules measurement after DOM layout without serializing the whole document.
+- [ ] Measure through DOM ranges and ProseMirror position mapping while preserving native selection, IME composition, drag selection, and undo history.
+- [ ] Render page chrome, gaps, and calculated break markers as decorations/layout UI that never enter canonical content.
+- [ ] Keep the editable ProseMirror content authoritative and avoid splitting one logical document into independent editor instances per page.
+- [ ] Reuse cached measurements until content, width, font, zoom, asset dimensions, or section setup invalidates them.
+- [ ] Reflow when web fonts and intrinsic asset sizes become ready, with scroll/caret anchoring to avoid visual jumps.
+- [ ] Virtualize page chrome and heavy previews for distant pages without unmounting editable text required by ProseMirror.
+- [ ] Add a continuous/paginated toggle that changes presentation without rewriting document content.
+- [ ] Verify long selections, copy/paste, keyboard navigation, find-in-page, accessibility, and browser zoom across calculated page boundaries.
+
+### 12.4 Page settings and header/footer design
+
+- [ ] Add a composable `PageSettings` primitive for preset/custom dimensions, units, orientation, margins, linked margins, and header/footer spacing.
+- [ ] Provide host-overridable controls and commands rather than baking product-specific dialogs into `DocumentEditor`.
+- [ ] Validate impossible dimensions and show actionable errors before applying a transaction.
+- [ ] Add reusable header/footer editing surfaces tied to the active section and selected variant.
+- [ ] Display non-printing boundaries and safe areas without putting them in exported content.
+- [ ] Add page-number insertion and starting-number controls with accessible keyboard operation.
+- [ ] Expose layout-change events and typed commands for custom application UI.
+
+### 12.5 Performance and cross-platform boundary
+
+- [ ] Establish budgets for keystroke-to-paint, incremental repagination, full initial pagination, memory, and layout shift at 10, 100, and 500 pages.
+- [ ] Move pure pagination work off the input path and use idle/chunked scheduling where browser measurement is not required.
+- [ ] Ensure `packages/core` pagination imports without DOM, React, Tiptap, or Paged.js.
+- [ ] Document how the same web bundle and paginator can run offline in a future React Native WebView.
+- [ ] Document the future native measurement-adapter contract without claiming pixel-identical layout across different font engines.
+- [ ] Add a paginated playground fixture with page settings, headers/footers, explicit breaks, long tables, images, and diagnostic overlays.
+
+**Exit criterion:** the web editor offers usable paginated presentation while the canonical model and pagination decisions remain portable to a future React Native adapter.
+
+## 13. Milestone 9 — export pipeline and Paged.js print rendering
+
+Exports must be projections from validated Incantly content. They must not scrape the live editor DOM, and every lossy or unsupported conversion must be visible to the caller.
+
+### 13.1 Shared export contracts
+
+- [ ] Define `ExportFormat`, `ExportOptions`, `ExportResult`, progress, cancellation, warnings, and structured loss-report contracts in core.
+- [ ] Build a normalized export projection from the canonical model so exporters share traversal, asset lookup, numbering, and fallback behavior.
+- [ ] Inject asset and font resolvers; never require embedded binary data in document JSON.
+- [ ] Define runtime-neutral byte/text output types with thin browser `Blob` and React Native filesystem adapters.
+- [ ] Make filenames, MIME types, encoding, locale, time zone, and deterministic metadata explicit options.
+- [ ] Sanitize links, embeds, HTML, filenames, and externally resolved assets before export.
+- [ ] Ensure heavy exporters are dynamically imported and absent from the default editor/canvas bundle.
+
+### 13.2 TXT export
+
+- [ ] Export UTF-8 plain text with predictable paragraph, list, checklist, table, code, equation, and attachment fallbacks.
+- [ ] Allow LF or CRLF line endings and optional front matter/metadata.
+- [ ] Report formatting, media, layout, and rich-structure loss.
+- [ ] Add golden fixtures for Unicode, RTL text, code, tables, lists, and attachments.
+
+### 13.3 Markdown export
+
+- [ ] Export CommonMark-compatible Markdown with documented extensions for tables, task lists, math, footnotes, and front matter.
+- [ ] Preserve fenced-code languages, link targets, asset references, and explicit page breaks through defined conventions.
+- [ ] Provide configurable unsupported-node fallbacks: omit, plain text, HTML, or warning placeholder.
+- [ ] Add Markdown round-trip tests where the supported subset is expected to be lossless.
+
+### 13.4 HTML export
+
+- [ ] Produce standalone semantic HTML from the export projection without mounting Tiptap.
+- [ ] Generate print CSS from canonical page and section setup using CSS Paged Media rules where supported.
+- [ ] Support self-contained or external asset strategies with explicit size/security limits.
+- [ ] Keep interactive editor UI, selection decorations, comments, upload state, and pagination diagnostics out of output.
+- [ ] Add accessibility and sanitization tests for exported HTML.
+
+### 13.5 Paged.js preview and PDF workflow
+
+- [ ] Pin and review the MIT-licensed Paged.js dependency, supported browsers, bundle impact, and release-health risk before adoption.
+- [ ] Feed Paged.js the sanitized, read-only HTML export in an isolated iframe or detached print surface; never run it over the live `contenteditable` tree.
+- [ ] Map canonical page size, orientation, margins, named sections, explicit breaks, headers/footers, counters, widows, and orphans to CSS Paged Media.
+- [ ] Wait for fonts, images, equations, and asset resolution before declaring the preview ready.
+- [ ] Dynamically load Paged.js only when print preview or PDF export is requested and clean up the isolated renderer afterward.
+- [ ] Offer an offline browser “Print / Save as PDF” path that uses the system print dialog.
+- [ ] Define a separate deterministic downloadable-PDF worker using headless Chromium/Paged.js; do not imply that browser Paged.js alone writes a PDF file.
+- [ ] Return page count, layout warnings, missing-asset warnings, progress, cancellation, and timeout errors.
+- [ ] Add visual-regression fixtures for paper sizes, margins, headers/footers, tables, code, equations, images, long links, and forced page breaks.
+- [ ] Compare Paged.js output against the live paginator and document accepted differences; Paged.js is an export renderer, not the canonical pagination oracle.
+
+### 13.6 DOCX export
+
+- [ ] Evaluate maintained open-source OOXML/DOCX libraries for license, browser bundling, React Native compatibility, extensibility, and deterministic output before selecting one.
+- [ ] Generate a real `.docx` OPC/OOXML package rather than HTML renamed as DOCX.
+- [ ] Map headings/styles, paragraphs, marks, lists/numbering, checklists, tables, code, equations, images, links, captions, footnotes, and explicit breaks where supported.
+- [ ] Map sections, paper dimensions, orientation, margins, columns, headers/footers, page-number fields, relationships, and content types to native Word constructs.
+- [ ] Embed or link assets according to explicit policy and report unsupported media/embeds rather than silently dropping them.
+- [ ] Keep the DOCX implementation outside `packages/core`; expose it through the shared export contracts and load it on demand.
+- [ ] Validate generated packages structurally, unzip-inspect golden fixtures, and open smoke-test artifacts in Word and LibreOffice.
+- [ ] Document unavoidable layout differences caused by Word font availability and pagination engines.
+
+### 13.7 Export UI and playground verification
+
+- [ ] Add host-overridable export commands and an optional web export menu for `.inc`, `.txt`, `.md`, `.html`, `.pdf`, and `.docx`.
+- [ ] Show progress, cancellation, warnings, loss reports, and retry states without blocking editing.
+- [ ] Add export controls and downloadable fixtures to `examples/document-web-demo`.
+- [ ] Verify exports work without Liveblocks or network access when all referenced assets are local.
+- [ ] Document which formats preserve editing semantics, which preserve visual layout, and which are intentionally lossy.
+
+**Exit criterion:** the same canonical document exports predictably to TXT, Markdown, HTML, PDF, and DOCX, with page setup honored where the target supports it and explicit reports everywhere fidelity is reduced.
+
+## 14. Milestone 10 — clipboard, drag/drop, and assets
 
 - [ ] Sanitize pasted HTML with an allowlist matching the canonical schema.
 - [ ] Preserve plain-text paste predictably.
@@ -362,7 +519,7 @@ For every node:
 
 **Exit criterion:** common clipboard and file operations are safe, report loss, and never embed uncontrolled binary data in JSON.
 
-## 13. Milestone 9 — persistence and recovery contracts
+## 15. Milestone 11 — persistence and recovery contracts
 
 - [ ] Expose debounced autosave integration without hard-coding a backend.
 - [ ] Flush pending changes on explicit save and editor teardown.
@@ -376,7 +533,7 @@ For every node:
 
 **Exit criterion:** a host can guarantee that acknowledged local edits survive refresh and navigation.
 
-## 14. Milestone 10 — performance implementation
+## 16. Milestone 12 — performance implementation
 
 - [ ] Set `shouldRerenderOnTransaction: false` unless a measured requirement proves otherwise.
 - [ ] Use narrow `useEditorState` selectors for toolbar and status UI.
@@ -401,7 +558,7 @@ For every node:
 
 **Exit criterion:** the first release has a measured baseline and no known per-keystroke whole-document work.
 
-## 15. Milestone 11 — accessibility and browser behavior
+## 17. Milestone 13 — accessibility and browser behavior
 
 - [ ] Preserve native text-selection and caret behavior.
 - [ ] Add labels, pressed states, disabled states, and keyboard operation to toolbar controls.
@@ -416,7 +573,7 @@ For every node:
 
 **Exit criterion:** the core writing path is keyboard- and screen-reader-usable and does not rely on pointer-only controls.
 
-## 16. Milestone 12 — testing matrix
+## 18. Milestone 14 — testing matrix
 
 ### Core unit tests
 
@@ -462,21 +619,21 @@ For every node:
 
 **Exit criterion:** CI tests both the new document path and all existing canvas behavior.
 
-## 17. Milestone 13 — examples and documentation
+## 19. Milestone 15 — examples and documentation
 
-- [ ] Scaffold a minimal Vite React application at `examples/document-web-demo`, separate from the canvas demo.
-- [ ] Configure the monorepo workspace and Vite aliases so the demo exercises the local `packages/core` and `packages/react` source/build instead of published packages.
-- [ ] Add root scripts such as `dev:document` and `build:document-demo` for starting and verifying the playground.
-- [ ] Keep the playground simple and development-focused; it is a test harness, not the final Incantly product interface.
-- [ ] Display the current document JSON beside or beneath the editor for inspecting canonical-model changes.
+- [x] Scaffold a minimal Vite React application at `examples/document-web-demo`, separate from the canvas demo.
+- [x] Configure the monorepo workspace and Vite aliases so the demo exercises the local `packages/core` and `packages/react` source/build instead of published packages.
+- [x] Add root scripts such as `dev:document` and `build:document-demo` for starting and verifying the playground.
+- [x] Keep the playground simple and development-focused; it is a test harness, not the final Incantly product interface.
+- [x] Display the current document JSON beside or beneath the editor for inspecting canonical-model changes.
 - [ ] Add controls to reset the fixture, load a large fixture, toggle read-only mode, toggle the default toolbar, and simulate save/reload.
 - [ ] Add a visible event log for transactions, selection changes, validation issues, autosave, and errors.
 - [ ] Add a local persistence toggle so refresh and recovery behavior can be tested without a backend.
 - [ ] Add fixture selection for basic formatting, nested lists, tables, math/code, attachments, hostile paste, and large-document performance.
 - [ ] Add a small diagnostics panel showing editor readiness, node count, character count, last save time, render/transaction timing, and current schema version.
-- [ ] Ensure every new user-visible editor feature is exposed in the playground in the same change that implements it.
-- [ ] Ensure the playground starts with one documented command and without requiring Liveblocks, authentication, or a network connection.
-- [ ] Add a production build check for the Vite playground to CI or the branch verification command.
+- [x] Ensure every new user-visible editor feature is exposed in the playground in the same change that implements it.
+- [x] Ensure the playground starts with one documented command and without requiring Liveblocks, authentication, or a network connection.
+- [x] Add a production build check for the Vite playground to CI or the branch verification command.
 - [ ] Show uncontrolled local usage.
 - [ ] Show controlled persistence usage.
 - [ ] Show a custom toolbar invoking shared commands.
@@ -490,7 +647,7 @@ For every node:
 
 **Exit criterion:** another application can integrate `DocumentEditor` without reading its internal source.
 
-## 18. Deferred work after the web foundation
+## 20. Deferred work after the web foundation
 
 These items must be anticipated by contracts but should not expand the first implementation branch uncontrollably:
 
@@ -498,16 +655,16 @@ These items must be anticipated by contracts but should not expand the first imp
 - Yjs document binding, awareness, comments, presence, and offline update compaction.
 - React Native locally bundled WebView editor and typed bridge.
 - Native SQLite and filesystem repositories.
-- Full paginated live editing.
-- High-fidelity PDF and DOCX import/export.
+- High-fidelity DOCX/PDF import; export is planned in Milestone 9.
+- Server-side collaborative export queues beyond the deterministic PDF worker contract.
 - Full citation manager, bibliography, footnotes, cross-references, and tracked changes.
-- Server-side indexing and export workers.
+- Server-side indexing and production export queue/infrastructure; Milestone 9 defines only the deterministic PDF worker contract needed by the exporter.
 - Native viewers and players for attachments.
 - ~~Legacy Canvas `documentMode` migration and removal.~~ Completed during milestone 5.4; the store migration removes legacy page/notebook document payloads.
 - Canvas/document embeds with live cross-surface updates.
 - Complete `.inc` ZIP container import/export.
 
-## 19. Pull request slicing
+## 21. Pull request slicing
 
 The branch may be implemented as a sequence of reviewable commits or smaller pull requests:
 
@@ -517,12 +674,15 @@ The branch may be implemented as a sequence of reviewable commits or smaller pul
 4. `feat(react): add Tiptap schema and Incantly adapters`
 5. `feat(react): add standalone DocumentEditor and command API`
 6. `feat(react): add formatting UI, paste, and asset hooks`
-7. `test(document): add round-trip, integration, security, and performance coverage`
-8. `docs(document): add web integration and architecture documentation`
+7. `feat(document): add portable page-layout and pagination contracts`
+8. `feat(react): add incremental paginated editing and page settings`
+9. `feat(export): add text, Markdown, HTML, Paged.js print, PDF, and DOCX pipelines`
+10. `test(document): add round-trip, integration, security, pagination, export, and performance coverage`
+11. `docs(document): add web integration and architecture documentation`
 
 Do not combine legacy Canvas document removal into these commits.
 
-## 20. Definition of done for this branch
+## 22. Definition of done for this branch
 
 - [ ] A new document is created through the core API.
 - [ ] The React editor edits it as one continuous writing surface.
@@ -535,10 +695,14 @@ Do not combine legacy Canvas document removal into these commits.
 - [ ] Canvas consumers can import a canvas-only React subpath without Tiptap.
 - [ ] Existing canvas behavior and tests remain intact.
 - [ ] Performance is measured against representative large-document fixtures.
+- [ ] Page layout round-trips through canonical JSON, and calculated page boundaries remain derived state.
+- [ ] Live pagination remains editable and preserves selection, IME, undo, and accessibility behavior.
+- [ ] TXT, Markdown, HTML, PDF, and DOCX exports pass their fixtures and expose loss reports.
+- [ ] Paged.js is isolated from the live editor and excluded from default bundles.
 - [ ] Public APIs and deferred limitations are documented.
 - [ ] React Native can later reuse the model, commands, transactions, fixtures, and repository contracts without importing web UI code.
 
-## 21. First implementation sequence
+## 23. First implementation sequence
 
 When implementation begins, use this exact order:
 
@@ -553,8 +717,12 @@ When implementation begins, use this exact order:
 9. Scaffold the minimal Vite document playground and connect it to the local packages.
 10. Add the standalone `DocumentEditor` API and continuous surface, exposing each completed feature in the playground.
 11. Add formatting commands and optional UI primitives.
-12. Add safe paste, asset hooks, persistence hooks, and recovery tests.
-13. Measure performance, inspect bundles, fix regressions, and document the integration.
+12. Add the canonical page-layout model and portable pagination contracts.
+13. Implement incremental web measurement, live page chrome, settings, and headers/footers.
+14. Add the shared export projection and TXT, Markdown, and HTML exporters.
+15. Add isolated Paged.js print preview/PDF workflows and the portable DOCX exporter.
+16. Add safe paste, asset hooks, persistence hooks, and recovery tests.
+17. Measure performance, inspect bundles, fix regressions, and document the integration.
 
 Implementation should not advance to the next numbered step while the current step's exit criteria or regression tests are failing.
 

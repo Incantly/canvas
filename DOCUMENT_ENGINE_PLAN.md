@@ -548,20 +548,26 @@ Store semantic content, not calculated page boundaries.
 interface PageSetup {
   mode: 'continuous' | 'paginated'
   size: 'a4' | 'letter' | 'legal' | 'custom'
-  width?: number
-  height?: number
+  widthPt?: number
+  heightPt?: number
   orientation: 'portrait' | 'landscape'
   margins: {
-    top: number
-    right: number
-    bottom: number
-    left: number
+    topPt: number
+    rightPt: number
+    bottomPt: number
+    leftPt: number
   }
   columns: 1 | 2
 }
 ```
 
-Pagination is calculated from content, font metrics, paper dimensions, margins, figures, tables, footnotes, headers, and footers. Only explicit user-created page breaks are stored.
+Points are the canonical physical unit. Centimeters, millimeters, inches, and CSS pixels are display/input choices converted at the platform boundary. Editor zoom, visual page gaps, ruler visibility, and linked-margin controls are user-interface state, not document semantics.
+
+Page setup has document defaults and may be overridden by explicit section records. Headers and footers are Incantly document fragments with default, first-page, odd-page, and even-page variants. Dynamic values such as page number and total page count are stored as semantic fields.
+
+Pagination is calculated from content, font metrics, paper dimensions, margins, figures, tables, footnotes, headers, and footers. Only explicit user-created page or section breaks are stored. Calculated page ranges and overflow diagnostics are derived caches and never become canonical content.
+
+The shared paginator accepts injected measurements rather than accessing the DOM. The web adapter obtains measurements from ProseMirror positions and DOM ranges. A future React Native WebView can reuse that web adapter offline; a future fully native editor can provide a native measurement adapter without replacing the document model or pagination rules.
 
 This allows the same document to render as:
 
@@ -624,7 +630,15 @@ Canonical Incantly document
 
 Exporters operate on the canonical model and must not require a mounted browser editor.
 
-DOCX export should map semantic structures to real Word constructs: heading styles, lists, tables, captions, footnotes, page setup, and document relationships. LaTeX export should produce a readable project with asset files rather than one opaque generated string.
+All exporters consume a validated, normalized export projection and return structured warnings/loss reports. Core owns format-neutral contracts and pure projections. Heavy or runtime-specific dependencies remain in optional adapter packages and are dynamically loaded.
+
+TXT export is explicitly lossy and uses documented textual fallbacks. Markdown targets a documented CommonMark-compatible profile. HTML export is semantic and sanitized, with optional print CSS generated from canonical page setup.
+
+Paged.js is used only against an isolated, read-only HTML export for print preview and CSS Paged Media rendering. It must not rewrite the live ProseMirror `contenteditable` DOM. Browser-only offline PDF output uses the system Print / Save as PDF flow; deterministic downloadable PDF generation uses a separate headless Chromium/Paged.js worker because Paged.js itself paginates HTML but does not create the final PDF byte stream in a normal browser.
+
+DOCX export should create a real OPC/OOXML package and map semantic structures to native Word constructs: heading styles, numbering, lists, tables, captions, footnotes, section page setup, headers/footers, page-number fields, media, and document relationships. The chosen open-source implementation must first be evaluated for license, maintenance, browser bundling, React Native compatibility, and extensibility. LaTeX export should produce a readable project with asset files rather than one opaque generated string.
+
+The first export order is `.inc`, TXT, Markdown, HTML, PDF, then DOCX. Import remains a separate pipeline and is not implied by export support.
 
 ## 12. Collaboration and offline storage
 
@@ -872,14 +886,16 @@ Initial nodes:
 
 ### Phase 4 — page layout and export
 
-- Continuous/paginated toggle
-- A4, Letter, Legal, and custom sizes
-- Margins and orientation
-- Headers and footers
-- Print/PDF output
-- Markdown and HTML export
-- DOCX export
-- LaTeX export
+- Canonical page defaults, sections, units, explicit breaks, and header/footer fragments
+- Portable measurement and incremental pagination contracts with synthetic core tests
+- Web DOM measurement adapter and continuous/paginated toggle
+- A4, Letter, Legal, custom sizes, margins, orientation, and page-setting UI
+- Editable headers/footers and semantic page-number fields
+- Shared export projection, asset/font resolvers, progress, cancellation, and loss reports
+- TXT, Markdown, and semantic HTML export
+- Isolated Paged.js print preview plus browser and headless-worker PDF paths
+- Real OOXML DOCX export behind an optional dynamically loaded package
+- LaTeX project export after the initial formats are stable
 
 ### Phase 5 — import pipelines
 

@@ -19,6 +19,7 @@
       "types": "./dist/document/index.d.ts",
       "default": "./dist/document/index.js"
     },
+    "./document.css": "./src/document/document.css",
     "./canvas.css": "./src/canvas.css",
     "./package.json": "./package.json"
   },
@@ -30,10 +31,12 @@
   "files": [
     "dist",
     "src/canvas.css",
+    "src/document/document.css",
     "README.md"
   ],
   "sideEffects": [
-    "./src/canvas.css"
+    "./src/canvas.css",
+    "./src/document/document.css"
   ],
   "keywords": [
     "react",
@@ -48,6 +51,7 @@
   "dependencies": {
     "@incantly/canvas": "0.2.0",
     "@tiptap/core": "3.31.3",
+    "@tiptap/extension-placeholder": "3.31.3",
     "@tiptap/extension-underline": "3.31.3",
     "@tiptap/pm": "3.31.3",
     "@tiptap/react": "3.31.3",

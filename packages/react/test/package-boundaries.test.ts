@@ -14,8 +14,10 @@ describe('React package entry points', () => {
     expect(packageJson.exports['./canvas']).toEqual({ types: './dist/canvas/index.d.ts', default: './dist/canvas/index.js' })
     expect(packageJson.exports['./document']).toEqual({ types: './dist/document/index.d.ts', default: './dist/document/index.js' })
     expect(packageJson.exports['./canvas.css']).toBe('./src/canvas.css')
-    expect(packageJson.sideEffects).toEqual(['./src/canvas.css'])
+    expect(packageJson.exports['./document.css']).toBe('./src/document/document.css')
+    expect(packageJson.sideEffects).toEqual(['./src/canvas.css', './src/document/document.css'])
     expect(packageJson.files).toContain('src/canvas.css')
+    expect(packageJson.files).toContain('src/document/document.css')
   })
 
   it('keeps the root Canvas API compatible and exposes the explicit canvas path', async () => {
