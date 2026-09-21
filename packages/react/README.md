@@ -60,3 +60,9 @@ The document theme is independent from the Canvas theme. Use `theme="dark"`, cha
 `placeholder`, or override the documented `--incantly-document-*` CSS variables on the
 wrapper. The editor does not render a toolbar, so hosts can supply any command UI through
 the imperative ref without changing the writing surface.
+
+Enable the optional formatting preset with `ui="formatting"`. It adds the accessible
+default toolbar, selection bubble toolbar, and slash-command menu. For a custom layout,
+leave `ui` unset and mount `DocumentToolbar`, `DocumentBubbleToolbar`, or
+`DocumentSlashMenu` with the editor returned by `onReady`. Slash-menu items and their
+rendering are replaceable through `items` and `renderItem`.

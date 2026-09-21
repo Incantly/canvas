@@ -6,6 +6,7 @@ import {
   useRef,
   type AriaAttributes,
   type CSSProperties,
+  type ReactNode,
 } from 'react'
 import { Editor, type FocusPosition } from '@tiptap/core'
 import { EditorContent, useEditor } from '@tiptap/react'
@@ -19,6 +20,8 @@ import {
 } from '@incantly/canvas/document'
 import { incantlyDocumentToProseMirror, type DocumentAdapterIssue } from './conversion.js'
 import { createIncantlyDocumentExtensions } from './schema/index.js'
+import { DocumentEditorProvider } from './DocumentEditorContext.js'
+import { DocumentBubbleToolbar, DocumentSlashMenu, DocumentToolbar } from './components/FormattingUI.js'
 import {
   DocumentCheckpointTracker,
   mapProseMirrorTransaction,
@@ -82,6 +85,10 @@ export interface DocumentEditorProps extends Pick<AriaAttributes,
   role?: string
   className?: string
   style?: CSSProperties
+  /** Optional built-in formatting UI. Omit it and compose the exported UI primitives for custom layouts. */
+  ui?: 'none' | 'formatting'
+  /** Custom UI rendered in the editor context without becoming document content. */
+  children?: ReactNode
   onReady?: (editor: Editor, ref: DocumentEditorRef) => void
   onChange?: (document: IncantlyDocument, event: CanonicalDocumentChangeEvent, editor: Editor) => void
   onTransaction?: (event: CanonicalDocumentChangeEvent, transaction: Transaction, editor: Editor) => void
@@ -298,5 +305,14 @@ export const DocumentEditor = forwardRef<DocumentEditorRef, DocumentEditorProps>
     'data-readonly': !editable ? 'true' : 'false',
   }), [props.id, props.className, props.style, props.theme, editable])
 
-  return <div {...wrapperProps}><EditorContent className="incantly-document-editor__content" editor={editor} /></div>
+  return (
+    <DocumentEditorProvider editor={editor}>
+      <div {...wrapperProps}>
+        {props.ui === 'formatting' ? <DocumentToolbar /> : null}
+        <EditorContent className="incantly-document-editor__content" editor={editor} />
+        {props.ui === 'formatting' ? <><DocumentBubbleToolbar /><DocumentSlashMenu /></> : null}
+        {props.children}
+      </div>
+    </DocumentEditorProvider>
+  )
 })

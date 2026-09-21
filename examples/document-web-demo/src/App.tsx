@@ -28,8 +28,8 @@ export function App() {
     <main className="demo-shell" data-theme={theme}>
       <header className="demo-controls">
         <div>
-          <strong>Document 11.2 playground</strong>
-          <span>Continuous surface, responsive layout, placeholder, and themes</span>
+          <strong>Document 11.3 playground</strong>
+          <span>Continuous surface and Milestone 11.3 formatting UI—type “/” for block commands</span>
         </div>
         <label>
           Placeholder
@@ -48,6 +48,7 @@ export function App() {
         theme={theme}
         readonly={readonly}
         placeholder={placeholder}
+        ui="formatting"
         aria-label="Research document"
         onChange={(nextDocument) => setDocument(nextDocument)}
       />

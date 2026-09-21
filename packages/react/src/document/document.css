@@ -86,6 +86,96 @@
   caret-color: transparent;
 }
 
+.incantly-document-toolbar,
+.incantly-document-bubble-toolbar {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0.5rem;
+  color: var(--incantly-document-text);
+  background: var(--incantly-document-surface);
+}
+
+.incantly-document-toolbar {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--incantly-document-border);
+}
+
+.incantly-document-bubble-toolbar {
+  border: 1px solid var(--incantly-document-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 18%);
+}
+
+.incantly-format-button,
+.incantly-document-slash-menu button {
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.incantly-format-button:hover:not(:disabled),
+.incantly-format-button:focus-visible,
+.incantly-format-button[aria-pressed='true'] {
+  border-color: var(--incantly-document-border);
+  background: var(--incantly-document-selection);
+  outline: none;
+}
+
+.incantly-format-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.incantly-toolbar-separator {
+  width: 1px;
+  height: 1.5rem;
+  margin-inline: 0.15rem;
+  background: var(--incantly-document-border);
+}
+
+.incantly-document-slash-menu {
+  position: absolute;
+  z-index: 3;
+  inset-inline-start: max(1rem, calc((100% - var(--incantly-document-content-width)) / 2));
+  width: min(20rem, calc(100% - 2rem));
+  max-height: 20rem;
+  overflow: auto;
+  padding: 0.4rem;
+  border: 1px solid var(--incantly-document-border);
+  border-radius: 0.5rem;
+  color: var(--incantly-document-text);
+  background: var(--incantly-document-surface);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 18%);
+}
+
+.incantly-document-slash-menu button {
+  display: grid;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  text-align: start;
+}
+
+.incantly-document-slash-menu button:hover,
+.incantly-document-slash-menu button:focus-visible,
+.incantly-document-slash-menu button[aria-current='true'] {
+  background: var(--incantly-document-selection);
+  outline: none;
+}
+
+.incantly-document-slash-menu button span {
+  color: var(--incantly-document-muted);
+  font-size: 0.8rem;
+}
+
 @media (max-width: 40rem) {
   .incantly-document-editor {
     --incantly-document-padding-inline: 1rem;

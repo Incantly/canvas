@@ -1,4 +1,4 @@
-import type { Extensions } from '@tiptap/core'
+import { Extension, type Extensions } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -28,6 +28,20 @@ const restrictedStarterKit = StarterKit.configure({
   },
 })
 
+const FormattingShortcuts = Extension.create({
+  name: 'incantlyFormattingShortcuts',
+  addKeyboardShortcuts() {
+    return {
+      'Mod-Alt-0': () => this.editor.commands.setNode('paragraph'),
+      'Mod-Alt-1': () => this.editor.commands.setNode('heading', { level: 1 }),
+      'Mod-Alt-2': () => this.editor.commands.setNode('heading', { level: 2 }),
+      'Mod-Shift-7': () => this.editor.commands.toggleList('orderedList', 'listItem'),
+      'Mod-Shift-8': () => this.editor.commands.toggleList('bulletList', 'listItem'),
+      'Mod-Shift-B': () => this.editor.commands.toggleWrap('blockquote'),
+    }
+  },
+})
+
 /**
  * The complete v1 editing schema. Keep this list explicit: adding an extension is
  * a persisted-format decision and must be paired with core schema support.
@@ -52,6 +66,7 @@ export function createIncantlyDocumentExtensions(
     ...incantlyDocumentNodes,
     ...incantlyDocumentMarks,
     IncantlyNodeIds,
+    FormattingShortcuts,
   ]
 }
 

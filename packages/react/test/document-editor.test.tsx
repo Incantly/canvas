@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { createRef, type CSSProperties } from 'react'
 import { renderToString } from 'react-dom/server'
 import { createDocument, createParagraph } from '@incantly/canvas/document'
@@ -177,6 +177,46 @@ describe('<DocumentEditor />', () => {
       expect.objectContaining({ from: 1, to: end, empty: false }),
       ref.current?.editor,
     )
+  })
+
+  it('provides optional accessible formatting UI without recreating the editor', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const initialDocument = documentFixture('document:formatting-ui', 'Format me')
+    const { container, rerender } = render(
+      <DocumentEditor ref={ref} initialDocument={initialDocument} ui="formatting" />,
+    )
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+    const editor = ref.current?.editor
+    const toolbar = container.querySelector('[role="toolbar"][aria-label="Document formatting"]')
+    expect(toolbar).toBeTruthy()
+
+    act(() => { ref.current?.executeCommand((current) => current.commands.setTextSelection({ from: 1, to: 7 })) })
+    const bold = container.querySelector('button[aria-label="Bold"]') as HTMLButtonElement
+    fireEvent.mouseDown(bold)
+    expect(ref.current?.editor?.isActive('bold')).toBe(true)
+    expect(bold.getAttribute('aria-pressed')).toBe('true')
+
+    rerender(<DocumentEditor ref={ref} initialDocument={initialDocument} ui="none" />)
+    expect(ref.current?.editor).toBe(editor)
+    expect(container.querySelector('[aria-label="Document formatting"]')).toBeNull()
+  })
+
+  it('offers host-overridable slash commands and removes the trigger text', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const initialDocument = createDocument({ id: 'document:slash', now: '2026-09-21T10:00:00.000Z' })
+    const { container } = render(<DocumentEditor ref={ref} initialDocument={initialDocument} ui="formatting" />)
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+
+    act(() => { ref.current?.executeCommand((editor) => editor.commands.insertContent('/heading')) })
+    const item = await waitFor(() => {
+      const button = container.querySelector('[role="menuitem"]') as HTMLButtonElement | null
+      expect(button?.textContent).toContain('Heading 1')
+      return button!
+    })
+    fireEvent.mouseDown(item)
+
+    expect(ref.current?.editor?.isActive('heading', { level: 1 })).toBe(true)
+    expect(ref.current?.editor?.getText()).not.toContain('/heading')
   })
 
   it('reports command errors without throwing into the host application', async () => {

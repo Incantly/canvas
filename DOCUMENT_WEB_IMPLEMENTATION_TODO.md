@@ -348,12 +348,12 @@ For every node:
 
 ### 11.3 Formatting UI
 
-- [ ] Provide a default toolbar as an optional reusable primitive.
-- [ ] Allow the host application to place or replace the toolbar completely.
-- [ ] Add a selection/bubble toolbar for contextual marks.
-- [ ] Add slash-command primitives with host-overridable rendering and commands.
-- [ ] Keep toolbar state subscribed through narrow selectors rather than rerendering on every transaction.
-- [ ] Ensure all commands have keyboard and accessible button equivalents where applicable.
+- [x] Provide a default toolbar as an optional reusable primitive.
+- [x] Allow the host application to place or replace the toolbar completely.
+- [x] Add a selection/bubble toolbar for contextual marks.
+- [x] Add slash-command primitives with host-overridable rendering and commands.
+- [x] Keep toolbar state subscribed through narrow selectors rather than rerendering on every transaction.
+- [x] Ensure all commands have keyboard and accessible button equivalents where applicable.
 
 ### 11.4 Initial feature set
 
