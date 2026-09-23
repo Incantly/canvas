@@ -45,7 +45,8 @@
   "peerDependencies": {
     "react": ">=17",
     "react-native": ">=0.70",
-    "react-native-webview": ">=11"
+    "react-native-webview": ">=11",
+    "react-native-svg": ">=15"
   },
   "license": "MIT",
   "homepage": "https://github.com/Incantly/canvas",
