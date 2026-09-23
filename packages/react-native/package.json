@@ -40,7 +40,8 @@
     "@incantly/canvas": "0.2.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "react-native-svg": "^15.15.5"
   },
   "peerDependencies": {
     "react": ">=17",
