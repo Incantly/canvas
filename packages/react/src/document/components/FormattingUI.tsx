@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type HTMLAttributes, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttributes, type MouseEvent, type ReactNode } from 'react'
 import type { Editor } from '@tiptap/core'
 import { useEditorState } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
@@ -139,7 +139,9 @@ export function DocumentSlashMenu({ editor: suppliedEditor, items = defaultSlash
   const contextualEditor = useDocumentEditor()
   const editor = suppliedEditor ?? contextualEditor
   const menuId = useId()
+  const menuRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [position, setPosition] = useState<CSSProperties | null>(null)
   const match = useEditorState({
     editor,
     selector: ({ editor: current }) => {
@@ -158,6 +160,31 @@ export function DocumentSlashMenu({ editor: suppliedEditor, items = defaultSlash
   const open = Boolean(match && filtered.length)
   useEffect(() => { onOpenChange?.(open) }, [onOpenChange, open])
   useEffect(() => { setActiveIndex(0) }, [match?.query])
+  useEffect(() => {
+    if (!editor || !open || !match) { setPosition(null); return }
+    const updatePosition = () => {
+      const host = editor.view.dom.closest<HTMLElement>('[data-incantly-document-editor]')
+      if (!host) return
+      let caret: { top: number; bottom: number; left: number }
+      try {
+        caret = editor.view.coordsAtPos(match.to)
+      } catch {
+        // Layout-less hosts (SSR test runners) have no caret rectangles. The
+        // browser will calculate the anchored position on its next layout pass.
+        setPosition({ top: 8, left: 8 })
+        return
+      }
+      const hostRect = host.getBoundingClientRect()
+      const menuHeight = menuRef.current?.offsetHeight ?? 0
+      const fitsBelow = caret.bottom + menuHeight + 8 <= window.innerHeight
+      const top = (fitsBelow ? caret.bottom + 6 : caret.top - menuHeight - 6) - hostRect.top
+      const maxLeft = Math.max(8, hostRect.width - (menuRef.current?.offsetWidth ?? 0) - 8)
+      setPosition({ top: Math.max(8, top), left: Math.max(8, Math.min(caret.left - hostRect.left, maxLeft)) })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    return () => window.removeEventListener('resize', updatePosition)
+  }, [editor, match?.to, open])
   useEffect(() => {
     if (!editor || !open || !match) return
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -189,7 +216,8 @@ export function DocumentSlashMenu({ editor: suppliedEditor, items = defaultSlash
     item.command(editor)
   }
   return (
-    <div {...props} id={menuId} className={['incantly-document-slash-menu', className].filter(Boolean).join(' ')}
+    <div {...props} ref={menuRef} id={menuId} style={{ ...props.style, ...position }}
+      className={['incantly-document-slash-menu', className].filter(Boolean).join(' ')}
       role="menu" aria-label={props['aria-label'] ?? 'Insert block'}>
       {filtered.map((item, index) => (
         <button key={item.id} type="button" role="menuitem" aria-current={index === activeIndex ? 'true' : undefined}

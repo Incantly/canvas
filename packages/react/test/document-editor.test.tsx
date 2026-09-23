@@ -220,6 +220,39 @@ describe('<DocumentEditor />', () => {
     expect(ref.current?.editor?.getText()).not.toContain('/heading')
   })
 
+  it('continues bullet list items when Enter is pressed', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const { container } = render(<DocumentEditor ref={ref} initialDocument={documentFixture('document:list-enter', 'First')} />)
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+    act(() => {
+      ref.current?.executeCommand((editor) => {
+        editor.commands.setTextSelection(6)
+        return editor.commands.toggleList('bulletList', 'listItem')
+      })
+    })
+    fireEvent.keyDown(container.querySelector('.ProseMirror')!, { key: 'Enter' })
+    await waitFor(() => expect(ref.current?.getDocument()?.content[0]).toMatchObject({
+      type: 'bulletList', content: [{}, {}],
+    }))
+
+  })
+
+  it('continues numbered list items when Enter is pressed', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const { container } = render(<DocumentEditor ref={ref} initialDocument={documentFixture('document:ordered-enter', 'First')} />)
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+    act(() => {
+      ref.current?.executeCommand((editor) => {
+        editor.commands.setTextSelection(6)
+        return editor.commands.toggleList('orderedList', 'listItem')
+      })
+    })
+    fireEvent.keyDown(container.querySelector('.ProseMirror')!, { key: 'Enter' })
+    await waitFor(() => expect(ref.current?.getDocument()?.content[0]).toMatchObject({
+      type: 'orderedList', content: [{}, {}],
+    }))
+  })
+
   it('reports command errors without throwing into the host application', async () => {
     const ref = createRef<DocumentEditorRef>()
     const onError = vi.fn()

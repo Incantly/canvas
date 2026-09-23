@@ -1,4 +1,5 @@
 import { Extension, type Extensions } from '@tiptap/core'
+import { splitListItem } from '@tiptap/pm/schema-list'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -15,7 +16,6 @@ const restrictedStarterKit = StarterKit.configure({
   bulletList: false,
   orderedList: false,
   listItem: false,
-  listKeymap: false,
   horizontalRule: false,
   codeBlock: false,
   underline: false,
@@ -38,6 +38,11 @@ const FormattingShortcuts = Extension.create({
       'Mod-Shift-7': () => this.editor.commands.toggleList('orderedList', 'listItem'),
       'Mod-Shift-8': () => this.editor.commands.toggleList('bulletList', 'listItem'),
       'Mod-Shift-B': () => this.editor.commands.toggleWrap('blockquote'),
+      Enter: () => {
+        const listItem = this.editor.state.schema.nodes.listItem
+        if (!listItem) return false
+        return splitListItem(listItem)(this.editor.state, (transaction) => this.editor.view.dispatch(transaction))
+      },
     }
   },
 })

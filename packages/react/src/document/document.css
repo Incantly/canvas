@@ -12,6 +12,7 @@
   --incantly-document-padding-block: clamp(1.5rem, 5vw, 4rem);
 
   box-sizing: border-box;
+  position: relative;
   min-width: 0;
   color: var(--incantly-document-text);
   background: var(--incantly-document-background);
@@ -222,7 +223,6 @@
 .incantly-document-slash-menu {
   position: absolute;
   z-index: 3;
-  inset-inline-start: max(1rem, calc((100% - var(--incantly-document-content-width)) / 2));
   width: min(20rem, calc(100% - 2rem));
   max-height: 20rem;
   overflow: auto;
