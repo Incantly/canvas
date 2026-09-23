@@ -17,7 +17,11 @@ const leaf = (name: string, tag: string, attributes: Record<string, { default: u
   selectable: true,
   addAttributes: () => ({ ...nodeIdAttribute, ...attributes }),
   parseHTML: () => [{ tag: `${tag}[data-incantly-node="${name}"]` }],
-  renderHTML: ({ HTMLAttributes }) => [tag, mergeAttributes(HTMLAttributes, { 'data-incantly-node': name })],
+  renderHTML: ({ HTMLAttributes }) => [tag, mergeAttributes(HTMLAttributes, {
+    'data-incantly-node': name,
+    'data-card-label': name.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase()),
+    contenteditable: 'false',
+  })],
 })
 
 const Document = Node.create({
@@ -152,6 +156,20 @@ export const incantlyDocumentNodes: Extensions = [
   cell('tableHeaderCell', 'th'), cell('tableCell', 'td'), Image, FileAttachment,
   Audio, VideoEmbed, PdfEmbed, CanvasEmbed, PageBreak,
 ]
+
+/** ProseMirror table utilities require these schema roles; they are behavior, not persisted attributes. */
+export const IncantlyTableSchemaRoles = Node.create({
+  name: 'incantlyTableSchemaRoles',
+  extendNodeSchema(extension) {
+    const tableRoles: Record<string, string> = {
+      table: 'table',
+      tableRow: 'row',
+      tableHeaderCell: 'header_cell',
+      tableCell: 'cell',
+    }
+    return tableRoles[extension.name] ? { tableRole: tableRoles[extension.name] } : {}
+  },
+})
 
 export const INCANTLY_NODE_ID_TYPES = new Set([
   'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'listItem',

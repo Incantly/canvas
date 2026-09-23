@@ -73,6 +73,83 @@
   background: var(--incantly-document-selection);
 }
 
+.incantly-document-editor .ProseMirror blockquote {
+  padding-inline-start: 1rem;
+  border-inline-start: 0.22rem solid var(--incantly-document-border);
+  color: var(--incantly-document-muted);
+}
+
+.incantly-document-editor .ProseMirror pre {
+  overflow: auto;
+  padding: 0.9rem 1rem;
+  border-radius: 0.5rem;
+  color: var(--incantly-document-text);
+  background: color-mix(in srgb, var(--incantly-document-border) 38%, transparent);
+}
+
+.incantly-document-editor .ProseMirror code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.incantly-document-editor .ProseMirror mark {
+  color: inherit;
+}
+
+.incantly-document-editor .ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.incantly-document-editor .ProseMirror th,
+.incantly-document-editor .ProseMirror td {
+  min-width: 6rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--incantly-document-border);
+  vertical-align: top;
+}
+
+.incantly-document-editor .ProseMirror th {
+  text-align: start;
+  background: color-mix(in srgb, var(--incantly-document-border) 38%, transparent);
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='mathBlock'],
+.incantly-document-editor .ProseMirror [data-incantly-node='image'],
+.incantly-document-editor .ProseMirror [data-incantly-node='fileAttachment'],
+.incantly-document-editor .ProseMirror [data-incantly-node='audio'],
+.incantly-document-editor .ProseMirror [data-incantly-node='videoEmbed'],
+.incantly-document-editor .ProseMirror [data-incantly-node='pdfEmbed'],
+.incantly-document-editor .ProseMirror [data-incantly-node='canvasEmbed'] {
+  display: block;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--incantly-document-border);
+  border-radius: 0.5rem;
+  color: var(--incantly-document-muted);
+  background: color-mix(in srgb, var(--incantly-document-border) 22%, transparent);
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='mathBlock']::before {
+  content: 'Math block · ' attr(latex);
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='image']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='fileAttachment']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='audio']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='videoEmbed']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='pdfEmbed']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='canvasEmbed']::before {
+  content: attr(data-card-label) ' attachment';
+  font-weight: 600;
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='pageBreak'] {
+  height: 1px;
+  margin-block: 2rem;
+  border: 0;
+  background: repeating-linear-gradient(90deg, var(--incantly-document-border) 0 0.4rem, transparent 0.4rem 0.8rem);
+}
+
 .incantly-document-editor .ProseMirror p.is-empty::before,
 .incantly-document-editor .ProseMirror .is-editor-empty:first-child::before {
   content: attr(data-placeholder);

@@ -23,7 +23,6 @@ const Citation = Mark.create({
 
 const InlineMath = Mark.create({
   name: 'inlineMath',
-  excludes: '_',
   addAttributes: () => ({ latex: { default: null } }),
   parseHTML: () => [{ tag: 'span[data-inline-math]', getAttrs: (element) => ({ latex: (element as HTMLElement).dataset.inlineMath }) }],
   renderHTML: ({ HTMLAttributes }) => ['span', mergeAttributes(HTMLAttributes, { 'data-inline-math': HTMLAttributes.latex }), 0],

@@ -357,17 +357,17 @@ For every node:
 
 ### 11.4 Initial feature set
 
-- [ ] Paragraph and headings.
-- [ ] Bold, italic, underline, strike, inline code, links, highlights, and text color.
-- [ ] Bullet lists, numbered lists, nested lists, and checklists.
-- [ ] Blockquotes and horizontal rules.
-- [ ] Code blocks.
-- [ ] Math blocks and inline math, with rendering kept incremental.
-- [ ] Tables with basic row/column actions.
-- [ ] Images and attachment cards using asset references.
-- [ ] Audio, PDF, Word, YouTube, and canvas embeds as safe cards/placeholders in the first milestone.
-- [ ] Explicit page breaks represented semantically even in continuous mode.
-- [ ] Undo and redo.
+- [x] Paragraph and headings.
+- [x] Bold, italic, underline, strike, inline code, links, highlights, and text color.
+- [x] Bullet lists, numbered lists, nested lists, and checklists.
+- [x] Blockquotes and horizontal rules.
+- [x] Code blocks.
+- [x] Math blocks and inline math, with rendering kept incremental.
+- [x] Tables with basic row/column actions.
+- [x] Images and attachment cards using asset references.
+- [x] Audio, PDF, Word, YouTube, and canvas embeds as safe cards/placeholders in the first milestone.
+- [x] Explicit page breaks represented semantically even in continuous mode.
+- [x] Undo and redo.
 
 **Exit criterion:** a host React application can render and edit a standalone Incantly document without creating a Canvas instance.
 

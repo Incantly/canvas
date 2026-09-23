@@ -4,7 +4,7 @@ import Underline from '@tiptap/extension-underline'
 import Placeholder from '@tiptap/extension-placeholder'
 import { incantlyDocumentMarks } from './marks.js'
 import { IncantlyNodeIds } from './nodeIds.js'
-import { incantlyDocumentNodes } from './nodes.js'
+import { IncantlyTableSchemaRoles, incantlyDocumentNodes } from './nodes.js'
 
 const restrictedStarterKit = StarterKit.configure({
   document: false,
@@ -64,6 +64,7 @@ export function createIncantlyDocumentExtensions(
       includeChildren: false,
     }),
     ...incantlyDocumentNodes,
+    IncantlyTableSchemaRoles,
     ...incantlyDocumentMarks,
     IncantlyNodeIds,
     FormattingShortcuts,

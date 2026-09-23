@@ -3,9 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { createRef, type CSSProperties } from 'react'
 import { renderToString } from 'react-dom/server'
-import { createDocument, createParagraph } from '@incantly/canvas/document'
+import { createDocument, createParagraph, type IncantlyDocument } from '@incantly/canvas/document'
 import {
   DocumentEditor,
+  documentRichCommands,
   type DocumentEditorRef,
 } from '../src/document/index.js'
 
@@ -230,6 +231,116 @@ describe('<DocumentEditor />', () => {
       expect.objectContaining({ phase: 'command', error: expect.any(Error) }),
       ref.current?.editor,
     )
+  })
+
+  it('writes rich marks and blocks as canonical content', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    const onChange = vi.fn()
+    const { container } = render(
+      <DocumentEditor ref={ref} initialDocument={documentFixture('document:rich', 'Equation')} onChange={onChange} />,
+    )
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+
+    act(() => {
+      ref.current?.executeCommand((editor) => {
+        editor.commands.setTextSelection({ from: 1, to: 9 })
+        documentRichCommands.setHighlight(editor, '#fef08a')
+        editor.commands.setTextSelection({ from: 1, to: 9 })
+        documentRichCommands.setTextColor(editor, '#155e75')
+        editor.commands.setTextSelection(9)
+        documentRichCommands.insertChecklist(editor)
+        return true
+      })
+    })
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled())
+    const richDocument = ref.current?.getDocument()
+    const types = richDocument?.content.map((node) => node.type) ?? []
+    expect(types).toEqual(expect.arrayContaining(['paragraph', 'checklist']))
+    expect(richDocument?.content[0]).toMatchObject({
+      content: [{ text: 'Equation', marks: expect.arrayContaining([
+        { type: 'highlight', color: '#fef08a' },
+        { type: 'textColor', color: '#155e75' },
+      ]) }],
+    })
+    expect(container.querySelector('[data-type="checklist"]')).toBeTruthy()
+  })
+
+  it('stores inline math as a semantic mark and block math as a semantic atom', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    render(<DocumentEditor ref={ref} initialDocument={documentFixture('document:math', 'x squared')} />)
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+    act(() => {
+      ref.current?.executeCommand((editor) => {
+        editor.commands.setTextSelection({ from: 1, to: 10 })
+        documentRichCommands.setInlineMath(editor, 'x^2')
+        editor.commands.setTextSelection(10)
+        documentRichCommands.insertMathBlock(editor, 'x^2', true, 'equation-one')
+        return true
+      })
+    })
+    await waitFor(() => expect(ref.current?.getDocument()?.content.map((node) => node.type))
+      .toEqual(expect.arrayContaining(['paragraph', 'mathBlock'])))
+    expect(ref.current?.getDocument()?.content[0]).toMatchObject({
+      content: [{ marks: [{ type: 'inlineMath', latex: 'x^2' }] }],
+    })
+  })
+
+  it('renders media and embed nodes as inert safe cards', async () => {
+    const richFixture = createDocument({
+      id: 'document:cards', now: '2026-09-21T10:00:00.000Z', content: [
+        { id: 'node:image', type: 'image', attrs: { assetId: 'asset:image' as never } },
+        { id: 'node:file', type: 'fileAttachment', attrs: { assetId: 'asset:file' as never, filename: 'paper.docx' } },
+        { id: 'node:audio', type: 'audio', attrs: { assetId: 'asset:audio' as never, title: 'Interview' } },
+        { id: 'node:video', type: 'videoEmbed', attrs: { provider: 'youtube', videoId: 'research-talk' } },
+        { id: 'node:pdf', type: 'pdfEmbed', attrs: { assetId: 'asset:pdf' as never, display: 'card' } },
+        { id: 'node:canvas', type: 'canvasEmbed', attrs: { canvasId: 'canvas:research' } },
+        { id: 'node:break', type: 'pageBreak' },
+      ],
+    } as IncantlyDocument)
+    const ref = createRef<DocumentEditorRef>()
+    const { container } = render(<DocumentEditor ref={ref} initialDocument={richFixture} />)
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+
+    for (const node of ['image', 'fileAttachment', 'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed']) {
+      expect(container.querySelector(`[data-incantly-node="${node}"]`)?.getAttribute('contenteditable')).toBe('false')
+    }
+    expect(container.querySelector('[data-incantly-node="pageBreak"]')).toBeTruthy()
+    expect(ref.current?.getDocument()?.content.map((node) => node.type)).toEqual(richFixture.content.map((node) => node.type))
+  })
+
+  it('provides basic table row and column actions through the table selection', async () => {
+    const ref = createRef<DocumentEditorRef>()
+    render(<DocumentEditor ref={ref} initialDocument={documentFixture('document:table-actions', 'Before')} />)
+    await waitFor(() => expect(ref.current?.editor).toBeTruthy())
+
+    act(() => {
+      ref.current?.executeCommand((editor) => {
+        documentRichCommands.insertTable(editor, { rows: 1, columns: 1 })
+        return true
+      })
+    })
+
+    await waitFor(() => {
+      const table = ref.current?.getDocument()?.content.find((node) => node.type === 'table')
+      expect(table).toMatchObject({ type: 'table', content: [{ content: [{}] }] })
+    })
+    act(() => {
+      ref.current?.executeCommand((editor) => {
+        let tablePosition = 0
+        editor.state.doc.descendants((node, position) => {
+          if (node.type.name === 'table') tablePosition = position
+        })
+        editor.commands.setTextSelection(tablePosition + 3)
+        documentRichCommands.addTableRow(editor)
+        documentRichCommands.addTableColumn(editor)
+        return true
+      })
+    })
+    await waitFor(() => {
+      const table = ref.current?.getDocument()?.content.find((node) => node.type === 'table')
+      expect(table).toMatchObject({ type: 'table', content: [{ content: [{}, {}] }, { content: [{}, {}] }] })
+    })
   })
 
   it('renders an inert host during SSR', () => {
