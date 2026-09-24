@@ -36,6 +36,24 @@ export type {
   UpdateDocumentNodeOperation,
 } from './operations.js'
 
+export type {
+  PageHeaderFooterVariants,
+  PageLayout,
+  PageLayoutSection,
+} from './types.js'
+export type {
+  PaginationBlockInput,
+  PaginationFragment,
+  PaginationInput,
+  PaginationMeasurement,
+  PaginationPage,
+  PaginationRegion,
+  PaginationResult,
+  PaginationWarning,
+  PaginationWarningCode,
+} from './pagination.js'
+export { paginate } from './pagination.js'
+
 export {
   DOCUMENT_TRANSACTION_LIMITS,
   applyDocumentTransaction,

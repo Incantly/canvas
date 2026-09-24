@@ -20,6 +20,27 @@ export interface PageSetup {
   columns: 1 | 2
 }
 
+export interface PageLayoutSection {
+  id: string
+  startNodeId?: DocumentNodeId
+  pageSetup: PageSetup
+  headers?: PageHeaderFooterVariants
+  footers?: PageHeaderFooterVariants
+}
+
+export interface PageHeaderFooterVariants {
+  default?: DocumentNode[]
+  first?: DocumentNode[]
+  odd?: DocumentNode[]
+  even?: DocumentNode[]
+}
+
+export interface PageLayout {
+  version: 1
+  defaultSection: PageLayoutSection
+  sections: PageLayoutSection[]
+}
+
 export interface DocumentAuthor {
   id?: string
   name: string
@@ -41,6 +62,7 @@ export interface DocumentMetadata {
   authors: DocumentAuthor[]
   tags: string[]
   pageSetup: PageSetup
+  layout?: PageLayout
   research?: ResearchMetadata
 }
 
