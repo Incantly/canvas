@@ -1,0 +1,39 @@
+import type { DocumentNode, IncantlyDocument } from './types.js'
+
+export type ExportFormat = 'txt' | 'md' | 'html' | 'pdf'
+export type ExportOutput = { kind: 'text'; text: string } | { kind: 'bytes'; bytes: Uint8Array }
+export interface ExportWarning { code: string; message: string; nodeId?: string }
+export interface ExportResult { format: ExportFormat; filename: string; mimeType: string; output: ExportOutput; warnings: ExportWarning[] }
+export interface ExportOptions { filename?: string; lineEnding?: 'lf' | 'crlf'; includeMetadata?: boolean; unsupported?: 'omit' | 'text' | 'placeholder' }
+export interface AssetResolver { resolve(assetId: string): Promise<{ url?: string; bytes?: Uint8Array; mimeType?: string } | undefined> }
+
+const textOf = (node: DocumentNode): string => {
+  if (node.type === 'paragraph' || node.type === 'heading') return node.content.map((item) => item.type === 'text' ? item.text : '\n').join('')
+  if (node.type === 'codeBlock') return node.text
+  if (node.type === 'mathBlock') return node.attrs.latex
+  if ('content' in node && Array.isArray(node.content)) return node.content.map((child) => textOf(child as DocumentNode)).join('\n')
+  return ''
+}
+const markdownOf = (node: DocumentNode, warnings: ExportWarning[]): string => {
+  if (node.type === 'heading') return `${'#'.repeat(node.attrs.level)} ${textOf(node)}\n`
+  if (node.type === 'paragraph') return `${textOf(node)}\n`
+  if (node.type === 'codeBlock') return `\n\`\`\`${node.attrs?.language ?? ''}\n${node.text}\n\`\`\`\n`
+  if (node.type === 'mathBlock') return `\n$$\n${node.attrs.latex}\n$$\n`
+  if (node.type === 'horizontalRule') return '\n---\n'
+  if (node.type === 'pageBreak') return '\n<div class="incantly-page-break"></div>\n'
+  if (node.type === 'image') return `![${node.attrs.alt ?? ''}](asset:${node.attrs.assetId})\n`
+  warnings.push({ code: 'unsupported-node', nodeId: node.id, message: `${node.type} exported as plain text` })
+  return `${textOf(node)}\n`
+}
+const filename = (document: IncantlyDocument, options: ExportOptions, ext: string): string => `${(options.filename ?? document.metadata.title) || 'document'}.${ext}`
+export function exportText(document: IncantlyDocument, options: ExportOptions = {}): ExportResult {
+  const warnings: ExportWarning[] = []
+  const separator = options.lineEnding === 'crlf' ? '\r\n' : '\n'
+  const text = document.content.map(textOf).join(separator) + separator
+  return { format: 'txt', filename: filename(document, options, 'txt'), mimeType: 'text/plain;charset=utf-8', output: { kind: 'text', text }, warnings }
+}
+export function exportMarkdown(document: IncantlyDocument, options: ExportOptions = {}): ExportResult {
+  const warnings: ExportWarning[] = []
+  const metadata = options.includeMetadata ? `---\ntitle: ${document.metadata.title}\nlanguage: ${document.metadata.language}\n---\n\n` : ''
+  return { format: 'md', filename: filename(document, options, 'md'), mimeType: 'text/markdown;charset=utf-8', output: { kind: 'text', text: metadata + document.content.map((node) => markdownOf(node, warnings)).join('\n') }, warnings }
+}
