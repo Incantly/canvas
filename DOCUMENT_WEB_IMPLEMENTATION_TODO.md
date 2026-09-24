@@ -378,9 +378,9 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 ### 12.1 Canonical layout and section model
 
 - [x] Add a versioned page-layout model to `packages/core`, with continuous and paginated presentation modes.
-- [ ] Store physical page width, height, margins, header distance, and footer distance in points; convert cm, mm, inches, and CSS pixels only at UI boundaries.
-- [ ] Provide presets for A4, Letter, Legal, and other approved formats plus validated custom dimensions.
-- [ ] Model portrait/landscape orientation without destructively rewriting the selected preset.
+- [x] Store physical page width, height, margins, header distance, and footer distance in points; convert cm, mm, inches, and CSS pixels only at UI boundaries.
+- [x] Provide presets for A4, Letter, Legal, and other approved formats plus validated custom dimensions.
+- [x] Model portrait/landscape orientation without destructively rewriting the selected preset.
 - [ ] Add document defaults and explicit section boundaries so page setup can later vary within one document.
 - [ ] Store only explicit user-created page/section breaks; never persist calculated automatic page boundaries.
 - [ ] Model default, first-page, odd-page, and even-page header/footer variants as canonical Incantly document fragments.
@@ -394,10 +394,10 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 - [x] Define framework-independent measurement input/output types in core for blocks, line fragments, intrinsic media size, keep rules, and available page regions.
 - [x] Define a deterministic pagination result containing derived page ranges, overflow diagnostics, and layout warnings without mutating the document.
 - [ ] Support keep-with-next, keep-lines-together, widows/orphans, explicit breaks, unbreakable blocks, tables, media, and header/footer reserved space incrementally.
-- [ ] Make the pagination algorithm consume injected measurements so the web DOM adapter and a future native adapter can share the same decisions.
-- [ ] Give every calculated page and fragment a stable derivation key for caching and debugging, not a persisted document ID.
-- [ ] Add invalidation ranges so edits repaginate from the earliest affected block rather than from page one.
-- [ ] Specify fallback behavior and warnings for content that cannot fit on a page.
+- [x] Make the pagination algorithm consume injected measurements so the web DOM adapter and a future native adapter can share the same decisions.
+- [x] Give every calculated page and fragment a stable derivation key for caching and debugging, not a persisted document ID.
+- [x] Add invalidation ranges so edits repaginate from the earliest affected block rather than from page one.
+- [x] Specify fallback behavior and warnings for content that cannot fit on a page.
 - [ ] Add deterministic core tests using synthetic measurements, independent of browser font rendering.
 
 ### 12.3 Live web pagination adapter
