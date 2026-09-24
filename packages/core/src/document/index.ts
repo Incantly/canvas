@@ -53,6 +53,8 @@ export type {
   PaginationWarningCode,
 } from './pagination.js'
 export { paginate } from './pagination.js'
+export { PAGE_PRESETS, contentRegion, createPageLayout, normalizePageSetup } from './layout.js'
+export { documentToHtml, type HtmlExportOptions } from './html.js'
 
 export {
   DOCUMENT_TRANSACTION_LIMITS,

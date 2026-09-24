@@ -377,7 +377,7 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 
 ### 12.1 Canonical layout and section model
 
-- [ ] Add a versioned page-layout model to `packages/core`, with continuous and paginated presentation modes.
+- [x] Add a versioned page-layout model to `packages/core`, with continuous and paginated presentation modes.
 - [ ] Store physical page width, height, margins, header distance, and footer distance in points; convert cm, mm, inches, and CSS pixels only at UI boundaries.
 - [ ] Provide presets for A4, Letter, Legal, and other approved formats plus validated custom dimensions.
 - [ ] Model portrait/landscape orientation without destructively rewriting the selected preset.
@@ -391,8 +391,8 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 
 ### 12.2 Portable pagination contracts
 
-- [ ] Define framework-independent measurement input/output types in core for blocks, line fragments, intrinsic media size, keep rules, and available page regions.
-- [ ] Define a deterministic pagination result containing derived page ranges, overflow diagnostics, and layout warnings without mutating the document.
+- [x] Define framework-independent measurement input/output types in core for blocks, line fragments, intrinsic media size, keep rules, and available page regions.
+- [x] Define a deterministic pagination result containing derived page ranges, overflow diagnostics, and layout warnings without mutating the document.
 - [ ] Support keep-with-next, keep-lines-together, widows/orphans, explicit breaks, unbreakable blocks, tables, media, and header/footer reserved space incrementally.
 - [ ] Make the pagination algorithm consume injected measurements so the web DOM adapter and a future native adapter can share the same decisions.
 - [ ] Give every calculated page and fragment a stable derivation key for caching and debugging, not a persisted document ID.
@@ -414,7 +414,7 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 
 ### 12.4 Page settings and header/footer design
 
-- [ ] Add a composable `PageSettings` primitive for preset/custom dimensions, units, orientation, margins, linked margins, and header/footer spacing.
+- [x] Add a composable `PageSettings` primitive for preset/custom dimensions, units, orientation, margins, linked margins, and header/footer spacing.
 - [ ] Provide host-overridable controls and commands rather than baking product-specific dialogs into `DocumentEditor`.
 - [ ] Validate impossible dimensions and show actionable errors before applying a transaction.
 - [ ] Add reusable header/footer editing surfaces tied to the active section and selected variant.
@@ -426,7 +426,7 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 
 - [ ] Establish budgets for keystroke-to-paint, incremental repagination, full initial pagination, memory, and layout shift at 10, 100, and 500 pages.
 - [ ] Move pure pagination work off the input path and use idle/chunked scheduling where browser measurement is not required.
-- [ ] Ensure `packages/core` pagination imports without DOM, React, Tiptap, or Paged.js.
+- [x] Ensure `packages/core` pagination imports without DOM, React, Tiptap, or Paged.js.
 - [ ] Document how the same web bundle and paginator can run offline in a future React Native WebView.
 - [ ] Document the future native measurement-adapter contract without claiming pixel-identical layout across different font engines.
 - [ ] Add a paginated playground fixture with page settings, headers/footers, explicit breaks, long tables, images, and diagnostic overlays.
@@ -463,7 +463,7 @@ Exports must be projections from validated Incantly content. They must not scrap
 
 ### 13.4 HTML export
 
-- [ ] Produce standalone semantic HTML from the export projection without mounting Tiptap.
+- [x] Produce standalone semantic HTML from the export projection without mounting Tiptap.
 - [ ] Generate print CSS from canonical page and section setup using CSS Paged Media rules where supported.
 - [ ] Support self-contained or external asset strategies with explicit size/security limits.
 - [ ] Keep interactive editor UI, selection decorations, comments, upload state, and pagination diagnostics out of output.
