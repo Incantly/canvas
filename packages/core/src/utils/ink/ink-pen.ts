@@ -1,4 +1,4 @@
-import { HIGHLIGHT_ALPHA, HIGHLIGHT_SCALE, SIZES } from '../../palette.js'
+import { HIGHLIGHT_ALPHA, HIGHLIGHT_SCALE, INK_SIZES, SIZES } from '../../palette.js'
 import type { SizeId } from '../../types/base.js'
 import { isReservedInkChromeId, sanitizeInkPenId } from '../../ink-pen-id.js'
 
@@ -112,8 +112,12 @@ export function isInkCapturingTool(tool: string, pens: readonly InkPenDefinition
   return tool === 'eraser' || isInkPenTool(tool, pens)
 }
 
-export function inkBaseWidthPaper(size: SizeId, style: InkPenStyle): number {
-  const base = SIZES[size] ?? SIZES.m
+export function inkBaseWidthPaper(
+  size: SizeId,
+  style: InkPenStyle,
+  widthOverride?: number,
+): number {
+  const base = sanitizeInkWidth(widthOverride, SIZES[size] ?? SIZES.m)
   if (typeof style.widthScale === 'number') return base * style.widthScale
   return style.kind === 'highlight' ? base * HIGHLIGHT_SCALE : base * 0.75
 }
@@ -131,4 +135,66 @@ export function inkWidthAtPressure(baseWidth: number, pressure: number, style: I
 export function inkStrokeOpacity(style: InkPenStyle): number {
   if (typeof style.opacity === 'number') return style.opacity
   return style.kind === 'highlight' ? HIGHLIGHT_ALPHA : 1
+}
+
+/** Eraser behavior: `stroke` removes whole strokes, `pixel` cuts only touched segments. */
+export type EraserMode = 'pixel' | 'stroke'
+
+export function sanitizeEraserMode(raw: unknown): EraserMode {
+  return raw === 'pixel' ? 'pixel' : 'stroke'
+}
+
+/** Eraser footprint radius in paper units. */
+export const DEFAULT_ERASER_RADIUS_PAPER = 8
+export const ERASER_RADIUS_MIN_PAPER = 1
+export const ERASER_RADIUS_MAX_PAPER = 48
+
+/** Finite paper-unit eraser radius, or `fallback` when invalid. */
+export function sanitizeEraserRadius(raw: unknown, fallback: number): number {
+  const n = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(ERASER_RADIUS_MAX_PAPER, Math.max(ERASER_RADIUS_MIN_PAPER, n))
+}
+
+/** Continuous width-slider domain (paper units). Exponential feel: fine control at hairlines. */
+export const INK_WIDTH_MIN_PAPER = 0.5
+export const INK_WIDTH_MAX_PAPER = 24
+export const INK_WIDTH_SLIDER_MIN = 1
+export const INK_WIDTH_SLIDER_MAX = 100
+/** Hard clamp for any stored/rendered explicit width. */
+export const INK_WIDTH_HARD_MIN = 0.25
+export const INK_WIDTH_HARD_MAX = 64
+
+/** Finite paper-unit width, or `fallback` when the override is absent/invalid. */
+export function sanitizeInkWidth(raw: unknown, fallback: number): number {
+  const n = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(INK_WIDTH_HARD_MAX, Math.max(INK_WIDTH_HARD_MIN, n))
+}
+
+/** Slider 1–100 → paper units (exponential, ≈0.5 → 24). */
+export function widthSliderToPaper(value: number): number {
+  const t = (Math.min(INK_WIDTH_SLIDER_MAX, Math.max(INK_WIDTH_SLIDER_MIN, value)) - INK_WIDTH_SLIDER_MIN) /
+    (INK_WIDTH_SLIDER_MAX - INK_WIDTH_SLIDER_MIN)
+  return INK_WIDTH_MIN_PAPER * Math.pow(INK_WIDTH_MAX_PAPER / INK_WIDTH_MIN_PAPER, t)
+}
+
+/** Paper units → nearest slider 1–100 (inverse of {@link widthSliderToPaper}). */
+export function paperToWidthSlider(width: number): number {
+  const w = Math.min(INK_WIDTH_MAX_PAPER, Math.max(INK_WIDTH_MIN_PAPER, width))
+  const t = Math.log(w / INK_WIDTH_MIN_PAPER) / Math.log(INK_WIDTH_MAX_PAPER / INK_WIDTH_MIN_PAPER)
+  return Math.round(INK_WIDTH_SLIDER_MIN + t * (INK_WIDTH_SLIDER_MAX - INK_WIDTH_SLIDER_MIN))
+}
+
+/**
+ * Absolute outline width for filled-ribbon renderers (web board draw shapes).
+ * Legacy output is bit-identical when no explicit width is stored: the
+ * `INK_SIZES` table, scaled proportionally when an override exists.
+ */
+export function inkOutlineWidthPaper(size: SizeId, widthOverride?: number): number {
+  const base = SIZES[size] ?? SIZES.m
+  const legacy = INK_SIZES[size] ?? INK_SIZES.m
+  if (widthOverride == null) return legacy
+  const w = sanitizeInkWidth(widthOverride, base)
+  return (w * legacy) / base
 }

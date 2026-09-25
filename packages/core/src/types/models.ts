@@ -8,6 +8,7 @@ import type {
   PageLayout,
   SizeId,
 } from './base.js'
+import type { CanvasTextBlock } from '../canvas-text.js'
 
 export type ShapeType =
   | 'draw'
@@ -36,6 +37,11 @@ export interface DrawShapeProps {
   dash?: DashId
   done: boolean
   isPen?: boolean
+  /**
+   * Explicit base width in paper units (replaces the `SIZES[size]` lookup).
+   * Optional — absent means legacy `SizeId` rendering.
+   */
+  width?: number
 }
 
 export interface LineishShapeProps {
@@ -60,10 +66,10 @@ export interface GeoShapeProps {
   labelSize?: SizeId
 }
 
-import type { TextBlock } from '../rich-text/types.js'
-
 export interface TextShapeProps {
-  blocks: TextBlock[]
+  text?: string
+  /** Structured content for positioned canvas text; unrelated to standalone documents. */
+  blocks?: CanvasTextBlock[]
   color: ColorId
   size: SizeId
   font: FontId
@@ -75,18 +81,16 @@ export interface TextShapeProps {
   /** Box fill. `none` = transparent. Web ignores. */
   fill?: FillId
   align?: 'left' | 'center' | 'right'
-  /** @deprecated Migrated to blocks on load */
-  text?: string
 }
 
 export interface NoteShapeProps {
-  blocks: TextBlock[]
+  text?: string
+  /** Structured content for positioned canvas notes; unrelated to standalone documents. */
+  blocks?: CanvasTextBlock[]
   color: ColorId
   size: SizeId
   font: FontId
   scale?: number
-  /** @deprecated Migrated to blocks on load */
-  text?: string
 }
 
 export interface ImageShapeProps {
@@ -147,10 +151,6 @@ export interface AssetRecord {
   h: number
 }
 
-export interface PageDocumentRecord {
-  blocks: import('../rich-text/types.js').DocumentBlock[]
-}
-
 export interface PageRecord {
   id: string
   typeName: 'page'
@@ -161,10 +161,6 @@ export interface PageRecord {
   height: number
   name?: string
   grid?: GridId
-  /** Document paper pattern (ruled / grid / dots). */
-  paperStyle?: import('./base.js').PaperStyleId
-  /** Per-page typing + drawing surface (discrete notes). */
-  document?: PageDocumentRecord
 }
 
 export interface NotebookRecord {
@@ -172,11 +168,6 @@ export interface NotebookRecord {
   typeName: 'notebook'
   pageLayout: PageLayout
   pageGap?: number
-  /**
-   * Legacy continuous notes stream. After page.document v3 migration,
-   * content lives on each page; this field is cleared.
-   */
-  document?: PageDocumentRecord
 }
 
 export type BoardRecord = ShapeRecord | AssetRecord | PageRecord | NotebookRecord

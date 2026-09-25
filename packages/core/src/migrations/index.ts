@@ -10,8 +10,6 @@ import {
 
 import './store.js'
 import './shape-text.js'
-import './page-document.js'
-import './notebook-document.js'
 
 export function getMigrationsSince(
   from: SerializedSchema | undefined,

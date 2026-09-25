@@ -8,22 +8,30 @@ import { RichTextPanel } from './panels/RichTextPanel'
 import { VersionHistoryPanel } from './panels/VersionHistoryPanel'
 import { PaperPagesPanel } from './panels/PaperPagesPanel'
 import { DebugPanel } from './components/DebugPanel'
+import './app.css'
 
 export default function App() {
   const store = useCanvasStore()
   const [selectedPanel, setSelectedPanel] = useState('03')
   const [editor, setEditor] = useState<Editor | null>(null)
+  const [mobilePanel, setMobilePanel] = useState<'features' | 'debug' | null>(null)
 
   return (
-    <div style={styles.root}>
-      <aside style={styles.sidebar}>
-        <header style={styles.sidebarHeader}>
+    <div className="playground-shell">
+      {mobilePanel && <button className="playground-scrim" aria-label="Close panel" onClick={() => setMobilePanel(null)} />}
+      <aside className={`playground-sidebar ${mobilePanel === 'features' ? 'is-open' : ''}`}>
+        <header className="playground-sidebar-header">
           <strong>Incantly Playground</strong>
+          <button className="playground-close" onClick={() => setMobilePanel(null)} aria-label="Close features">×</button>
         </header>
-        <FeatureIndex selectedId={selectedPanel} onSelect={setSelectedPanel} />
+        <FeatureIndex selectedId={selectedPanel} onSelect={(id) => { setSelectedPanel(id); setMobilePanel(null) }} />
       </aside>
 
-      <main style={styles.main}>
+      <main className="playground-main">
+        <nav className="playground-mobile-nav" aria-label="Playground panels">
+          <button onClick={() => setMobilePanel('features')}>Features</button>
+          <button onClick={() => setMobilePanel('debug')}>Debug</button>
+        </nav>
         {selectedPanel === '01' ? (
           <CanvasDemoPanel store={store} onEditorReady={setEditor} />
         ) : selectedPanel === '02' ? (
@@ -42,7 +50,8 @@ export default function App() {
         )}
       </main>
 
-      <aside style={styles.debug}>
+      <aside className={`playground-debug ${mobilePanel === 'debug' ? 'is-open' : ''}`}>
+        <button className="playground-close playground-debug-close" onClick={() => setMobilePanel(null)} aria-label="Close debug panel">×</button>
         <DebugPanel store={store} editor={editor} />
       </aside>
     </div>
@@ -50,38 +59,6 @@ export default function App() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  root: {
-    display: 'flex',
-    height: '100vh',
-    fontFamily: 'system-ui, sans-serif',
-    fontSize: 13,
-    color: '#1a1a1a',
-  },
-  sidebar: {
-    width: 240,
-    flexShrink: 0,
-    borderRight: '1px solid #e0e0e0',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#fafafa',
-  },
-  sidebarHeader: {
-    padding: '12px 14px',
-    borderBottom: '1px solid #e0e0e0',
-    fontSize: 14,
-  },
-  main: {
-    flex: 1,
-    minWidth: 0,
-    position: 'relative',
-  },
-  debug: {
-    width: 320,
-    flexShrink: 0,
-    borderLeft: '1px solid #e0e0e0',
-    background: '#fafafa',
-    overflow: 'auto',
-  },
   placeholder: {
     display: 'flex',
     flexDirection: 'column',

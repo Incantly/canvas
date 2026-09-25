@@ -7,7 +7,7 @@ import type {
   ShapeRecord,
   SizeId,
 } from '../../types/index.js'
-import { emptyDocument, textToBlocks } from '../../rich-text/document.js'
+import { emptyCanvasText, textToBlocks } from '../../canvas-text.js'
 import { GEO_IDS } from '../../palette.js'
 
 export const TEXT_SHAPE_MAX_CHARS = 256 * 1024
@@ -167,7 +167,7 @@ export function createTextShape(opts: {
     rot: 0,
     z: opts.z,
     props: {
-      blocks: plain ? textToBlocks(plain) : emptyDocument(),
+      blocks: plain ? textToBlocks(plain) : emptyCanvasText(),
       color: opts.color,
       size: opts.size,
       font: opts.font ?? 'sans',
@@ -188,6 +188,7 @@ export function createDrawShape(opts: {
   pts: number[]
   color: ColorId
   size: SizeId
+  width?: number
   dash?: DashId
 }): ShapeRecord | null {
   const packed = packedPtsToDrawLocal(opts.pts)
@@ -206,6 +207,7 @@ export function createDrawShape(opts: {
       color: opts.color,
       size: opts.size,
       done: true,
+      ...(opts.width != null ? { width: opts.width } : {}),
       ...(opts.kind === 'draw' && opts.dash ? { dash: opts.dash } : {}),
     },
   }
