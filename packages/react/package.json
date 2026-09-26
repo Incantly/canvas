@@ -15,11 +15,6 @@
       "types": "./dist/canvas/index.d.ts",
       "default": "./dist/canvas/index.js"
     },
-    "./document": {
-      "types": "./dist/document/index.d.ts",
-      "default": "./dist/document/index.js"
-    },
-    "./document.css": "./src/document/document.css",
     "./canvas.css": "./src/canvas.css",
     "./package.json": "./package.json"
   },
@@ -31,12 +26,10 @@
   "files": [
     "dist",
     "src/canvas.css",
-    "src/document/document.css",
     "README.md"
   ],
   "sideEffects": [
-    "./src/canvas.css",
-    "./src/document/document.css"
+    "./src/canvas.css"
   ],
   "keywords": [
     "react",
@@ -49,33 +42,11 @@
     "excalidraw-alternative"
   ],
   "dependencies": {
-    "@incantly/canvas": "0.2.0",
-    "@tiptap/core": "3.31.3",
-    "@tiptap/extension-bubble-menu": "3.31.3",
-    "@tiptap/extension-floating-menu": "3.31.3",
-    "@tiptap/extension-placeholder": "3.31.3",
-    "@tiptap/extension-underline": "3.31.3",
-    "@tiptap/pm": "3.31.3",
-    "@tiptap/react": "3.31.3",
-    "@tiptap/starter-kit": "3.31.3"
+    "@incantly/canvas": "0.2.0"
   },
   "peerDependencies": {
-    "docx": "^9.7.2",
-    "pagedjs": "^0.4.3",
     "react": ">=17",
     "react-dom": ">=17"
-  },
-  "peerDependenciesMeta": {
-    "docx": {
-      "optional": true
-    },
-    "pagedjs": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "docx": "^9.7.2",
-    "pagedjs": "^0.4.3"
   },
   "license": "MIT",
   "homepage": "https://github.com/Incantly/canvas",

@@ -12,8 +12,8 @@ import {
   type DocumentEditorTheme,
   type IncantlyDocument,
   type ExportResult,
-} from '@incantly/canvas-react/document'
-import '@incantly/canvas-react/document.css'
+} from './editor/index.js'
+import './editor/document.css'
 
 const demoDocument = createDocument({
   title: 'Continuous writing demo',
