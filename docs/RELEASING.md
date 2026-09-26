@@ -1,6 +1,6 @@
 # Releasing
 
-The three `@incantly/canvas*` packages version in lockstep.
+The three `@incantly/core*` packages version in lockstep.
 
 ## One-time setup
 
@@ -15,7 +15,7 @@ The three `@incantly/canvas*` packages version in lockstep.
 
 ```bash
 # 1. bump versions in packages/*/package.json (keep the three in lockstep,
-#    and @incantly/canvas-react-native's dependency on @incantly/canvas)
+#    and @incantly/canvas-react-native's dependency on @incantly/core)
 # 2. update CHANGELOG.md
 npm test && npm run typecheck && npm run build
 git commit -am "vX.Y.Z"

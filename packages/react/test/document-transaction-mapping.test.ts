@@ -1,7 +1,7 @@
 import { getSchema } from '@tiptap/core'
 import { EditorState } from '@tiptap/pm/state'
 import { describe, expect, it } from 'vitest'
-import { createDocument, createParagraph } from '@incantly/canvas/document'
+import { createDocument, createParagraph } from '@incantly/core/document'
 import {
   DocumentCheckpointTracker,
   getIncantlyTransactionMeta,

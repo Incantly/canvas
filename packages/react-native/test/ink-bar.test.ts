@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeInkPens } from '@incantly/canvas/headless'
+import { sanitizeInkPens } from '@incantly/core/headless'
 import { resolveInkBarItems } from '../src/ink/ink-bar-config.js'
 
 describe('resolveInkBarItems', () => {

@@ -1,5 +1,5 @@
-import type { DocumentVersion, VersionStorage } from '@incantly/canvas/headless'
-import { createMutex, snapshotFingerprint } from '@incantly/canvas/headless'
+import type { DocumentVersion, VersionStorage } from '@incantly/core/headless'
+import { createMutex, snapshotFingerprint } from '@incantly/core/headless'
 import type { SqliteDriver } from './sqlite-driver.js'
 
 const SCHEMA_SQL = `

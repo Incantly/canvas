@@ -1,5 +1,5 @@
 import { useState, type HTMLAttributes } from 'react'
-import type { ExportResult, IncantlyDocument } from '@incantly/canvas/document'
+import type { ExportResult, IncantlyDocument } from '@incantly/core/document'
 import { downloadExport, exportDocumentWeb, type WebExportFormat } from '../exporters.js'
 
 export interface DocumentExportMenuProps extends HTMLAttributes<HTMLDivElement> {

@@ -1,5 +1,5 @@
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react'
-import { PAGE_PRESETS, normalizePageSetup, type PageSetup } from '@incantly/canvas/document'
+import { PAGE_PRESETS, normalizePageSetup, type PageSetup } from '@incantly/core/document'
 
 /** CSS pixels per typographic point at the UI boundary (model stores points). */
 export const POINTS_TO_CSS_PX = 96 / 72

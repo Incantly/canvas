@@ -150,13 +150,13 @@ The final filenames can change during implementation when the code demonstrates 
 
 ## 4. Milestone 0 — protect the current repository
 
-- [ ] Record the current test, typecheck, and build baseline before dependency changes.
-- [ ] Confirm supported TypeScript, React, Node.js, and browser versions.
-- [ ] Confirm whether React 17 remains the intended minimum peer version for the React SDK.
-- [ ] Record the current package sizes for `@incantly/canvas` and `@incantly/canvas-react`.
-- [ ] Add document-specific test fixture directories without changing existing canvas fixtures.
-- [ ] Ensure existing canvas, page-document, notebook, migration, and React tests stay green.
-- [ ] Document any pre-existing failure separately; do not hide it by weakening tests.
+- [x] Record the current test, typecheck, and build baseline before dependency changes.
+- [x] Confirm supported TypeScript, React, Node.js, and browser versions.
+- [x] Confirm whether React 17 remains the intended minimum peer version for the React SDK.
+- [x] Record the current package sizes for `@incantly/core` and `@incantly/canvas-react`.
+- [x] Add document-specific test fixture directories without changing existing canvas fixtures.
+- [x] Ensure existing canvas, page-document, notebook, migration, and React tests stay green.
+- [x] Document any pre-existing failure separately; do not hide it by weakening tests.
 
 **Exit criterion:** a reproducible baseline exists and no document work has changed current behavior.
 
@@ -279,8 +279,8 @@ For every node:
 
 ## 9. Milestone 5 — package exports and dependency boundaries
 
-- [x] Export the document model through `@incantly/canvas/document`.
-- [x] Export the portable subset through `@incantly/canvas/headless` where appropriate.
+- [x] Export the document model through `@incantly/core/document`.
+- [x] Export the portable subset through `@incantly/core/headless` where appropriate.
 - [x] Preserve current root exports for compatibility.
 - [x] Add `@incantly/canvas-react/canvas` as the explicit canvas-only React entry point.
 - [x] Add `@incantly/canvas-react/document` as the isolated document entry point reserved for the Milestone 6 Tiptap adapter.
@@ -381,19 +381,19 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 - [x] Store physical page width, height, margins, header distance, and footer distance in points; convert cm, mm, inches, and CSS pixels only at UI boundaries.
 - [x] Provide presets for A4, Letter, Legal, and other approved formats plus validated custom dimensions.
 - [x] Model portrait/landscape orientation without destructively rewriting the selected preset.
-- [ ] Add document defaults and explicit section boundaries so page setup can later vary within one document.
-- [ ] Store only explicit user-created page/section breaks; never persist calculated automatic page boundaries.
-- [ ] Model default, first-page, odd-page, and even-page header/footer variants as canonical Incantly document fragments.
-- [ ] Model page number, total page count, document title, date, and similar header/footer fields semantically rather than as frozen text.
-- [ ] Keep editor zoom, page gap, ruler visibility, and “link margins” UI state outside the canonical document.
-- [ ] Add validation, normalization, migration, serialization, and hostile-input limits for all layout records.
+- [x] Add document defaults and explicit section boundaries so page setup can later vary within one document.
+- [x] Store only explicit user-created page/section breaks; never persist calculated automatic page boundaries.
+- [x] Model default, first-page, odd-page, and even-page header/footer variants as canonical Incantly document fragments.
+- [x] Model page number, total page count, document title, date, and similar header/footer fields semantically rather than as frozen text.
+- [x] Keep editor zoom, page gap, ruler visibility, and “link margins” UI state outside the canonical document.
+- [x] Add validation, normalization, migration, serialization, and hostile-input limits for all layout records.
 - [ ] Add core fixtures covering custom paper, mirrored margins, headers/footers, explicit breaks, and multiple sections.
 
 ### 12.2 Portable pagination contracts
 
 - [x] Define framework-independent measurement input/output types in core for blocks, line fragments, intrinsic media size, keep rules, and available page regions.
 - [x] Define a deterministic pagination result containing derived page ranges, overflow diagnostics, and layout warnings without mutating the document.
-- [ ] Support keep-with-next, keep-lines-together, widows/orphans, explicit breaks, unbreakable blocks, tables, media, and header/footer reserved space incrementally.
+- [x] Support keep-with-next, keep-lines-together, widows/orphans, explicit breaks, unbreakable blocks, tables, media, and header/footer reserved space incrementally.
 - [x] Make the pagination algorithm consume injected measurements so the web DOM adapter and a future native adapter can share the same decisions.
 - [x] Give every calculated page and fragment a stable derivation key for caching and debugging, not a persisted document ID.
 - [x] Add invalidation ranges so edits repaginate from the earliest affected block rather than from page one.
@@ -402,33 +402,33 @@ Paged editing must be built as an Incantly capability, not as Tiptap-specific st
 
 ### 12.3 Live web pagination adapter
 
-- [ ] Build a ProseMirror plugin that observes transactions and schedules measurement after DOM layout without serializing the whole document.
-- [ ] Measure through DOM ranges and ProseMirror position mapping while preserving native selection, IME composition, drag selection, and undo history.
-- [ ] Render page chrome, gaps, and calculated break markers as decorations/layout UI that never enter canonical content.
-- [ ] Keep the editable ProseMirror content authoritative and avoid splitting one logical document into independent editor instances per page.
-- [ ] Reuse cached measurements until content, width, font, zoom, asset dimensions, or section setup invalidates them.
-- [ ] Reflow when web fonts and intrinsic asset sizes become ready, with scroll/caret anchoring to avoid visual jumps.
-- [ ] Virtualize page chrome and heavy previews for distant pages without unmounting editable text required by ProseMirror.
-- [ ] Add a continuous/paginated toggle that changes presentation without rewriting document content.
+- [x] Build a ProseMirror plugin that observes transactions and schedules measurement after DOM layout without serializing the whole document.
+- [x] Measure through DOM ranges and ProseMirror position mapping while preserving native selection, IME composition, drag selection, and undo history.
+- [x] Render page chrome, gaps, and calculated break markers as decorations/layout UI that never enter canonical content.
+- [x] Keep the editable ProseMirror content authoritative and avoid splitting one logical document into independent editor instances per page.
+- [x] Reuse cached measurements until content, width, font, zoom, asset dimensions, or section setup invalidates them.
+- [x] Reflow when web fonts and intrinsic asset sizes become ready, with scroll/caret anchoring to avoid visual jumps.
+- [x] Virtualize page chrome and heavy previews for distant pages without unmounting editable text required by ProseMirror.
+- [x] Add a continuous/paginated toggle that changes presentation without rewriting document content.
 - [ ] Verify long selections, copy/paste, keyboard navigation, find-in-page, accessibility, and browser zoom across calculated page boundaries.
 
 ### 12.4 Page settings and header/footer design
 
 - [x] Add a composable `PageSettings` primitive for preset/custom dimensions, units, orientation, margins, linked margins, and header/footer spacing.
-- [ ] Provide host-overridable controls and commands rather than baking product-specific dialogs into `DocumentEditor`.
-- [ ] Validate impossible dimensions and show actionable errors before applying a transaction.
-- [ ] Add reusable header/footer editing surfaces tied to the active section and selected variant.
-- [ ] Display non-printing boundaries and safe areas without putting them in exported content.
-- [ ] Add page-number insertion and starting-number controls with accessible keyboard operation.
-- [ ] Expose layout-change events and typed commands for custom application UI.
+- [x] Provide host-overridable controls and commands rather than baking product-specific dialogs into `DocumentEditor`.
+- [x] Validate impossible dimensions and show actionable errors before applying a transaction.
+- [x] Add reusable header/footer editing surfaces tied to the active section and selected variant.
+- [x] Display non-printing boundaries and safe areas without putting them in exported content.
+- [x] Add page-number insertion and starting-number controls with accessible keyboard operation.
+- [x] Expose layout-change events and typed commands for custom application UI.
 
 ### 12.5 Performance and cross-platform boundary
 
-- [ ] Establish budgets for keystroke-to-paint, incremental repagination, full initial pagination, memory, and layout shift at 10, 100, and 500 pages.
-- [ ] Move pure pagination work off the input path and use idle/chunked scheduling where browser measurement is not required.
+- [x] Establish budgets for keystroke-to-paint, incremental repagination, full initial pagination, memory, and layout shift at 10, 100, and 500 pages.
+- [x] Move pure pagination work off the input path and use idle/chunked scheduling where browser measurement is not required.
 - [x] Ensure `packages/core` pagination imports without DOM, React, Tiptap, or Paged.js.
-- [ ] Document how the same web bundle and paginator can run offline in a future React Native WebView.
-- [ ] Document the future native measurement-adapter contract without claiming pixel-identical layout across different font engines.
+- [x] Document how the same web bundle and paginator can run offline in a future React Native WebView.
+- [x] Document the future native measurement-adapter contract without claiming pixel-identical layout across different font engines.
 - [ ] Add a paginated playground fixture with page settings, headers/footers, explicit breaks, long tables, images, and diagnostic overlays.
 
 **Exit criterion:** the web editor offers usable paginated presentation while the canonical model and pagination decisions remain portable to a future React Native adapter.
@@ -439,110 +439,110 @@ Exports must be projections from validated Incantly content. They must not scrap
 
 ### 13.1 Shared export contracts
 
-- [ ] Define `ExportFormat`, `ExportOptions`, `ExportResult`, progress, cancellation, warnings, and structured loss-report contracts in core.
-- [ ] Build a normalized export projection from the canonical model so exporters share traversal, asset lookup, numbering, and fallback behavior.
-- [ ] Inject asset and font resolvers; never require embedded binary data in document JSON.
-- [ ] Define runtime-neutral byte/text output types with thin browser `Blob` and React Native filesystem adapters.
-- [ ] Make filenames, MIME types, encoding, locale, time zone, and deterministic metadata explicit options.
-- [ ] Sanitize links, embeds, HTML, filenames, and externally resolved assets before export.
-- [ ] Ensure heavy exporters are dynamically imported and absent from the default editor/canvas bundle.
+- [x] Define `ExportFormat`, `ExportOptions`, `ExportResult`, progress, cancellation, warnings, and structured loss-report contracts in core.
+- [x] Build a normalized export projection from the canonical model so exporters share traversal, asset lookup, numbering, and fallback behavior.
+- [x] Inject asset and font resolvers; never require embedded binary data in document JSON.
+- [x] Define runtime-neutral byte/text output types with thin browser `Blob` and React Native filesystem adapters.
+- [x] Make filenames, MIME types, encoding, locale, time zone, and deterministic metadata explicit options.
+- [x] Sanitize links, embeds, HTML, filenames, and externally resolved assets before export.
+- [x] Ensure heavy exporters are dynamically imported and absent from the default editor/canvas bundle.
 
 ### 13.2 TXT export
 
-- [ ] Export UTF-8 plain text with predictable paragraph, list, checklist, table, code, equation, and attachment fallbacks.
-- [ ] Allow LF or CRLF line endings and optional front matter/metadata.
-- [ ] Report formatting, media, layout, and rich-structure loss.
+- [x] Export UTF-8 plain text with predictable paragraph, list, checklist, table, code, equation, and attachment fallbacks.
+- [x] Allow LF or CRLF line endings and optional front matter/metadata.
+- [x] Report formatting, media, layout, and rich-structure loss.
 - [ ] Add golden fixtures for Unicode, RTL text, code, tables, lists, and attachments.
 
 ### 13.3 Markdown export
 
-- [ ] Export CommonMark-compatible Markdown with documented extensions for tables, task lists, math, footnotes, and front matter.
-- [ ] Preserve fenced-code languages, link targets, asset references, and explicit page breaks through defined conventions.
-- [ ] Provide configurable unsupported-node fallbacks: omit, plain text, HTML, or warning placeholder.
+- [x] Export CommonMark-compatible Markdown with documented extensions for tables, task lists, math, footnotes, and front matter.
+- [x] Preserve fenced-code languages, link targets, asset references, and explicit page breaks through defined conventions.
+- [x] Provide configurable unsupported-node fallbacks: omit, plain text, HTML, or warning placeholder.
 - [ ] Add Markdown round-trip tests where the supported subset is expected to be lossless.
 
 ### 13.4 HTML export
 
 - [x] Produce standalone semantic HTML from the export projection without mounting Tiptap.
-- [ ] Generate print CSS from canonical page and section setup using CSS Paged Media rules where supported.
-- [ ] Support self-contained or external asset strategies with explicit size/security limits.
-- [ ] Keep interactive editor UI, selection decorations, comments, upload state, and pagination diagnostics out of output.
+- [x] Generate print CSS from canonical page and section setup using CSS Paged Media rules where supported.
+- [x] Support self-contained or external asset strategies with explicit size/security limits.
+- [x] Keep interactive editor UI, selection decorations, comments, upload state, and pagination diagnostics out of output.
 - [ ] Add accessibility and sanitization tests for exported HTML.
 
 ### 13.5 Paged.js preview and PDF workflow
 
-- [ ] Pin and review the MIT-licensed Paged.js dependency, supported browsers, bundle impact, and release-health risk before adoption.
-- [ ] Feed Paged.js the sanitized, read-only HTML export in an isolated iframe or detached print surface; never run it over the live `contenteditable` tree.
-- [ ] Map canonical page size, orientation, margins, named sections, explicit breaks, headers/footers, counters, widows, and orphans to CSS Paged Media.
-- [ ] Wait for fonts, images, equations, and asset resolution before declaring the preview ready.
-- [ ] Dynamically load Paged.js only when print preview or PDF export is requested and clean up the isolated renderer afterward.
-- [ ] Offer an offline browser “Print / Save as PDF” path that uses the system print dialog.
+- [x] Pin and review the MIT-licensed Paged.js dependency, supported browsers, bundle impact, and release-health risk before adoption.
+- [x] Feed Paged.js the sanitized, read-only HTML export in an isolated iframe or detached print surface; never run it over the live `contenteditable` tree.
+- [x] Map canonical page size, orientation, margins, named sections, explicit breaks, headers/footers, counters, widows, and orphans to CSS Paged Media.
+- [x] Wait for fonts, images, equations, and asset resolution before declaring the preview ready.
+- [x] Dynamically load Paged.js only when print preview or PDF export is requested and clean up the isolated renderer afterward.
+- [x] Offer an offline browser “Print / Save as PDF” path that uses the system print dialog.
 - [ ] Define a separate deterministic downloadable-PDF worker using headless Chromium/Paged.js; do not imply that browser Paged.js alone writes a PDF file.
 - [ ] Return page count, layout warnings, missing-asset warnings, progress, cancellation, and timeout errors.
 - [ ] Add visual-regression fixtures for paper sizes, margins, headers/footers, tables, code, equations, images, long links, and forced page breaks.
-- [ ] Compare Paged.js output against the live paginator and document accepted differences; Paged.js is an export renderer, not the canonical pagination oracle.
+- [x] Compare Paged.js output against the live paginator and document accepted differences; Paged.js is an export renderer, not the canonical pagination oracle.
 
 ### 13.6 DOCX export
 
-- [ ] Evaluate maintained open-source OOXML/DOCX libraries for license, browser bundling, React Native compatibility, extensibility, and deterministic output before selecting one.
-- [ ] Generate a real `.docx` OPC/OOXML package rather than HTML renamed as DOCX.
+- [x] Evaluate maintained open-source OOXML/DOCX libraries for license, browser bundling, React Native compatibility, extensibility, and deterministic output before selecting one.
+- [x] Generate a real `.docx` OPC/OOXML package rather than HTML renamed as DOCX.
 - [ ] Map headings/styles, paragraphs, marks, lists/numbering, checklists, tables, code, equations, images, links, captions, footnotes, and explicit breaks where supported.
 - [ ] Map sections, paper dimensions, orientation, margins, columns, headers/footers, page-number fields, relationships, and content types to native Word constructs.
 - [ ] Embed or link assets according to explicit policy and report unsupported media/embeds rather than silently dropping them.
-- [ ] Keep the DOCX implementation outside `packages/core`; expose it through the shared export contracts and load it on demand.
+- [x] Keep the DOCX implementation outside `packages/core`; expose it through the shared export contracts and load it on demand.
 - [ ] Validate generated packages structurally, unzip-inspect golden fixtures, and open smoke-test artifacts in Word and LibreOffice.
-- [ ] Document unavoidable layout differences caused by Word font availability and pagination engines.
+- [x] Document unavoidable layout differences caused by Word font availability and pagination engines.
 
 ### 13.7 Export UI and playground verification
 
-- [ ] Add host-overridable export commands and an optional web export menu for `.inc`, `.txt`, `.md`, `.html`, `.pdf`, and `.docx`.
-- [ ] Show progress, cancellation, warnings, loss reports, and retry states without blocking editing.
-- [ ] Add export controls and downloadable fixtures to `examples/document-web-demo`.
-- [ ] Verify exports work without Liveblocks or network access when all referenced assets are local.
-- [ ] Document which formats preserve editing semantics, which preserve visual layout, and which are intentionally lossy.
+- [x] Add host-overridable export commands and an optional web export menu for `.inc`, `.txt`, `.md`, `.html`, `.pdf`, and `.docx`.
+- [x] Show progress, cancellation, warnings, loss reports, and retry states without blocking editing.
+- [x] Add export controls and downloadable fixtures to `examples/document-web-demo`.
+- [x] Verify exports work without Liveblocks or network access when all referenced assets are local.
+- [x] Document which formats preserve editing semantics, which preserve visual layout, and which are intentionally lossy.
 
 **Exit criterion:** the same canonical document exports predictably to TXT, Markdown, HTML, PDF, and DOCX, with page setup honored where the target supports it and explicit reports everywhere fidelity is reduced.
 
 ## 14. Milestone 10 — clipboard, drag/drop, and assets
 
-- [ ] Sanitize pasted HTML with an allowlist matching the canonical schema.
-- [ ] Preserve plain-text paste predictably.
-- [ ] Map supported headings, lists, tables, code, links, and images from pasted content.
-- [ ] Return an import report for discarded or downgraded content.
-- [ ] Prevent pasted scripts, inline event handlers, dangerous URLs, and arbitrary iframes.
-- [ ] Define file drop and paste hooks that hand files to the host `AssetRepository`.
-- [ ] Insert temporary upload state outside canonical document JSON or through an explicit transient state model.
-- [ ] Replace temporary upload state with stable `assetId` references on success.
-- [ ] Provide retry and remove behavior for failures.
-- [ ] Revoke object URLs and release preview resources on replacement or unmount.
-- [ ] Render thumbnails/previews lazily near the viewport.
+- [x] Sanitize pasted HTML with an allowlist matching the canonical schema.
+- [x] Preserve plain-text paste predictably.
+- [x] Map supported headings, lists, tables, code, links, and images from pasted content.
+- [x] Return an import report for discarded or downgraded content.
+- [x] Prevent pasted scripts, inline event handlers, dangerous URLs, and arbitrary iframes.
+- [x] Define file drop and paste hooks that hand files to the host `AssetRepository`.
+- [x] Insert temporary upload state outside canonical document JSON or through an explicit transient state model.
+- [x] Replace temporary upload state with stable `assetId` references on success.
+- [x] Provide retry and remove behavior for failures.
+- [x] Revoke object URLs and release preview resources on replacement or unmount.
+- [x] Render thumbnails/previews lazily near the viewport.
 
 **Exit criterion:** common clipboard and file operations are safe, report loss, and never embed uncontrolled binary data in JSON.
 
 ## 15. Milestone 11 — persistence and recovery contracts
 
-- [ ] Expose debounced autosave integration without hard-coding a backend.
-- [ ] Flush pending changes on explicit save and editor teardown.
-- [ ] Define browser lifecycle hooks for page visibility and navigation boundaries.
-- [ ] Prevent stale asynchronous saves from overwriting newer checkpoints.
-- [ ] Attach schema version and document revision to persistence calls.
-- [ ] Provide an IndexedDB reference adapter or demo integration only if it can remain separate from core.
+- [x] Expose debounced autosave integration without hard-coding a backend.
+- [x] Flush pending changes on explicit save and editor teardown.
+- [x] Define browser lifecycle hooks for page visibility and navigation boundaries.
+- [x] Prevent stale asynchronous saves from overwriting newer checkpoints.
+- [x] Attach schema version and document revision to persistence calls.
+- [x] Provide an IndexedDB reference adapter or demo integration only if it can remain separate from core.
 - [ ] Test rapid edits followed by immediate unmount.
 - [ ] Test failed save, retry, stale response, refresh recovery, and invalid stored snapshot behavior.
-- [ ] Make local editing functional without Liveblocks or network access.
+- [x] Make local editing functional without Liveblocks or network access.
 
 **Exit criterion:** a host can guarantee that acknowledged local edits survive refresh and navigation.
 
 ## 16. Milestone 12 — performance implementation
 
-- [ ] Set `shouldRerenderOnTransaction: false` unless a measured requirement proves otherwise.
-- [ ] Use narrow `useEditorState` selectors for toolbar and status UI.
-- [ ] Keep ordinary paragraphs, headings, text, and list items as ProseMirror DOM rendering rather than React NodeViews.
-- [ ] Reserve React NodeViews for genuinely interactive rich embeds.
-- [ ] Lazy-mount heavy image, audio, PDF, Word, YouTube, equation, and canvas previews.
-- [ ] Avoid full-document serialization on every input event.
-- [ ] Batch autosave and future collaboration emissions.
-- [ ] Avoid full-document pagination during typing.
+- [x] Set `shouldRerenderOnTransaction: false` unless a measured requirement proves otherwise.
+- [x] Use narrow `useEditorState` selectors for toolbar and status UI.
+- [x] Keep ordinary paragraphs, headings, text, and list items as ProseMirror DOM rendering rather than React NodeViews.
+- [x] Reserve React NodeViews for genuinely interactive rich embeds.
+- [x] Lazy-mount heavy image, audio, PDF, Word, YouTube, equation, and canvas previews.
+- [x] Avoid full-document serialization on every input event.
+- [x] Batch autosave and future collaboration emissions.
+- [x] Avoid full-document pagination during typing.
 - [ ] Measure editor creation, first editable, typing latency, selection changes, paste, undo, serialization, and teardown.
 - [ ] Add representative benchmark fixtures: 10k, 100k, 500k, and 1m characters; nested lists; large tables; and media-heavy documents.
 - [ ] Establish budgets for mid-range hardware and record results rather than claiming performance without measurement.
@@ -560,13 +560,13 @@ Exports must be projections from validated Incantly content. They must not scrap
 
 ## 17. Milestone 13 — accessibility and browser behavior
 
-- [ ] Preserve native text-selection and caret behavior.
-- [ ] Add labels, pressed states, disabled states, and keyboard operation to toolbar controls.
-- [ ] Ensure focus is not stolen when invoking formatting commands.
+- [x] Preserve native text-selection and caret behavior.
+- [x] Add labels, pressed states, disabled states, and keyboard operation to toolbar controls.
+- [x] Ensure focus is not stolen when invoking formatting commands.
 - [ ] Verify screen-reader navigation for headings, lists, checklists, tables, code, and attachments.
-- [ ] Verify high-contrast and forced-color behavior.
-- [ ] Verify 200% zoom and narrow viewport layouts.
-- [ ] Respect reduced-motion preferences.
+- [x] Verify high-contrast and forced-color behavior.
+- [x] Verify 200% zoom and narrow viewport layouts.
+- [x] Respect reduced-motion preferences.
 - [ ] Test composition input and IME behavior.
 - [ ] Test Chrome, Safari, Firefox, and Edge versions in the support policy.
 - [ ] Test macOS and Windows keyboard shortcuts deliberately.
@@ -626,11 +626,11 @@ Exports must be projections from validated Incantly content. They must not scrap
 - [x] Add root scripts such as `dev:document` and `build:document-demo` for starting and verifying the playground.
 - [x] Keep the playground simple and development-focused; it is a test harness, not the final Incantly product interface.
 - [x] Display the current document JSON beside or beneath the editor for inspecting canonical-model changes.
-- [ ] Add controls to reset the fixture, load a large fixture, toggle read-only mode, toggle the default toolbar, and simulate save/reload.
-- [ ] Add a visible event log for transactions, selection changes, validation issues, autosave, and errors.
-- [ ] Add a local persistence toggle so refresh and recovery behavior can be tested without a backend.
+- [x] Add controls to reset the fixture, load a large fixture, toggle read-only mode, toggle the default toolbar, and simulate save/reload.
+- [x] Add a visible event log for transactions, selection changes, validation issues, autosave, and errors.
+- [x] Add a local persistence toggle so refresh and recovery behavior can be tested without a backend.
 - [ ] Add fixture selection for basic formatting, nested lists, tables, math/code, attachments, hostile paste, and large-document performance.
-- [ ] Add a small diagnostics panel showing editor readiness, node count, character count, last save time, render/transaction timing, and current schema version.
+- [x] Add a small diagnostics panel showing editor readiness, node count, character count, last save time, render/transaction timing, and current schema version.
 - [x] Ensure every new user-visible editor feature is exposed in the playground in the same change that implements it.
 - [x] Ensure the playground starts with one documented command and without requiring Liveblocks, authentication, or a network connection.
 - [x] Add a production build check for the Vite playground to CI or the branch verification command.

@@ -18,16 +18,16 @@ import type {
   ShapeRecord,
   SizeId,
   TextBlock,
-} from '@incantly/canvas/headless'
+} from '@incantly/core/headless'
 import {
   DEFAULT_CAMERA,
   isInkCapturingTool,
   panCamera,
   pinchCamera,
   sanitizeCamera,
-} from '@incantly/canvas/headless'
+} from '@incantly/core/headless'
 import { InkOverlay, type InkHit, type PixelShapeEraseEdit } from '../ink/InkOverlay.js'
-import type { DrawingStroke } from '@incantly/canvas/headless'
+import type { DrawingStroke } from '@incantly/core/headless'
 import { ShapeLayer, type ShapeDraft } from '../shapes/ShapeLayer.js'
 import { TextBoxLayer } from '../shapes/TextBoxLayer.js'
 

@@ -7,8 +7,8 @@ import {
   type CSSProperties,
   type ForwardedRef,
 } from 'react'
-import type { Editor, BoardUI, Diff, DiffSource, GridId, Snapshot, ThemeId } from '@incantly/canvas'
-import { Editor as EditorCtor, Store, buildUI, buildWatermark } from '@incantly/canvas'
+import type { Editor, BoardUI, Diff, DiffSource, GridId, Snapshot, ThemeId } from '@incantly/core'
+import { Editor as EditorCtor, Store, buildUI, buildWatermark } from '@incantly/core'
 import type { CanvasProps, CanvasRef } from '../types/index.js'
 
 export const Canvas = forwardRef(function Canvas(

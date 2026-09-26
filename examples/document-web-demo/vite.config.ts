@@ -30,7 +30,7 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@incantly/canvas/document',
+        find: '@incantly/core/document',
         replacement: fileURLToPath(new URL('../../packages/core/src/document/index.ts', import.meta.url)),
       },
     ],

@@ -7,7 +7,7 @@ import {
   type IncantlyDocument,
   type InlineNode,
   type TextMark,
-} from '@incantly/canvas/document'
+} from '@incantly/core/document'
 
 export type DocumentAdapterIssueCode =
   | 'unsupported_node'

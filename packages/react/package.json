@@ -42,7 +42,7 @@
     "excalidraw-alternative"
   ],
   "dependencies": {
-    "@incantly/canvas": "0.2.0"
+    "@incantly/core": "0.2.0"
   },
   "peerDependencies": {
     "react": ">=17",

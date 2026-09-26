@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { createSubscriptionBag, type SubscriptionBag } from '@incantly/canvas/headless'
+import { createSubscriptionBag, type SubscriptionBag } from '@incantly/core/headless'
 
 export function useDisposable(): SubscriptionBag {
   const bagRef = useRef<SubscriptionBag | null>(null)

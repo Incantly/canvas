@@ -7,7 +7,7 @@ body:
     attributes:
       label: Package
       options:
-        - "@incantly/canvas"
+        - "@incantly/core"
         - "@incantly/canvas-react"
         - "@incantly/canvas-react-native"
         - The hosted app (apps/app)

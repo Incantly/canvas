@@ -13,7 +13,7 @@ import {
   type IncantlyDocument,
   type ReplaceDocumentTextOperation,
   type TextMark,
-} from '@incantly/canvas/document'
+} from '@incantly/core/document'
 import {
   proseMirrorToIncantlyDocument,
   type DocumentAdapterReport,

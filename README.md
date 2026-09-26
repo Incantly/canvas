@@ -11,7 +11,7 @@
 
 | Package | For |
 | --- | --- |
-| [`@incantly/canvas`](packages/core) | Framework-free engine + toolbar |
+| [`@incantly/core`](packages/core) | Framework-free engine + toolbar |
 | [`@incantly/canvas-react`](packages/react) | `<Canvas />` component + hooks |
 | [`@incantly/canvas-react-native`](packages/react-native) | WebView component + typed bridge |
 
@@ -23,7 +23,7 @@ npm install @incantly/canvas-react
 
 ```tsx
 import { Canvas } from '@incantly/canvas-react'
-import '@incantly/canvas/canvas.css'
+import '@incantly/core/canvas.css'
 
 export default function App() {
   return <Canvas theme="light" grid="lines" />
@@ -33,8 +33,8 @@ export default function App() {
 ## Quick start — vanilla
 
 ```js
-import { createCanvas } from '@incantly/canvas'
-import '@incantly/canvas/canvas.css'
+import { createCanvas } from '@incantly/core'
+import '@incantly/core/canvas.css'
 
 createCanvas({ container: document.getElementById('board') })
 ```
