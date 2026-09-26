@@ -60,8 +60,22 @@
     "@tiptap/starter-kit": "3.31.3"
   },
   "peerDependencies": {
+    "docx": "^9.7.2",
+    "pagedjs": "^0.4.3",
     "react": ">=17",
     "react-dom": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "docx": {
+      "optional": true
+    },
+    "pagedjs": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "docx": "^9.7.2",
+    "pagedjs": "^0.4.3"
   },
   "license": "MIT",
   "homepage": "https://github.com/Incantly/canvas",

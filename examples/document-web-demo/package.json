@@ -10,6 +10,8 @@
   "dependencies": {
     "@incantly/canvas": "0.2.0",
     "@incantly/canvas-react": "0.2.0",
+    "docx": "^9.7.2",
+    "pagedjs": "^0.4.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

@@ -17,8 +17,16 @@ export interface PageSetup {
   height?: number
   orientation: PageOrientation
   margins: PageMargins
+  headerDistance?: number
+  footerDistance?: number
+  mirroredMargins?: boolean
+  startingPageNumber?: number
   columns: 1 | 2
 }
+
+export type HeaderFooterFieldType = 'pageNumber' | 'pageCount' | 'documentTitle' | 'currentDate'
+export interface HeaderFooterField { type: 'field'; field: HeaderFooterFieldType; format?: string }
+export type HeaderFooterContent = DocumentNode | HeaderFooterField
 
 export interface PageLayoutSection {
   id: string
@@ -29,10 +37,10 @@ export interface PageLayoutSection {
 }
 
 export interface PageHeaderFooterVariants {
-  default?: DocumentNode[]
-  first?: DocumentNode[]
-  odd?: DocumentNode[]
-  even?: DocumentNode[]
+  default?: HeaderFooterContent[]
+  first?: HeaderFooterContent[]
+  odd?: HeaderFooterContent[]
+  even?: HeaderFooterContent[]
 }
 
 export interface PageLayout {

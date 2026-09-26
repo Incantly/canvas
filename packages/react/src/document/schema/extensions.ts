@@ -6,6 +6,8 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { incantlyDocumentMarks } from './marks.js'
 import { IncantlyNodeIds } from './nodeIds.js'
 import { IncantlyTableSchemaRoles, incantlyDocumentNodes } from './nodes.js'
+import { WebPagination, type WebPaginationOptions } from '../paginationExtension.js'
+import { DocumentClipboard, type DocumentClipboardOptions } from '../clipboardExtension.js'
 
 const restrictedStarterKit = StarterKit.configure({
   document: false,
@@ -53,6 +55,8 @@ const FormattingShortcuts = Extension.create({
  */
 export interface IncantlyDocumentExtensionOptions {
   placeholder?: string | (() => string)
+  pagination?: false | WebPaginationOptions
+  clipboard?: false | DocumentClipboardOptions
 }
 
 export function createIncantlyDocumentExtensions(
@@ -73,6 +77,8 @@ export function createIncantlyDocumentExtensions(
     ...incantlyDocumentMarks,
     IncantlyNodeIds,
     FormattingShortcuts,
+    ...(options.pagination === false ? [] : [WebPagination.configure(options.pagination ?? {})]),
+    ...(options.clipboard === false ? [] : [DocumentClipboard.configure(options.clipboard ?? {})]),
   ]
 }
 

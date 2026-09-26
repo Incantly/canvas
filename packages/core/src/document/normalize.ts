@@ -251,6 +251,10 @@ function recoverMetadata(value: unknown, state: RecoveryState): DocumentMetadata
     ...(size === 'custom' ? { width: numberOr(page.width, 612, 1), height: numberOr(page.height, 792, 1) } : {}),
     orientation: ['portrait', 'landscape'].includes(String(page.orientation)) ? page.orientation as PageSetup['orientation'] : DEFAULT_PAGE_SETUP.orientation,
     margins: { top: numberOr(margins.top, DEFAULT_PAGE_SETUP.margins.top, 0, 10_000), right: numberOr(margins.right, DEFAULT_PAGE_SETUP.margins.right, 0, 10_000), bottom: numberOr(margins.bottom, DEFAULT_PAGE_SETUP.margins.bottom, 0, 10_000), left: numberOr(margins.left, DEFAULT_PAGE_SETUP.margins.left, 0, 10_000) },
+    headerDistance: numberOr(page.headerDistance, 36, 0, 10_000),
+    footerDistance: numberOr(page.footerDistance, 36, 0, 10_000),
+    ...(page.mirroredMargins === true ? { mirroredMargins: true } : {}),
+    startingPageNumber: Math.floor(numberOr(page.startingPageNumber, 1, 1, 1_000_000)),
     columns: page.columns === 2 ? 2 : 1,
   }
   const authors: DocumentAuthor[] = Array.isArray(metadata.authors)

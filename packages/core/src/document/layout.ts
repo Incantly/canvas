@@ -12,11 +12,16 @@ export function normalizePageSetup(input: PageSetup): PageSetup {
   const height = preset?.height ?? input.height
   if (width === undefined || height === undefined || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
     throw new Error('Page dimensions must be positive finite values in points')
+  // Named sizes must not carry width/height keys at all: an explicit
+  // `undefined` value is not canonical JSON and the strict serializer rejects
+  // it (e.g. after switching back from custom to a preset in page settings).
+  const { width: _ignoredWidth, height: _ignoredHeight, ...rest } = input
   return {
-    ...input,
-    width: input.size === 'custom' ? width : undefined,
-    height: input.size === 'custom' ? height : undefined,
+    ...rest,
+    ...(input.size === 'custom' ? { width, height } : {}),
     margins: { ...input.margins },
+    headerDistance: Math.max(0, input.headerDistance ?? 36),
+    footerDistance: Math.max(0, input.footerDistance ?? 36),
   }
 }
 

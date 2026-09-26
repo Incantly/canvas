@@ -271,3 +271,93 @@
     box-shadow: none;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .incantly-document-editor *,
+  .incantly-document-editor *::before,
+  .incantly-document-editor *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 28rem) {
+  .incantly-document-toolbar { overflow-x: auto; flex-wrap: nowrap; }
+  .incantly-document-editor .ProseMirror { overflow-wrap: anywhere; }
+}
+.incantly-calculated-page-break {
+  border-top: 1px dashed color-mix(in srgb, currentColor 25%, transparent);
+  height: 24px;
+  margin: 18px -32px;
+  pointer-events: none;
+  content-visibility: auto;
+  contain-intrinsic-size: 24px;
+}
+
+.incantly-page-safe-area {
+  position: absolute;
+  border: 1px dashed color-mix(in srgb, currentColor 24%, transparent);
+  pointer-events: none;
+}
+
+/* Composable page presentation for DocumentPageView. Every dimension arrives
+   as an --incantly-page-* custom property so host stylesheets can restyle or
+   replace any of it; the rules below are only the default theme. */
+.incantly-document-page {
+  --incantly-page-width: 100%;
+  --incantly-page-height: auto;
+  --incantly-page-margin-top: 72px;
+  --incantly-page-margin-right: 72px;
+  --incantly-page-margin-bottom: 72px;
+  --incantly-page-margin-left: 72px;
+  --incantly-page-header-distance: 36px;
+  --incantly-page-footer-distance: 36px;
+  --incantly-page-chrome: #6b7280;
+  --incantly-page-surface: #ffffff;
+  --incantly-page-gap: 2rem auto;
+
+  position: relative;
+  transition: width 160ms ease, min-height 160ms ease, padding 160ms ease;
+}
+
+.incantly-document-page--paginated {
+  box-sizing: border-box;
+  width: min(var(--incantly-page-width), calc(100% - 2rem));
+  min-height: var(--incantly-page-height);
+  margin: var(--incantly-page-gap);
+  padding: var(--incantly-page-margin-top) var(--incantly-page-margin-right) var(--incantly-page-margin-bottom) var(--incantly-page-margin-left);
+  border: 1px solid var(--incantly-document-border);
+  background: var(--incantly-page-surface);
+  box-shadow: 0 0.8rem 2.5rem rgb(0 0 0 / 12%);
+}
+
+.incantly-document-page--paginated .incantly-document-editor,
+.incantly-document-page--paginated .incantly-document-editor__content,
+.incantly-document-page--paginated .incantly-document-editor .ProseMirror {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.incantly-document-page__header,
+.incantly-document-page__footer {
+  position: absolute;
+  right: var(--incantly-page-margin-right);
+  left: var(--incantly-page-margin-left);
+  color: var(--incantly-page-chrome);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.incantly-document-page__header { top: var(--incantly-page-header-distance); }
+.incantly-document-page__footer { bottom: var(--incantly-page-footer-distance); }
+
+.incantly-document-editor .ProseMirror > [data-incantly-node] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 12rem;
+}

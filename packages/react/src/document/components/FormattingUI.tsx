@@ -187,6 +187,9 @@ export function DocumentSlashMenu({ editor: suppliedEditor, items = defaultSlash
   }, [editor, match?.to, open])
   useEffect(() => {
     if (!editor || !open || !match) return
+    // Capture phase: this must run before ProseMirror's own Enter/Arrow
+    // handling on the same element, otherwise the paragraph splits (or the
+    // cursor moves) before the menu can commit the chosen block.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
@@ -206,8 +209,8 @@ export function DocumentSlashMenu({ editor: suppliedEditor, items = defaultSlash
       }
     }
     const element = editor.view.dom
-    element.addEventListener('keydown', handleKeyDown)
-    return () => element.removeEventListener('keydown', handleKeyDown)
+    element.addEventListener('keydown', handleKeyDown, true)
+    return () => element.removeEventListener('keydown', handleKeyDown, true)
   }, [activeIndex, editor, filtered, match, open])
   if (!editor || !match || !filtered.length) return null
   const choose = (item: SlashMenuItem) => (event: MouseEvent<HTMLButtonElement>) => {

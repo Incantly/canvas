@@ -56,7 +56,8 @@ export { paginate } from './pagination.js'
 export { createPaginationScheduler, type PaginationScheduler, type PaginationSchedulerOptions } from './pagination-scheduler.js'
 export { PAGE_PRESETS, contentRegion, createPageLayout, normalizePageSetup } from './layout.js'
 export { documentToHtml, type HtmlExportOptions } from './html.js'
-export { exportMarkdown, exportText, type AssetResolver, type ExportFormat, type ExportOptions, type ExportResult, type ExportWarning } from './export.js'
+export { exportMarkdown, exportText, type AssetResolver, type ExportFormat, type ExportLoss, type ExportOptions, type ExportProgress, type ExportResult, type ExportWarning } from './export.js'
+export { createExportProjection, type ExportProjection, type ExportProjectionNode } from './projection.js'
 
 export {
   DOCUMENT_TRANSACTION_LIMITS,

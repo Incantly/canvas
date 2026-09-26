@@ -75,7 +75,6 @@ export function paginate(input: PaginationInput): PaginationResult {
   const measurements = new Map(input.measurements.map((value) => [String(value.nodeId), value]))
   let pageIndex = 0
   let blockStart = Math.max(0, input.startIndex ?? 0)
-  let cursor = 0
   let fragments: PaginationFragment[] = []
   let used = 0
   const flush = (blockEnd: number): void => {
@@ -105,6 +104,29 @@ export function paginate(input: PaginationInput): PaginationResult {
     const forcedBreak = block.explicitBreakBefore && fragments.length > 0
     if (forcedBreak) flush(index)
     const height = Math.max(0, measurement.height)
+    const pieces = measurement.breakable === false || block.keepTogether
+      ? [{ height }]
+      : measurement.fragments?.length ? measurement.fragments : [{ height }]
+    if (block.keepWithNext && index + 1 < input.blocks.length) {
+      const next = measurements.get(String(input.blocks[index + 1].nodeId))
+      if (next && used > 0 && used + height + next.height > available) flush(index)
+    }
+    if (pieces.length > 1) {
+      const minimumStart = Math.max(1, block.orphans ?? 1)
+      const minimumEnd = Math.max(1, block.widows ?? 1)
+      let pieceIndex = 0
+      while (pieceIndex < pieces.length) {
+        const piece = pieces[pieceIndex]
+        const remainingPieces = pieces.length - pieceIndex
+        if (used + piece.height > available && fragments.length) { flush(index); continue }
+        if (pieceIndex < minimumStart && used > 0 && pieces.slice(0, minimumStart).reduce((sum, item) => sum + item.height, 0) > available - used) { flush(index); continue }
+        if (remainingPieces <= minimumEnd && used > 0 && pieces.slice(pieceIndex).reduce((sum, item) => sum + item.height, 0) > available - used) { flush(index); continue }
+        fragments.push({ nodeId: String(block.nodeId), pageIndex, height: piece.height, from: piece.from, to: piece.to, derivationKey: `${block.nodeId}:${pieceIndex}:${piece.height}:${available}` })
+        used += piece.height
+        pieceIndex++
+      }
+      continue
+    }
     if (used + height <= available || !fragments.length) {
       fragments.push({ nodeId: String(block.nodeId), pageIndex, height, derivationKey: `${block.nodeId}:${height}:${available}` })
       used += height

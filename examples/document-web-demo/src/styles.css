@@ -68,6 +68,108 @@ input {
   padding: 1rem;
 }
 
+.demo-diagnostics {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 64rem;
+  margin: 1rem auto;
+  padding: 1rem;
+  border: 1px solid rgb(128 128 128 / 35%);
+  border-radius: 0.5rem;
+}
+
+.demo-page {
+  /* Demo hook for host-style overrides of the SDK DocumentPageView. */
+}
+
+/* Demo styling of the SDK PageSettings primitive: any host can do the same
+   through the `incantly-page-settings` class, `className`, or `style`. */
+.demo-page-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  align-items: end;
+  max-width: 64rem;
+  margin: 1rem auto;
+  padding: 1rem;
+  border: 1px solid rgb(128 128 128 / 35%);
+  border-radius: 0.5rem;
+}
+
+.demo-page-settings label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.demo-page-settings select,
+.demo-page-settings input:not([type='checkbox']) {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgb(128 128 128 / 45%);
+  border-radius: 0.4rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.demo-download-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.demo-download-row button {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid rgb(128 128 128 / 45%);
+  border-radius: 0.4rem;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.demo-diagnostics ol {
+  max-height: 10rem;
+  overflow: auto;
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+.demo-export-preview {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 64rem;
+  margin: 1rem auto;
+  padding: 1rem;
+  border: 1px solid rgb(128 128 128 / 35%);
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 60%);
+}
+
+.demo-export-preview iframe { width: 100%; min-height: 28rem; border: 1px solid rgb(128 128 128 / 35%); background: white; }
+.demo-export-preview pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; }
+
+.demo-pdf-preview {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.demo-pdf-pages {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  padding: 1rem;
+  background: rgb(128 128 128 / 12%);
+  border-radius: 0.4rem;
+}
+
+.demo-pdf-pages .pagedjs_page {
+  box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 18%);
+}
+
 .demo-json pre {
   max-height: 24rem;
   overflow: auto;

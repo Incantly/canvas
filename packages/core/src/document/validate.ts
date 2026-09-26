@@ -298,8 +298,19 @@ function validateMetadata(value: unknown, path: string, issues: DocumentValidati
     if (!['portrait', 'landscape'].includes(String(page.orientation))) issue(issues, 'invalid_value', `${path}.pageSetup.orientation`, 'Invalid page orientation')
     if (![1, 2].includes(Number(page.columns))) issue(issues, 'invalid_value', `${path}.pageSetup.columns`, 'Columns must be 1 or 2')
     if (page.size === 'custom') { validateNumber(page, 'width', `${path}.pageSetup`, issues, { min: 1, max: 100_000 }); validateNumber(page, 'height', `${path}.pageSetup`, issues, { min: 1, max: 100_000 }) }
+    validateNumber(page, 'headerDistance', `${path}.pageSetup`, issues, { min: 0, max: 10_000 })
+    validateNumber(page, 'footerDistance', `${path}.pageSetup`, issues, { min: 0, max: 10_000 })
+    validateNumber(page, 'startingPageNumber', `${path}.pageSetup`, issues, { integer: true, min: 1, max: 1_000_000 })
+    if (page.mirroredMargins !== undefined && typeof page.mirroredMargins !== 'boolean') issue(issues, 'invalid_type', `${path}.pageSetup.mirroredMargins`, 'mirroredMargins must be boolean')
     if (!isRecord(page.margins)) issue(issues, 'invalid_type', `${path}.pageSetup.margins`, 'Margins must be an object')
     else for (const side of ['top', 'right', 'bottom', 'left']) validateNumber(page.margins, side, `${path}.pageSetup.margins`, issues, { min: 0, max: 10_000 })
+  }
+  if (own(value, 'layout')) {
+    if (!isRecord(value.layout)) issue(issues, 'invalid_type', `${path}.layout`, 'layout must be an object')
+    else {
+      if (value.layout.version !== 1) issue(issues, 'invalid_value', `${path}.layout.version`, 'Unsupported layout version')
+      if (!Array.isArray(value.layout.sections) || value.layout.sections.length > 1_000) issue(issues, 'limit_attribute', `${path}.layout.sections`, 'Layout sections must be an array with at most 1000 entries')
+    }
   }
   if (own(value, 'research') && !isRecord(value.research)) issue(issues, 'invalid_type', `${path}.research`, 'research must be an object')
   else if (isRecord(value.research)) {
