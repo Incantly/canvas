@@ -31,13 +31,13 @@ type ChildContext = 'root' | 'blocks' | 'listItems' | 'checklistItems' | 'tableR
 
 const NODE_TYPES = new Set([
   'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'checklist',
-  'listItem', 'checklistItem', 'horizontalRule', 'codeBlock', 'mathBlock', 'table',
+  'listItem', 'checklistItem', 'horizontalRule', 'details', 'codeBlock', 'mathBlock', 'table',
   'tableRow', 'tableHeaderCell', 'tableCell', 'image', 'fileAttachment', 'audio',
   'videoEmbed', 'pdfEmbed', 'canvasEmbed', 'pageBreak',
 ])
 const BLOCK_TYPES = new Set([
   'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'checklist',
-  'horizontalRule', 'codeBlock', 'mathBlock', 'table', 'image', 'fileAttachment',
+  'horizontalRule', 'details', 'codeBlock', 'mathBlock', 'table', 'image', 'fileAttachment',
   'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed', 'pageBreak',
 ])
 const ALIGNMENTS = new Set(['left', 'center', 'right', 'justify'])
@@ -132,6 +132,15 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
     const itemPath = `${path}[${index}]`
     if (!isRecord(candidate)) { issue(issues, 'invalid_type', itemPath, 'Inline node must be an object'); return }
     if (candidate.type === 'hardBreak') return
+    if (candidate.type === 'inlineMath') {
+      if (typeof candidate.latex !== 'string' || !candidate.latex) { issue(issues, 'invalid_type', `${itemPath}.latex`, 'LaTeX must be a non-empty string'); return }
+      state.totalText += candidate.latex.length
+      if (candidate.latex.length > DOCUMENT_LIMITS.maxTextNodeLength)
+        issue(issues, 'limit_text', `${itemPath}.latex`, 'LaTeX is too long')
+      if (state.totalText > DOCUMENT_LIMITS.maxTotalTextLength)
+        issue(issues, 'limit_text', `${itemPath}.latex`, 'Document text limit exceeded')
+      return
+    }
     if (candidate.type !== 'text') { issue(issues, 'unknown_node', `${itemPath}.type`, 'Unknown inline node'); return }
     if (typeof candidate.text !== 'string') { issue(issues, 'invalid_type', `${itemPath}.text`, 'Text must be a string'); return }
     state.totalText += candidate.text.length
@@ -215,7 +224,7 @@ function validateNode(value: unknown, path: string, issues: DocumentValidationIs
     state.nodeIds.add(id)
   }
   const attrs = validateAttrsObject(value, path, issues,
-    ['heading', 'checklistItem', 'mathBlock', 'image', 'fileAttachment', 'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed'].includes(value.type))
+    ['heading', 'checklistItem', 'details', 'mathBlock', 'image', 'fileAttachment', 'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed'].includes(value.type))
   switch (value.type) {
     case 'paragraph': case 'heading': {
       validateInline(value.content, `${path}.content`, issues, state)
@@ -231,6 +240,12 @@ function validateNode(value: unknown, path: string, issues: DocumentValidationIs
     case 'checklist': validateChildren(value, path, issues, state, depth, 'checklistItems'); return
     case 'checklistItem':
       if (attrs && typeof attrs.checked !== 'boolean') issue(issues, 'invalid_type', `${path}.attrs.checked`, 'checked must be boolean')
+      validateChildren(value, path, issues, state, depth, 'blocks'); return
+    case 'details':
+      if (attrs) {
+        if (typeof attrs.summary !== 'string') issue(issues, 'invalid_type', `${path}.attrs.summary`, 'summary must be a string')
+        if (attrs.open !== undefined && typeof attrs.open !== 'boolean') issue(issues, 'invalid_type', `${path}.attrs.open`, 'open must be boolean')
+      }
       validateChildren(value, path, issues, state, depth, 'blocks'); return
     case 'codeBlock':
       if (typeof value.text !== 'string') issue(issues, 'invalid_type', `${path}.text`, 'Code text must be a string')

@@ -97,6 +97,15 @@ function recoverInline(value: unknown, path: string, state: RecoveryState): Inli
     const candidate = value[index]
     if (!isRecord(candidate)) continue
     if (candidate.type === 'hardBreak') { output.push({ type: 'hardBreak' }); continue }
+    if (candidate.type === 'inlineMath') {
+      const remaining = DOCUMENT_LIMITS.maxTotalTextLength - state.text
+      if (remaining <= 0) { warning(state, 'limit_text', `${path}[${index}].latex`, 'LaTeX beyond the document limit was omitted'); break }
+      const latex = typeof candidate.latex === 'string' ? candidate.latex.slice(0, Math.min(DOCUMENT_LIMITS.maxTextNodeLength, remaining)) : ''
+      if (!latex) continue
+      state.text += latex.length
+      output.push({ type: 'inlineMath', latex })
+      continue
+    }
     if (candidate.type !== 'text' || typeof candidate.text !== 'string') continue
     const remaining = DOCUMENT_LIMITS.maxTotalTextLength - state.text
     if (remaining <= 0) { warning(state, 'limit_text', `${path}[${index}].text`, 'Text beyond the document limit was omitted'); break }
@@ -188,6 +197,12 @@ function recoverNode(value: unknown, path: string, state: RecoveryState, depth: 
     case 'listItem': return { id, type: 'listItem', content: blocks(value.content) }
     case 'checklistItem': return { id, type: 'checklistItem', attrs: { checked: attrs.checked === true }, content: blocks(value.content) }
     case 'horizontalRule': return { id, type: 'horizontalRule' }
+    case 'details': return {
+      id,
+      type: 'details',
+      attrs: { summary: safeString(attrs.summary) ?? '', ...(attrs.open === true ? { open: true as const } : {}) },
+      content: blocks(value.content),
+    }
     case 'codeBlock': {
       const remaining = Math.max(0, DOCUMENT_LIMITS.maxTotalTextLength - state.text)
       const text = safeString(value.text, Math.min(DOCUMENT_LIMITS.maxTextNodeLength, remaining)) ?? ''

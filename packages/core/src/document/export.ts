@@ -11,7 +11,8 @@ export interface AssetResolver { resolve(assetId: string): Promise<{ url?: strin
 const cancelled = (): Error => Object.assign(new Error('Export cancelled'), { name: 'AbortError' })
 
 const textOf = (node: DocumentNode): string => {
-  if (node.type === 'paragraph' || node.type === 'heading') return node.content.map((item) => item.type === 'text' ? item.text : '\n').join('')
+  if (node.type === 'paragraph' || node.type === 'heading') return node.content.map((item) => item.type === 'text' ? item.text : item.type === 'inlineMath' ? `$${item.latex}$` : '\n').join('')
+  if (node.type === 'details') return [node.attrs.summary, node.content.map((child) => textOf(child)).join('\n')].filter(Boolean).join('\n')
   if (node.type === 'codeBlock') return node.text
   if (node.type === 'mathBlock') return node.attrs.latex
   if ('content' in node && Array.isArray(node.content)) return node.content.map((child) => textOf(child as DocumentNode)).join('\n')
@@ -23,6 +24,7 @@ const markdownOf = (node: DocumentNode, warnings: ExportWarning[]): string => {
   if (node.type === 'codeBlock') return `\n\`\`\`${node.attrs?.language ?? ''}\n${node.text}\n\`\`\`\n`
   if (node.type === 'mathBlock') return `\n$$\n${node.attrs.latex}\n$$\n`
   if (node.type === 'horizontalRule') return '\n---\n'
+  if (node.type === 'details') return `\n**${node.attrs.summary}**\n${node.content.map((child) => markdownOf(child as DocumentNode, warnings)).join('')}\n`
   if (node.type === 'pageBreak') return '\n<div class="incantly-page-break"></div>\n'
   if (node.type === 'image') return `![${node.attrs.alt ?? ''}](asset:${node.attrs.assetId})\n`
   warnings.push({ code: 'unsupported-node', nodeId: node.id, message: `${node.type} exported as plain text` })

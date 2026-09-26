@@ -26,6 +26,7 @@ function renderMark(mark: TextMark, inner: string): string {
 
 function renderInlineNode(node: InlineNode): string {
   if (node.type === 'hardBreak') return '<br>'
+  if (node.type === 'inlineMath') return `<code class="math-inline" data-latex="${escapeAttr(node.latex)}">${escape(node.latex)}</code>`
   const text = escape(node.text)
   if (!text) return ''
   return (node.marks ?? []).reduceRight((inner, mark) => renderMark(mark, inner), text)
@@ -72,6 +73,11 @@ function renderBlock(node: DocumentNode, options: HtmlExportOptions): string {
     case 'checklistItem':
       return `<li>${renderChildren(node.content, options)}</li>`
     case 'horizontalRule': return '<hr>'
+    case 'details': {
+      const open = node.attrs.open === true ? ' open' : ''
+      const summary = escape(node.attrs.summary) || '<br>'
+      return `<details${open}><summary>${summary}</summary>${renderChildren(node.content, options) || '<br>'}</details>`
+    }
     case 'codeBlock': {
       const language = node.attrs?.language ? ` class="language-${escapeAttr(node.attrs.language)}"` : ''
       return `<pre><code${language}>${escape(node.text)}</code></pre>`

@@ -91,7 +91,8 @@ export type TextMarkType = TextMark['type']
 
 export interface DocumentTextNode { type: 'text'; text: string; marks?: TextMark[] }
 export interface HardBreakNode { type: 'hardBreak' }
-export type InlineNode = DocumentTextNode | HardBreakNode
+export interface InlineMathNode { type: 'inlineMath'; latex: string }
+export type InlineNode = DocumentTextNode | HardBreakNode | InlineMathNode
 
 export interface ParagraphNode {
   id: DocumentNodeId
@@ -112,6 +113,12 @@ export interface ChecklistNode { id: DocumentNodeId; type: 'checklist'; content:
 export interface ListItemNode { id: DocumentNodeId; type: 'listItem'; content: DocumentNode[] }
 export interface ChecklistItemNode { id: DocumentNodeId; type: 'checklistItem'; attrs: { checked: boolean }; content: DocumentNode[] }
 export interface HorizontalRuleNode { id: DocumentNodeId; type: 'horizontalRule' }
+export interface DetailsNode {
+  id: DocumentNodeId
+  type: 'details'
+  attrs: { summary: string; open?: boolean }
+  content: DocumentNode[]
+}
 export interface CodeBlockNode { id: DocumentNodeId; type: 'codeBlock'; attrs?: { language?: string }; text: string }
 export interface MathBlockNode {
   id: DocumentNodeId
@@ -154,7 +161,7 @@ export interface PageBreakNode { id: DocumentNodeId; type: 'pageBreak' }
 
 export type DocumentNode =
   | ParagraphNode | HeadingNode | BlockquoteNode | BulletListNode | OrderedListNode
-  | ChecklistNode | ListItemNode | ChecklistItemNode | HorizontalRuleNode | CodeBlockNode
+  | ChecklistNode | ListItemNode | ChecklistItemNode | HorizontalRuleNode | DetailsNode | CodeBlockNode
   | MathBlockNode | TableNode | TableRowNode | TableHeaderCellNode | TableCellNode
   | ImageNode | FileAttachmentNode | AudioNode | VideoEmbedNode | PdfEmbedNode
   | CanvasEmbedNode | PageBreakNode

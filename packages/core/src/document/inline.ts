@@ -88,6 +88,11 @@ export function normalizeInlineContent(value: unknown): InlineNode[] {
       output.push({ type: 'hardBreak' })
       continue
     }
+    if (record.type === 'inlineMath') {
+      const latex = typeof record.latex === 'string' ? record.latex : ''
+      if (latex) output.push({ type: 'inlineMath', latex })
+      continue
+    }
     if (record.type !== 'text' || typeof record.text !== 'string' || !record.text) continue
     const marks = normalizeTextMarks(record.marks)
     const next = { type: 'text' as const, text: record.text, ...(marks.length ? { marks } : {}) }
@@ -99,4 +104,4 @@ export function normalizeInlineContent(value: unknown): InlineNode[] {
 }
 
 export const inlineContentToPlainText = (content: readonly InlineNode[]): string =>
-  content.map((node) => node.type === 'hardBreak' ? '\n' : node.text).join('')
+  content.map((node) => node.type === 'hardBreak' ? '\n' : node.type === 'inlineMath' ? `$${node.latex}$` : node.text).join('')
