@@ -1,0 +1,39 @@
+.playground-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font: 13px system-ui, sans-serif;
+  color: #1a1a1a;
+}
+
+.playground-sidebar,
+.playground-debug {
+  flex-shrink: 0;
+  background: #fafafa;
+  z-index: 20;
+}
+
+.playground-sidebar { width: 240px; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; }
+.playground-debug { width: 320px; border-left: 1px solid #e0e0e0; overflow: auto; position: relative; }
+.playground-sidebar-header { padding: 12px 14px; border-bottom: 1px solid #e0e0e0; font-size: 14px; display: flex; justify-content: space-between; }
+.playground-main { flex: 1; min-width: 0; position: relative; }
+.playground-mobile-nav, .playground-close, .playground-scrim { display: none; }
+
+@media (max-width: 900px) {
+  .playground-sidebar,
+  .playground-debug {
+    position: fixed;
+    inset-block: 0;
+    max-width: min(88vw, 340px);
+    transition: transform 180ms ease;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, .2);
+  }
+  .playground-sidebar { left: 0; transform: translateX(-105%); }
+  .playground-debug { right: 0; transform: translateX(105%); }
+  .playground-sidebar.is-open, .playground-debug.is-open { transform: translateX(0); }
+  .playground-mobile-nav { display: flex; gap: 8px; position: absolute; z-index: 10; top: 10px; left: 10px; }
+  .playground-mobile-nav button, .playground-close { border: 1px solid #d8d8d8; border-radius: 8px; background: rgba(255,255,255,.94); padding: 7px 10px; }
+  .playground-close { display: block; font-size: 18px; line-height: 1; }
+  .playground-debug-close { position: sticky; top: 8px; margin: 8px 8px 0 auto; z-index: 2; }
+  .playground-scrim { display: block; position: fixed; inset: 0; z-index: 15; border: 0; background: rgba(0,0,0,.28); }
+}

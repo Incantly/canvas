@@ -7,6 +7,7 @@ export type * from './themes.js'
 export type * from './utils.js'
 export type {
   EditorOptions,
+  CanvasPerformanceSnapshot,
   EditorEvent,
   Store,
   Editor,

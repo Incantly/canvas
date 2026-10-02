@@ -172,13 +172,11 @@ describe('createSqliteVersionStorage', () => {
       notebookId: 'notebook:main',
       autosaveMs: 60_000,
     })
-    store.setNotebookDocument([{ type: 'paragraph', content: [{ text: 'before' }] }], 'user')
+    store.put({ id: 'asset:test', typeName: 'asset', src: 'before', w: 1, h: 1 }, 'user')
     const saved = await vm.checkpoint('manual', 'Before')
-    store.setNotebookDocument([{ type: 'paragraph', content: [{ text: 'after' }] }], 'user')
+    store.update('asset:test', { src: 'after' } as never, 'user')
     await vm.revert(saved.id)
-    const blocks = store.notebookDocumentBlocks()
-    const text = blocks[0] && 'content' in blocks[0] ? blocks[0].content[0]?.text : ''
-    expect(text).toBe('before')
+    expect(store.asset('asset:test')?.src).toBe('before')
     vm.dispose()
   })
 })

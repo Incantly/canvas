@@ -19,6 +19,8 @@ import type {
   PageLayout,
   Diff,
   Theme,
+  EditorOptions,
+  CanvasPerformanceSnapshot,
 } from "./types/index.js";
 import { Store, newId } from "./store.js";
 import {
@@ -26,11 +28,8 @@ import {
   PAGE_GAP_STEP,
   pageGapForPreset,
   pageGapPresetFor,
-  paperStyleToGridId,
-  DEFAULT_PAGE_HEIGHT,
-  type CreatePageOpts,
 } from "./pages.js";
-import type { PageGapPreset, PaperSizeId, PaperStyleId } from "./types/base.js";
+import type { PageGapPreset } from "./types/base.js";
 import {
   themeOf,
   SIZES,
@@ -54,39 +53,7 @@ import {
   noteLayout,
   sampleLinePts,
   NOTE_W,
-  NOTE_PAD,
 } from "./shapes.js";
-import {
-  blocksToHtml,
-  htmlToBlocks,
-  createRichEditElement,
-  getSelectionRect,
-  createRichTextToolbar,
-  emptyDocument,
-  getShapeBlocks,
-  isEmptyDocument,
-  applyLineMarkdown,
-  applyMarkdownToBlock,
-  type RichTextToolbar,
-} from "./rich-text/index.js";
-import { PageDocumentUI, drawPageDocument, type PageDocumentHost } from "./page-document-ui.js";
-import { pointInPageContent, pageContentRect, pointInNotesContent, pointInNotesPaper, notesPageContentRect } from "./page-document.js";
-import { applyPageDocumentOverflow } from "./page-document-paginate.js";
-import {
-  findDrawingTarget,
-  hitDocumentStroke,
-  removeDocumentStroke,
-  layoutPageDocument,
-  drawPageDocumentBlocks,
-  drawDocumentInkOverlay,
-} from "./page-document-blocks.js";
-import type { DocumentBlock } from "./rich-text/types.js";
-import {
-  contrastDocumentText,
-  defaultDocumentBackground,
-  defaultDocumentPaperColor,
-  normalizeCssColor,
-} from "./document-background.js";
 import {
   boundsUnion,
   boundsExpand,
@@ -94,6 +61,27 @@ import {
   clamp,
   rotWith,
 } from "./geometry.js";
+import { createDrawShape } from "./utils/shapes/create.js";
+import type { EraserMode } from "./utils/ink/ink-pen.js";
+import {
+  DEFAULT_ERASER_RADIUS_PAPER,
+  sanitizeEraserMode,
+  sanitizeEraserRadius,
+  sanitizeInkWidth,
+  inkBaseWidthPaper,
+  inkOutlineWidthPaper,
+} from "./utils/ink/ink-pen.js";
+import {
+  eraseCirclesHitBounds,
+  erasedPointRanges,
+  hitEraseStroke,
+  isErasureFragment,
+  keptPointRuns,
+  mergeEraseRanges,
+  slicePackedRuns,
+  splitStrokeByEraser,
+  type EraseCircle,
+} from "./utils/ink/erase.js";
 
 const ZOOM_MIN = 0.05;
 const ZOOM_MAX = 8;
@@ -141,14 +129,6 @@ interface SessionPinch {
 interface SessionPanning {
   type: "panning";
   last: XY;
-}
-interface SessionDocDrawing {
-  type: "doc-drawing";
-  blockIndex: number;
-  strokeIndex: number;
-  lastLocal: XY;
-  /** Trailing predicted points (transient — truncated on next real event). */
-  predicted: number;
 }
 interface SessionDrawing {
   type: "drawing";
@@ -222,7 +202,6 @@ interface SessionPlacing {
 type Session =
   | SessionPinch
   | SessionPanning
-  | SessionDocDrawing
   | SessionDrawing
   | SessionErasing
   | SessionLasering
@@ -239,10 +218,8 @@ type Session =
 interface Editing {
   id: string;
   field: "text" | "label";
+  textarea: HTMLTextAreaElement;
   fresh: boolean;
-  textarea?: HTMLTextAreaElement;
-  richEdit?: HTMLDivElement;
-  toolbar?: RichTextToolbar;
 }
 interface FitEase {
   t0: number;
@@ -278,13 +255,6 @@ interface EditorCtorOpts {
   camera?: Camera;
   styles?: Partial<Styles>;
   geoKind?: GeoId;
-  documentMode?: boolean;
-  documentBackground?: string | null;
-  documentPaperColor?: string | null;
-  touchUi?: boolean;
-  documentUi?: import("./document-ui-config.js").DocumentUiOptions;
-  promptLink?: () => Promise<string | null>;
-  readClipboard?: () => Promise<string>;
 }
 
 export class Editor {
@@ -298,16 +268,13 @@ export class Editor {
   camera: Camera;
   styles: Styles;
   geoKind: GeoId;
-  documentMode: boolean;
-  private _documentBackground: string | null = null;
-  private _documentPaperColor: string | null = null;
-  private _touchUi?: boolean;
-  private _documentUi?: import("./document-ui-config.js").DocumentUiOptions;
-  private _promptLink?: () => Promise<string | null>;
-  private _readClipboard?: () => Promise<string>;
   tool: ToolId;
   selection: Set<string>;
   currentPageId: string;
+  /** Eraser footprint radius in paper/world units (both erase modes). */
+  eraserRadius: number;
+  /** Eraser behavior: whole strokes vs cut segments. */
+  eraserMode: EraserMode;
   session!: Session | null;
   editing!: Editing | null;
   scribbles!: ScribbleStroke[];
@@ -321,6 +288,7 @@ export class Editor {
   _penDown!: boolean;
   _events!: Map<string, Set<(...args: any[]) => void>>;
   _raf!: number;
+  private _frameTimes: number[] = [];
   _camAnim!: number;
   _fitEaseRaf!: number;
   _laserRaf!: number;
@@ -332,10 +300,6 @@ export class Editor {
   _pendingFit!: (() => void) | null;
   _unsubStore!: () => void;
   _unsubHistory!: () => void;
-  _unsubCamera!: () => void;
-  _onVisibility!: () => void;
-  private _cachedPaperH: number | null = null;
-  private _cachedPaperHBlocks: DocumentBlock[] | null = null;
   _crossfadeTheme!: () => void;
   _decodeAssets!: (shapes: ShapeRecord[]) => Promise<void>;
   _drawGrid!: (
@@ -359,7 +323,6 @@ export class Editor {
   _onPaste!: (e: ClipboardEvent) => void;
   _onBlur!: () => void;
   _ro!: ResizeObserver;
-  pageDocUI!: PageDocumentUI;
 
   constructor(
     {
@@ -371,13 +334,6 @@ export class Editor {
       camera,
       styles,
       geoKind,
-      documentMode = false,
-      documentBackground = null,
-      documentPaperColor = null,
-      touchUi,
-      documentUi,
-      promptLink,
-      readClipboard,
     }: EditorCtorOpts = {} as EditorCtorOpts,
   ) {
     this.container = container;
@@ -389,24 +345,9 @@ export class Editor {
     this.camera = camera || { x: 0, y: 0, z: 1 };
     this.styles = { ...DEFAULT_STYLES, ...(styles || {}) };
     this.geoKind = geoKind || "rectangle";
-    this.documentMode = !!documentMode;
-    this._touchUi = touchUi;
-    this._documentUi = documentUi;
-    this._promptLink = promptLink;
-    this._readClipboard = readClipboard;
-    this.tool = this.documentMode ? "select" : "draw";
-    if (this.documentMode) container.classList.add("ic-document-mode");
-    if (documentBackground != null) {
-      const norm = normalizeCssColor(documentBackground);
-      if (!norm) throw new Error(`Invalid document background color: ${documentBackground}`);
-      this._documentBackground = norm;
-    }
-    if (documentPaperColor != null) {
-      const norm = normalizeCssColor(documentPaperColor);
-      if (!norm) throw new Error(`Invalid document paper color: ${documentPaperColor}`);
-      this._documentPaperColor = norm;
-    }
-    this._applyDocumentSurface();
+    this.eraserRadius = DEFAULT_ERASER_RADIUS_PAPER;
+    this.eraserMode = "stroke";
+    this.tool = "draw";
     this.selection = new Set();
     this.session = null;
     this.editing = null;
@@ -440,66 +381,12 @@ export class Editor {
     container.prepend(this.canvas);
 
     this._bind();
-    const self = this;
-    const host: PageDocumentHost = {
-      get readonly() {
-        return self.readonly;
-      },
-      get currentPageId() {
-        return self.currentPageId;
-      },
-      get camera() {
-        return self.camera;
-      },
-      container: this.container,
-      store: this.store,
-      get theme() {
-        return self.theme;
-      },
-      get documentMode() {
-        return self.documentMode;
-      },
-      get touchUi() {
-        return self._touchUi;
-      },
-      get documentUi() {
-        return self._documentUi;
-      },
-      promptLink: self._promptLink,
-      readClipboard: self._readClipboard,
-      currentPage: () => self.currentPage(),
-      pageToScreen: (x: number, y: number) => self.pageToScreen(x, y),
-      requestRender: () => self.requestRender(),
-      emitEdit: () => self.emit("edit"),
-      undo: () => self.undo(),
-      redo: () => self.redo(),
-      setPage: (id, opts) => self.setPage(id, opts),
-      emitPage: () => self.emit("page", self.currentPageId),
-      copySelection: () => self.copySelection(),
-      pasteFromClipboard: () => self.pasteFromClipboard(),
-    };
-    this.pageDocUI = new PageDocumentUI(host);
-    this.pageDocUI.setDocumentMode(this.documentMode);
-    this.pageDocUI.syncFromStore();
-    this._syncPageDocInteraction();
-    this._unsubCamera = this.on("camera", () => this.pageDocUI?.layout());
-    if (typeof document !== "undefined") {
-      this._onVisibility = () => this._onDocumentVisible();
-      document.addEventListener("visibilitychange", this._onVisibility);
-    }
-    if (this.documentMode && !this.readonly) {
-      requestAnimationFrame(() => {
-        this.fitDocumentView();
-        this.pageDocUI.focus();
-      });
-    }
     this._unsubStore = this.store.listen(() => {
       const pages = this.store.pages();
       if (pages.length && !pages.some((p) => p.id === this.currentPageId)) {
         this.currentPageId = pages[0].id;
       }
       this._pruneSelection();
-      if (!this.pageDocUI.focused) this.pageDocUI.syncFromStore();
       this.requestRender();
       this.emit("change");
     });
@@ -628,7 +515,6 @@ export class Editor {
   pan(dxScreen: number, dyScreen: number): void {
     const c = this.camera;
     this.setCamera({ ...c, x: c.x + dxScreen / c.z, y: c.y + dyScreen / c.z });
-    if (this.documentMode) this._clampNotesCamera();
   }
   zoomAt(
     sx: number,
@@ -657,28 +543,18 @@ export class Editor {
     }: { fit?: boolean; animate?: number; preserveZoom?: boolean } = {},
   ): void {
     if (!this.store.page(id) || id === this.currentPageId) return;
+    this.flushPendingEdits();
     this._cancelSession();
     this._commitText();
-    this.pageDocUI?.blur();
     this.currentPageId = id;
     this.setSelection([]);
-    if (this.documentMode) {
-      if (fit && !preserveZoom) this.fitDocumentView({ animate: 0 });
-      else this._panToCurrentPageKeepingZoom({ animate: fit ? animate : 0 });
-    } else if (fit) {
-      this.fitPage({ animate, ease: animate ? 0 : 0 });
-    } else if (preserveZoom) {
-      this._panToCurrentPageKeepingZoom({ animate });
-    } else {
+    if (fit) this.fitPage({ animate, ease: animate ? 0 : 0 });
+    else if (preserveZoom) this._panToCurrentPageKeepingZoom({ animate });
+    else {
       this._clampCamera();
       this._afterCamera();
     }
     this.emit("page", id);
-    this.pageDocUI.syncFromStore();
-    this._syncPageDocInteraction();
-    if (this.documentMode && !this.readonly) {
-      requestAnimationFrame(() => this.pageDocUI.focus());
-    }
     this.requestRender();
   }
   _panToCurrentPageKeepingZoom({
@@ -695,40 +571,11 @@ export class Editor {
       { animate },
     );
   }
-  addPage(opts: CreatePageOpts = {}): PageRecord {
+  addPage(opts: { width?: number; height?: number; name?: string } = {}): PageRecord {
     const page = this.store.addPage(opts);
-    if (this.documentMode) {
-      this.setPage(page.id, { fit: false, preserveZoom: true, animate: 180 });
-    } else {
-      this.emit("page", this.currentPageId);
-      this.requestRender();
-    }
-    return page;
-  }
-
-  setPagePaper(
-    pageId: string,
-    opts: {
-      width?: number;
-      height?: number;
-      paperStyle?: PaperStyleId;
-      paperSize?: PaperSizeId;
-    },
-  ): boolean {
-    const ok = this.store.setPagePaper(pageId, opts);
-    if (!ok) return false;
-    this._cachedPaperH = null;
-    this._cachedPaperHBlocks = null;
-    if (this.documentMode) {
-      applyPageDocumentOverflow(this.store, pageId, "user");
-    }
     this.emit("page", this.currentPageId);
-    if (this.documentMode && pageId === this.currentPageId) {
-      this._clampNotesCamera();
-      this.pageDocUI?.syncFromStore();
-    }
     this.requestRender();
-    return true;
+    return page;
   }
   removePage(id: string): boolean {
     if (id === this.currentPageId && this.store.pages().length <= 1) return false;
@@ -737,6 +584,7 @@ export class Editor {
     if (idx < 0) return false;
     const next =
       pages[idx + 1]?.id ?? pages[idx - 1]?.id ?? this.currentPageId;
+    if (id === this.currentPageId) this.flushPendingEdits();
     if (!this.store.removePage(id)) return false;
     if (this.currentPageId === id) this.setPage(next, { fit: true });
     else this.emit("page", this.currentPageId);
@@ -753,71 +601,11 @@ export class Editor {
     animate?: number;
     ease?: number;
   } = {}): void {
-    if (this.documentMode) {
-      this.fitDocumentView({ animate });
-      return;
-    }
     const page = this.currentPage();
     if (!page) return;
     this.followBounds(pageBoundsRect(page), { animate, ease });
   }
-
-  /** Notes-style view: fixed width, vertical scroll through growing body. */
-  fitDocumentView({ animate = 0 }: { animate?: number } = {}): void {
-    const page = this.currentPage();
-    if (!page) return;
-    if (this._deferFit(() => this.fitDocumentView({ animate }))) return;
-    const { w } = this.viewSize();
-    const side = 24;
-    const z = clamp(Math.min(1, (w - side * 2) / page.width), ZOOM_MIN, ZOOM_MAX);
-    this.setCamera(
-      {
-        z,
-        x: w / 2 / z - (page.x + page.width / 2),
-        y: side / z - page.y,
-      },
-      { animate },
-    );
-    this._clampNotesCamera();
-  }
-
-  _notesPaperHeight(page: PageRecord | null = this.currentPage()): number {
-    return page?.height ?? DEFAULT_PAGE_HEIGHT;
-  }
-
-  _pageStackBounds(): Bounds {
-    let b: Bounds | null = null;
-    for (const pg of this.store.pages()) {
-      b = boundsUnion(b, pageBoundsRect(pg));
-    }
-    return b ?? { x: 0, y: 0, w: 816, h: DEFAULT_PAGE_HEIGHT };
-  }
-
-  _clampNotesCamera(): void {
-    const stack = this._pageStackBounds();
-    const { w, h } = this.viewSize();
-    const c = this.camera;
-    const z = c.z;
-    const margin = 48 / z;
-    const vw = w / z;
-    const vh = h / z;
-    let x = c.x;
-    let y = c.y;
-    const minX = -(stack.x + stack.w + margin - vw);
-    const maxX = margin - stack.x;
-    const minY = -(stack.y + stack.h + margin - vh);
-    const maxY = margin - stack.y;
-    if (minX > maxX) x = (minX + maxX) / 2;
-    else x = clamp(x, minX, maxX);
-    if (minY > maxY) y = (minY + maxY) / 2;
-    else y = clamp(y, minY, maxY);
-    if (x !== c.x || y !== c.y) this.camera = { ...c, x, y };
-  }
   _clampCamera(): void {
-    if (this.documentMode) {
-      this._clampNotesCamera();
-      return;
-    }
     const page = this.currentPage();
     if (!page) return;
     const { w, h } = this.viewSize();
@@ -961,29 +749,9 @@ export class Editor {
     this._commitText();
     this.tool = tool;
     if (tool !== "select") this.setSelection([]);
-    this._syncPageDocInteraction();
-    if (
-      this.documentMode &&
-      (tool === "select" || tool === "text") &&
-      !this.readonly
-    ) {
-      this.pageDocUI.focus();
-    }
     this._syncCursor();
     this.emit("tool");
     this.requestRender();
-  }
-
-  _syncPageDocInteraction(): void {
-    if (!this.pageDocUI) return;
-    const ink =
-      this.tool === "draw" ||
-      this.tool === "highlight" ||
-      this.tool === "eraser" ||
-      this.tool === "laser";
-    this.pageDocUI.setInkPassThrough(ink);
-    this.container.classList.toggle("ic-ink-active", ink);
-    if (ink) this.pageDocUI.blur();
   }
   setGeoKind(kind: GeoId): void {
     if (GEO_IDS.includes(kind)) {
@@ -991,59 +759,24 @@ export class Editor {
       this.emit("tool");
     }
   }
+  setEraserRadius(radius: number): void {
+    this.eraserRadius = sanitizeEraserRadius(radius, DEFAULT_ERASER_RADIUS_PAPER);
+    this.emit("tool");
+    this.requestRender();
+  }
+  setEraserMode(mode: EraserMode): void {
+    this.eraserMode = sanitizeEraserMode(mode);
+    this.emit("tool");
+    this.requestRender();
+  }
   setTheme(id: ThemeId | string): void {
     const t = themeOf(id);
     if (t === this.theme) return;
     this._crossfadeTheme();
     this.theme = t;
     this.container.dataset.icTheme = t.id;
-    this._applyDocumentSurface();
     this.requestRender();
     this.emit("theme");
-  }
-
-  documentBackgroundColor(): string {
-    if (this._documentBackground) return this._documentBackground;
-    return defaultDocumentBackground(this.theme.id);
-  }
-
-  setDocumentBackground(color: string | null): void {
-    if (color === null) {
-      this._documentBackground = null;
-    } else {
-      const norm = normalizeCssColor(color);
-      if (!norm) throw new Error(`Invalid document background color: ${color}`);
-      this._documentBackground = norm;
-    }
-    this._applyDocumentSurface();
-    this.requestRender();
-  }
-
-  documentPaperColor(): string {
-    if (this._documentPaperColor) return this._documentPaperColor;
-    return defaultDocumentPaperColor(this.theme.id);
-  }
-
-  setDocumentPaperColor(color: string | null): void {
-    if (color === null) {
-      this._documentPaperColor = null;
-    } else {
-      const norm = normalizeCssColor(color);
-      if (!norm) throw new Error(`Invalid document paper color: ${color}`);
-      this._documentPaperColor = norm;
-    }
-    this._applyDocumentSurface();
-    this.requestRender();
-  }
-
-  _applyDocumentSurface(): void {
-    if (!this.documentMode) return;
-    const canvasBg = this.documentBackgroundColor();
-    const paperBg = this.documentPaperColor();
-    const fg = contrastDocumentText(paperBg);
-    this.container.style.setProperty("--ic-doc-bg", canvasBg);
-    this.container.style.setProperty("--ic-doc-paper", paperBg);
-    this.container.style.setProperty("--ic-doc-fg", fg);
   }
   _crossfadeThemeFn(): void {
     if (this._destroyed) return;
@@ -1091,6 +824,20 @@ export class Editor {
       this.setSelection([]);
     }
     this._syncCursor();
+  }
+  /** Canvas text edits commit synchronously. */
+  hasPendingEdits(): boolean {
+    return false;
+  }
+  /** Compatibility no-op; canvas text edits commit synchronously. */
+  flushPendingEdits(): void {}
+  /**
+   * Flush pending edits, then return the Store snapshot. Use this instead of
+   * `store.getSnapshot()` when the editor may have an uncommitted keystroke.
+   */
+  getSnapshot(): import("./types/operations.js").Snapshot {
+    this.flushPendingEdits();
+    return this.store.getSnapshot();
   }
   setPenMode(on: boolean): void {
     on = !!on;
@@ -1166,31 +913,14 @@ export class Editor {
     }
     return b;
   }
-  undo(): void {
-    this.store.undo();
-    if (this.documentMode) {
-      this.pageDocUI?.syncFromStore();
-      this.requestRender();
-    }
-  }
-  redo(): void {
-    this.store.redo();
-    if (this.documentMode) {
-      this.pageDocUI?.syncFromStore();
-      this.requestRender();
-    }
-  }
-  hasDocumentTextSelection(): boolean {
-    return this.pageDocUI?.hasTextSelection() ?? false;
-  }
   deleteSelection(): void {
-    if (this.documentMode && this.pageDocUI?.deleteSelectedText()) return
-    if (!this.selection.size) return
-    this.store.remove([...this.selection])
-    this.setSelection([])
+    if (!this.selection.size) return;
+    this.store.remove([...this.selection]);
+    this.setSelection([]);
   }
   clearBoard(): void {
     if (!this._pageShapes().length) return;
+    this.flushPendingEdits();
     this._cancelSession();
     this._commitText();
     this.store.clearPage(this.currentPageId);
@@ -1250,8 +980,8 @@ export class Editor {
           (a.id < b.id ? -1 : 1),
       );
   }
-  hitTest(px: number, py: number): ShapeRecord | null {
-    const tol = 8 / this.camera.z;
+  hitTest(px: number, py: number, tolerance?: number): ShapeRecord | null {
+    const tol = tolerance ?? 8 / this.camera.z;
     const list = this.shapesSorted();
     for (let i = list.length - 1; i >= 0; i--) {
       if (hitShape(list[i], px, py, tol, this.store)) return list[i];
@@ -1351,12 +1081,6 @@ export class Editor {
     if (this.session?.type === "pinch") return;
 
     const p = this._pointerPagePoint(s.x, s.y);
-    if (this.documentMode) {
-      const hit = this._pageAtWorldPoint(p);
-      if (hit && hit.id !== this.currentPageId) {
-        this.setPage(hit.id, { fit: false, preserveZoom: true, animate: 0 });
-      }
-    }
     if (e.button === 1 || this.spaceHeld || this.tool === "hand") {
       this.session = { type: "panning", last: s };
       this._syncCursor("grabbing");
@@ -1377,8 +1101,6 @@ export class Editor {
       case "geo":
         return this._beginGeo(p, e);
       case "text":
-        this._focusPageDocument(p);
-        return;
       case "note":
         this.session = { type: "placing", tool: this.tool, page: p };
         return;
@@ -1428,8 +1150,6 @@ export class Editor {
       }
       case "drawing":
         return this._extendDraw(e, p);
-      case "doc-drawing":
-        return this._extendDocDraw(e, p);
       case "erasing":
         return this._extendErase(p);
       case "lasering":
@@ -1491,8 +1211,6 @@ export class Editor {
         return;
       case "drawing":
         return this._endDraw();
-      case "doc-drawing":
-        return this._endDocDraw();
       case "erasing":
         return this._endErase();
       case "lasering":
@@ -1509,7 +1227,9 @@ export class Editor {
         return this._endTranslate();
       case "placing": {
         this.session = null;
-        if (ss.tool === "note") this._placeNote(ss.page);
+        ss.tool === "note"
+          ? this._placeNote(ss.page)
+          : this._placeText(ss.page);
         return;
       }
       case "resizing":
@@ -1566,7 +1286,6 @@ export class Editor {
   }
 
   _beginDraw(e: PointerEvent, p: XY): void {
-    if (this.documentMode) return this._beginDocDraw(e, p);
     const type: "draw" | "highlight" = this.tool as any;
     const id = newId();
     this.store.beginBatch();
@@ -1652,162 +1371,7 @@ export class Editor {
     this.session = null;
   }
 
-  _contentPointFromPage(p: XY): { lx: number; ly: number } | null {
-    const loc = this._localPagePoint(p);
-    if (!loc) return null;
-    const page = loc.page;
-    if (this.documentMode) {
-      const paperH = this._notesPaperHeight();
-      if (!pointInNotesContent(page, loc.lx, loc.ly, paperH)) return null;
-      const rect = notesPageContentRect(page, paperH);
-      return { lx: loc.lx - rect.x, ly: loc.ly - rect.y };
-    }
-    if (!pointInPageContent(page, loc.lx, loc.ly)) return null;
-    const rect = pageContentRect(page);
-    return { lx: loc.lx - rect.x, ly: loc.ly - rect.y };
-  }
-
-  /** Page-local coordinates for document ink (full sheet including margins). */
-  _paperPointFromPage(p: XY): { px: number; py: number } | null {
-    const loc = this._localPagePoint(p);
-    if (!loc) return null;
-    const paperH = this._notesPaperHeight();
-    if (!pointInNotesPaper(loc.page, loc.lx, loc.ly, paperH)) return null;
-    return { px: loc.lx, py: loc.ly };
-  }
-
-  _blockLocalFromPaper(cp: { px: number; py: number }): XY {
-    return { x: cp.px, y: cp.py };
-  }
-
-  _beginDocDraw(e: PointerEvent, p: XY): void {
-    const pp = this._paperPointFromPage(p);
-    if (!pp) return;
-    this.pageDocUI?.blur();
-    const page = this.currentPage();
-    if (!page) return;
-    const paperH = this._notesPaperHeight(page);
-    const blocks = this.store.pageDocumentBlocks(page.id);
-    const target = findDrawingTarget(blocks, pp.px, pp.py, page.width, paperH);
-    if (target.action === "reject") return;
-
-    const kind: "draw" | "highlight" = this.tool === "highlight" ? "highlight" : "draw";
-    this.store.beginBatch();
-    let blockIndex: number;
-    let local: XY;
-    let inserted = false;
-
-    if (target.action === "ensure-end") {
-      blockIndex = this.store.ensureEndDrawingBlock(page.id);
-      inserted = true;
-      local = { x: target.localX, y: target.localY };
-    } else {
-      blockIndex = target.blockIndex;
-      local = { x: target.localX, y: target.localY };
-    }
-    const stroke = {
-      pts: [local.x, local.y, e.pressure || 0.5],
-      color: this.styles.color,
-      size: this.styles.size,
-      kind,
-    };
-    this.store.appendDocumentDrawingStroke(page.id, blockIndex, stroke);
-    const updated = this.store.pageDocumentBlocks(page.id);
-    const block = updated[blockIndex];
-    const strokeIndex =
-      block && block.type === "drawing" ? block.strokes.length - 1 : 0;
-    this.session = {
-      type: "doc-drawing",
-      blockIndex,
-      strokeIndex,
-      lastLocal: local,
-      predicted: 0,
-    };
-    if (inserted) this.pageDocUI?.syncFromStore();
-    this.requestRender();
-  }
-
-  _extendDocDraw(e: PointerEvent, p: XY): void {
-    const ss = this.session as SessionDocDrawing;
-    const pp = this._paperPointFromPage(p);
-    if (!pp) return;
-    const local = this._blockLocalFromPaper(pp);
-    const page = this.currentPage();
-    if (!page) return;
-    // Drop last frame's predicted tail before appending real samples.
-    if (ss.predicted > 0) {
-      this.store.truncateDocumentDrawingStroke(
-        page.id,
-        ss.blockIndex,
-        ss.strokeIndex,
-        ss.predicted,
-      );
-      ss.predicted = 0;
-    }
-    const minD = 1.25 / this.camera.z;
-    if (Math.hypot(local.x - ss.lastLocal.x, local.y - ss.lastLocal.y) < minD)
-      return;
-    ss.lastLocal = local;
-    const evs = (e as any).getCoalescedEvents
-      ? (e as any).getCoalescedEvents()
-      : [e];
-    // One store update per input event (was one per coalesced sample).
-    const triples: number[] = [];
-    for (const ce of evs.length ? evs : [e]) {
-      const r = this._evPoint(ce);
-      const ppp = this._pointerPagePoint(r.x, r.y);
-      const cpp = this._paperPointFromPage(ppp);
-      if (!cpp) continue;
-      const loc = this._blockLocalFromPaper(cpp);
-      triples.push(loc.x, loc.y, ce.pressure || 0.5);
-    }
-    const pevs =
-      typeof (e as any).getPredictedEvents === "function"
-        ? (e as any).getPredictedEvents()
-        : [];
-    for (const pe of pevs) {
-      const r = this._evPoint(pe);
-      const ppp = this._pointerPagePoint(r.x, r.y);
-      const cpp = this._paperPointFromPage(ppp);
-      if (!cpp) continue;
-      const loc = this._blockLocalFromPaper(cpp);
-      triples.push(loc.x, loc.y, pe.pressure || 0.5);
-      ss.predicted++;
-    }
-    if (triples.length) {
-      this.store.appendDocumentDrawingStrokePoints(
-        page.id,
-        ss.blockIndex,
-        ss.strokeIndex,
-        triples,
-      );
-    }
-    this.requestRender();
-  }
-
-  _endDocDraw(): void {
-    const ss = this.session as SessionDocDrawing | null;
-    if (ss && ss.type === "doc-drawing" && ss.predicted > 0) {
-      const page = this.currentPage();
-      if (page) {
-        this.store.truncateDocumentDrawingStroke(
-          page.id,
-          ss.blockIndex,
-          ss.strokeIndex,
-          ss.predicted,
-        );
-      }
-    }
-    this.store.endBatch();
-    this.session = null;
-    this.pageDocUI?.syncFromStore();
-    this.requestRender();
-  }
-
   _beginErase(p: XY): void {
-    if (this.documentMode) {
-      this.store.beginBatch();
-    }
     this.session = {
       type: "erasing",
       hits: new Set(),
@@ -1837,35 +1401,13 @@ export class Editor {
     this.requestRender();
   }
   _eraseAt(p: XY): void {
-    if (this.documentMode) {
-      this._eraseDocStrokeAt(p);
-      return;
-    }
     const hit = this.hitTest(p.x, p.y);
     if (hit) (this.session as SessionErasing).hits.add(hit.id);
-  }
-  _eraseDocStrokeAt(p: XY): void {
-    const pp = this._paperPointFromPage(p);
-    if (!pp) return;
-    const page = this.currentPage();
-    if (!page) return;
-    const blocks = this.store.pageDocumentBlocks(page.id);
-    const tol = 10 / this.camera.z;
-    const hit = hitDocumentStroke(blocks, pp.px, pp.py, tol);
-    if (hit) {
-      const next = removeDocumentStroke(blocks, hit.blockIndex, hit.strokeIndex);
-      this.store.setPageDocument(page.id, next);
-    }
   }
   _endErase(): void {
     const hits = [...(this.session as SessionErasing).hits];
     this.session = null;
-    if (this.documentMode) {
-      this.store.endBatch();
-      this.pageDocUI?.syncFromStore();
-    } else if (hits.length) {
-      this.store.remove(hits);
-    }
+    if (hits.length) this.store.remove(hits);
     this.requestRender();
   }
 
@@ -2051,105 +1593,30 @@ export class Editor {
     }
   }
 
-  _focusPageDocument(p?: XY): void {
-    if (this.readonly) return;
-    this._commitText();
-    this.setSelection([]);
-    if (p) {
-      const loc = this._localPagePoint(p);
-      if (loc) {
-        this.pageDocUI.focusAtPagePoint(loc.lx, loc.ly);
-        return;
-      }
-    }
-    this.pageDocUI.focus();
+  _placeText(p: XY): void {
+    const id = newId();
+    this.store.beginBatch();
+    this.store.put({
+      id,
+      typeName: "shape",
+      type: "text",
+      x: p.x,
+      y: p.y - FONT_SIZES[this.styles.size] * 0.66,
+      rot: 0,
+      ...this._newShapeBase(),
+      props: {
+        text: "",
+        color: this.styles.color,
+        size: this.styles.size,
+        font: this.styles.font,
+        autosize: true,
+        scale: 1,
+      },
+    } as ShapeRecord);
+    this.setTool("select");
+    this.setSelection([id]);
+    this._startTextEdit(id, "text", { fresh: true });
   }
-
-  focusPageDocument(): void {
-    this._focusPageDocument();
-  }
-
-  refreshPageDocument(): void {
-    this.pageDocUI?.refresh();
-    this.requestRender();
-  }
-
-  _onDocumentVisible(): void {
-    if (this._destroyed || !this.documentMode) return;
-    if (typeof document === "undefined" || document.visibilityState !== "visible")
-      return;
-    this.pageDocUI?.refresh();
-    this.fitDocumentView({ animate: 0 });
-    this.requestRender();
-  }
-
-  async _pasteDocumentText(): Promise<void> {
-    let text = "";
-    try {
-      text = await navigator.clipboard.readText();
-    } catch {
-      if (this._readClipboard) {
-        try {
-          text = await this._readClipboard();
-        } catch {
-          return;
-        }
-      } else {
-        return;
-      }
-    }
-    if (!text) return;
-    try {
-      const data = JSON.parse(text);
-      if (
-        data &&
-        (data.incantly || data.quickdraw) &&
-        Array.isArray(data.shapes)
-      )
-        return;
-    } catch {
-      /* plain text */
-    }
-    this._focusPageDocument();
-    this.pageDocUI.pasteText(text);
-  }
-
-  _pageAtWorldPoint(p: XY): PageRecord | null {
-    for (const page of this.store.pages()) {
-      if (
-        p.x >= page.x &&
-        p.x <= page.x + page.width &&
-        p.y >= page.y &&
-        p.y <= page.y + page.height
-      ) {
-        return page;
-      }
-    }
-    return null;
-  }
-
-  _localPagePoint(p: XY): { page: PageRecord; lx: number; ly: number } | null {
-    const page = this.currentPage();
-    if (!page) return null;
-    const lx = p.x - page.x;
-    const ly = p.y - page.y;
-    return { page, lx, ly };
-  }
-
-  _clickTargetsPageDocument(p: XY): boolean {
-    const loc = this._localPagePoint(p);
-    if (!loc) return false;
-    if (this.documentMode) {
-      return pointInNotesContent(
-        loc.page,
-        loc.lx,
-        loc.ly,
-        this._notesPaperHeight(),
-      );
-    }
-    return pointInPageContent(loc.page, loc.lx, loc.ly);
-  }
-
   _placeNote(p: XY): void {
     const id = newId();
     this.store.beginBatch();
@@ -2162,7 +1629,7 @@ export class Editor {
       rot: 0,
       ...this._newShapeBase(),
       props: {
-        blocks: emptyDocument(),
+        text: "",
         color: (this.styles.color === DEFAULT_STYLES.color
           ? "yellow"
           : this.styles.color) as ColorId,
@@ -2185,229 +1652,115 @@ export class Editor {
     const shape = this.store.get(id) as ShapeRecord | undefined;
     if (!shape) return;
     if (!fresh) this.store.beginBatch();
-
-    if (field === "label" && shape.type === "geo") {
-      const ta = document.createElement("textarea");
-      ta.className = "ic-text-edit";
-      ta.value = shape.props.label || "";
-      ta.spellcheck = false;
-      this.container.appendChild(ta);
-      this.editing = { id, field, fresh, textarea: ta };
-      const sync = () => {
-        this.store.update(id, { props: { label: ta.value } });
-        this._layoutTextEditor();
-      };
-      ta.addEventListener("input", sync);
-      ta.addEventListener("keydown", (e) => this._textEditKeydown(e));
-      ta.addEventListener("pointerdown", (e) => e.stopPropagation());
-      ta.addEventListener("blur", () => this._commitText());
+    const ta = document.createElement("textarea");
+    ta.className = "ic-text-edit";
+    ta.value =
+      field === "label"
+        ? shape.type === "geo"
+          ? shape.props.label || ""
+          : ""
+        : shape.type === "text" || shape.type === "note"
+          ? shape.props.text || ""
+          : "";
+    ta.spellcheck = false;
+    this.container.appendChild(ta);
+    this.editing = { id, field, textarea: ta, fresh };
+    const sync = () => {
+      const patch: Record<string, any> =
+        field === "label" ? { label: ta.value } : { text: ta.value };
+      this.store.update(id, { props: patch });
       this._layoutTextEditor();
-      ta.focus();
-      if (!fresh) ta.select();
-    } else if (shape.type === "text" || shape.type === "note") {
-      const editEl = createRichEditElement();
-      const blocks = getShapeBlocks(shape.props as unknown as Record<string, unknown>);
-      editEl.innerHTML = blocksToHtml(blocks);
-      this.container.appendChild(editEl);
-      const toolbar = createRichTextToolbar(this.container, () => {
-        this._syncRichText(id, editEl);
-        toolbar.show(getSelectionRect());
-      });
-      this.editing = { id, field, fresh, richEdit: editEl, toolbar };
-      const sync = () => this._syncRichText(id, editEl);
-      editEl.addEventListener("input", sync);
-      editEl.addEventListener("keyup", () => {
-        toolbar.show(getSelectionRect());
-      });
-      editEl.addEventListener("keydown", (e) => {
-        e.stopPropagation();
-        if (e.metaKey || e.ctrlKey) {
-          if (e.key === "b") {
-            e.preventDefault();
-            document.execCommand("bold");
-            sync();
-          } else if (e.key === "i") {
-            e.preventDefault();
-            document.execCommand("italic");
-            sync();
-          } else if (e.key === "u") {
-            e.preventDefault();
-            document.execCommand("underline");
-            sync();
-          } else if (e.key === "k") {
-            e.preventDefault();
-            const url = window.prompt("Link URL", "https://");
-            if (url) {
-              document.execCommand("createLink", false, url);
-              sync();
-            }
-          }
-        }
-        if (e.key === " ") {
-          this._applyRichMarkdown(editEl);
-          sync();
-        }
-        if (
-          e.key === "Escape" ||
-          (e.key === "Enter" && (e.metaKey || e.ctrlKey))
-        ) {
-          e.preventDefault();
-          this._commitText();
-          this.container.focus({ preventScroll: true });
-        }
-      });
-      editEl.addEventListener("pointerdown", (e) => e.stopPropagation());
-      editEl.addEventListener("blur", () => this._commitText());
-      this._layoutTextEditor();
-      editEl.focus();
-      if (!fresh) {
-        const sel = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(editEl);
-        range.collapse(false);
-        sel?.removeAllRanges();
-        sel?.addRange(range);
+    };
+    ta.addEventListener("input", sync);
+    ta.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (
+        e.key === "Escape" ||
+        (e.key === "Enter" && (e.metaKey || e.ctrlKey))
+      ) {
+        e.preventDefault();
+        this._commitText();
+        this.container.focus({ preventScroll: true });
       }
-    } else return;
-
+    });
+    ta.addEventListener("pointerdown", (e) => e.stopPropagation());
+    ta.addEventListener("blur", () => this._commitText());
+    this._layoutTextEditor();
+    ta.focus();
+    if (!fresh) ta.select();
     this.emit("edit");
     this.requestRender();
   }
-
-  _textEditKeydown(e: KeyboardEvent): void {
-    e.stopPropagation();
-    if (
-      e.key === "Escape" ||
-      (e.key === "Enter" && (e.metaKey || e.ctrlKey))
-    ) {
-      e.preventDefault();
-      this._commitText();
-      this.container.focus({ preventScroll: true });
-    }
-  }
-
-  _syncRichText(id: string, editEl: HTMLDivElement): void {
-    let blocks = htmlToBlocks(editEl);
-    blocks = blocks.map((b) => applyMarkdownToBlock(b));
-    this.store.update(id, { props: { blocks } });
-    this._layoutTextEditor();
-    this.requestRender();
-  }
-
-  _applyRichMarkdown(editEl: HTMLDivElement): void {
-    const sel = window.getSelection();
-    if (!sel?.focusNode) return;
-    let node: Node | null = sel.focusNode;
-    while (node && node !== editEl) {
-      if (node instanceof HTMLElement && node.dataset.block) {
-        const text = node.textContent ?? "";
-        const md = applyLineMarkdown(text.trim());
-        if (md) {
-          node.setAttribute("data-block", md.type);
-          node.className = `ic-rt-block ic-rt-${md.type}`;
-          node.textContent = md.text;
-          return;
-        }
-        break;
-      }
-      node = node.parentNode;
-    }
-  }
-
   _layoutTextEditor(): void {
     const ed = this.editing;
     if (!ed) return;
     const shape = this.store.get(ed.id) as ShapeRecord | undefined;
     if (!shape) return;
     const z = this.camera.z;
-
-    if (ed.textarea) {
-      const ta = ed.textarea;
-      let pos: XY | null = null;
-      let w = 0;
-      let h = 0;
-      let align = "left";
-      if (shape.type === "geo" && ed.field === "label") {
-        const p: any = shape.props;
-        const fs = FONT_SIZES[(p.labelSize || "s") as SizeId];
-        const fam = FONTS[(p.font || "draw") as FontId];
-        pos = this._shapeToScreen(shape, shape.x + 8, shape.y + 8);
-        w = p.w - 16;
-        h = p.h - 16;
-        align = "center";
-        ta.style.font = `500 ${fs * z}px ${fam}`;
-        ta.style.lineHeight = fs * 1.3 * z + "px";
-        ta.style.paddingTop = Math.max(0, (h * z) / 2 - fs * 1.3 * z) / 2 + "px";
-      }
-      const colorId = ("color" in shape.props ? shape.props.color : "black") as ColorId;
-      const col = this.theme.colors[colorId || "black"];
-      ta.style.left = pos!.x + "px";
-      ta.style.top = pos!.y + "px";
-      ta.style.width = w * z + "px";
-      ta.style.height = h * z + "px";
-      ta.style.textAlign = align;
-      ta.style.color = col.stroke;
-      return;
-    }
-
-    const editEl = ed.richEdit;
-    if (!editEl) return;
-    let lay: ReturnType<typeof textLayout> | ReturnType<typeof noteLayout>;
-    let pos: XY | null = null;
-    let w = 0;
-    let h = 0;
-    let align = "left";
+    const ta = ed.textarea;
+    let lay: any,
+      pos: XY | null = null,
+      w: number = 0,
+      h: number = 0,
+      align: string = "left";
     if (shape.type === "note") {
-      const nlay = noteLayout(shape);
-      lay = nlay;
+      lay = noteLayout(shape);
       const s = (shape.props as any).scale || 1;
-      const yStart = Math.max(NOTE_PAD, nlay.boxH / 2 - nlay.textH / 2);
-      pos = this._shapeToScreen(shape, shape.x + NOTE_PAD * s, shape.y + yStart * s);
-      w = (NOTE_W - NOTE_PAD * 2) * s;
-      h = nlay.textH * s;
-      align = "left";
-      editEl.style.font = `500 ${nlay.fontSize * s * z}px ${nlay.font}`;
-      editEl.style.lineHeight = nlay.lh * s * z + "px";
+      const yStart = Math.max(20, lay.boxH / 2 - lay.textH / 2);
+      pos = this._shapeToScreen(shape, shape.x + 20 * s, shape.y + yStart * s);
+      w = (NOTE_W - 40) * s;
+      h = lay.textH * s;
+      align = "center";
+      ta.style.font = `500 ${lay.fontSize * s * z}px ${lay.font}`;
+      ta.style.lineHeight = lay.lh * s * z + "px";
+    } else if (shape.type === "geo" && ed.field === "label") {
+      const p: any = shape.props;
+      const fs = FONT_SIZES[(p.labelSize || "s") as SizeId];
+      const fam = FONTS[(p.font || "draw") as FontId];
+      pos = this._shapeToScreen(shape, shape.x + 8, shape.y + 8);
+      w = p.w - 16;
+      h = p.h - 16;
+      align = "center";
+      ta.style.font = `500 ${fs * z}px ${fam}`;
+      ta.style.lineHeight = fs * 1.3 * z + "px";
+      ta.style.paddingTop = Math.max(0, (h * z) / 2 - fs * 1.3 * z) / 2 + "px";
     } else {
       lay = textLayout(shape);
       pos = this._shapeToScreen(shape, shape.x, shape.y);
       w = Math.max(lay.w + 4, 40);
       h = lay.h + 4;
       const p: any = shape.props;
-      align = p.align === "center" ? "center" : p.align === "right" ? "right" : "left";
-      editEl.style.font = `500 ${lay.fontSize * z}px ${lay.fontFamily}`;
-      editEl.style.lineHeight = lay.lh * z + "px";
+      align =
+        p.align === "middle" ? "center" : p.align === "end" ? "right" : "left";
+      ta.style.font = `500 ${lay.fontSize * z}px ${lay.font}`;
+      ta.style.lineHeight = lay.lh * z + "px";
     }
     const colorId = ("color" in shape.props ? shape.props.color : "black") as ColorId;
     const col = this.theme.colors[colorId || "black"];
-    editEl.style.left = pos!.x + "px";
-    editEl.style.top = pos!.y + "px";
-    editEl.style.width = w * z + "px";
-    editEl.style.minHeight = h * z + "px";
-    editEl.style.textAlign = align;
-    editEl.style.color = shape.type === "note" ? this.theme.noteText : col.stroke;
+    ta.style.left = pos!.x + "px";
+    ta.style.top = pos!.y + "px";
+    ta.style.width = w * z + "px";
+    ta.style.height = h * z + "px";
+    ta.style.textAlign = align;
+    ta.style.color = shape.type === "note" ? this.theme.noteText : col.stroke;
   }
-
   _commitText(): void {
     const ed = this.editing;
     if (!ed) return;
     this.editing = null;
     const shape = this.store.get(ed.id) as ShapeRecord | undefined;
-    ed.textarea?.remove();
-    ed.richEdit?.remove();
-    ed.toolbar?.destroy();
+    ed.textarea.remove();
     if (shape) {
-      if (ed.field === "label") {
-        const value = (shape.props as any).label;
-        if (!String(value || "").trim()) {
-          this.store.update(ed.id, { props: { label: undefined } });
-        }
-      } else if (shape.type === "text" || shape.type === "note") {
-        const blocks = getShapeBlocks(shape.props as unknown as Record<string, unknown>);
-        if (isEmptyDocument(blocks) && (shape.type === "text" || (shape.type === "note" && ed.fresh))) {
-          this.store.remove([ed.id]);
-          this.selection.delete(ed.id);
-        }
+      const value =
+        ed.field === "label"
+          ? (shape.props as any).label
+          : (shape.props as any).text;
+      if (
+        !String(value || "").trim() &&
+        (shape.type === "text" || (shape.type === "note" && ed.fresh))
+      ) {
+        this.store.remove([ed.id]);
+        this.selection.delete(ed.id);
       }
     }
     this.store.endBatch();
@@ -2456,8 +1809,6 @@ export class Editor {
         start: s,
         page: p,
       };
-    } else if (this._clickTargetsPageDocument(p)) {
-      this._focusPageDocument(p);
     } else {
       this.session = {
         type: "marquee",
@@ -2694,7 +2045,7 @@ export class Editor {
     const p = this._pointerPagePoint(s.x, s.y);
     const hit = this.hitTest(p.x, p.y);
     if (hit) {
-      if (hit.type === "note") {
+      if (hit.type === "text" || hit.type === "note") {
         this.setSelection([hit.id]);
         this._startTextEdit(hit.id, "text");
         return;
@@ -2706,11 +2057,11 @@ export class Editor {
       }
       return;
     }
-    this._focusPageDocument(p);
+    this._placeText(p);
   }
 
   _keyDown(e: KeyboardEvent): void {
-    if (this.readonly || this.editing || this.pageDocUI?.focused) return;
+    if (this.readonly || this.editing) return;
     const meta = e.metaKey || e.ctrlKey;
     const k = e.key.toLowerCase();
     if (k === " ") {
@@ -2723,7 +2074,7 @@ export class Editor {
     }
     if (meta && k === "z") {
       e.preventDefault();
-      e.shiftKey ? this.redo() : this.undo();
+      e.shiftKey ? this.store.redo() : this.store.undo();
       return;
     }
     if (meta && k === "a") {
@@ -2748,10 +2099,6 @@ export class Editor {
     }
     if (meta && k === "v") {
       e.preventDefault();
-      if (this.documentMode) {
-        void this._pasteDocumentText();
-        return;
-      }
       this.pasteFromClipboard();
       return;
     }
@@ -2905,10 +2252,6 @@ export class Editor {
   }
 
   async copySelection(): Promise<void> {
-    if (this.documentMode) {
-      const copied = await this.pageDocUI?.copySelectedText();
-      if (copied) return;
-    }
     if (!this.selection.size) return;
     const shapes: ShapeRecord[] = [];
     const assets: Record<string, AssetRecord> = {};
@@ -2930,10 +2273,6 @@ export class Editor {
     }
   }
   async pasteFromClipboard(): Promise<void> {
-    if (this.documentMode) {
-      await this._pasteDocumentText();
-      return;
-    }
     try {
       if ((navigator.clipboard as any).read) {
         const items: any[] = await (navigator.clipboard as any).read();
@@ -2997,26 +2336,6 @@ export class Editor {
   }
   _paste(e: ClipboardEvent): void {
     if (this.readonly || this.editing) return;
-    if (this.pageDocUI?.focused) return;
-    if (this.documentMode) {
-      const text = e.clipboardData?.getData("text/plain");
-      if (text) {
-        try {
-          const data = JSON.parse(text);
-          if (
-            data &&
-            (data.incantly || data.quickdraw) &&
-            Array.isArray(data.shapes)
-          )
-            return;
-        } catch {
-          /* plain text */
-        }
-        e.preventDefault();
-        this.pageDocUI.pasteText(text);
-        return;
-      }
-    }
     const files = Array.from(e.clipboardData?.files || []).filter((f) =>
       f.type.startsWith("image/"),
     );
@@ -3167,96 +2486,7 @@ export class Editor {
     });
   }
   resize(): void {
-    if (this.documentMode) {
-      this._clampNotesCamera();
-      this.pageDocUI?.layout();
-    }
     this.requestRender();
-  }
-
-  _renderNotesScene(
-    ctx: CanvasRenderingContext2D,
-    cam: Camera,
-    _w: number,
-    dpr: number,
-    vis: Bounds,
-    background: boolean,
-    hideEditing: boolean,
-  ): void {
-    const paperBg = this.documentPaperColor();
-    for (const pg of this.store.pages()) {
-      const paperH = this._notesPaperHeight(pg);
-      const pb = pageBoundsRect(pg);
-      if (
-        pb.x + pb.w < vis.x ||
-        pb.x > vis.x + vis.w ||
-        pb.y + pb.h < vis.y ||
-        pb.y > vis.y + vis.h
-      )
-        continue;
-      if (background) {
-        ctx.save();
-        ctx.translate(pg.x, pg.y);
-        ctx.shadowColor = "rgba(28, 27, 24, 0.14)";
-        ctx.shadowBlur = 12 / cam.z;
-        ctx.shadowOffsetY = 4 / cam.z;
-        ctx.fillStyle = paperBg;
-        ctx.fillRect(0, 0, pg.width, paperH);
-        ctx.shadowColor = "transparent";
-        const styleGrid = paperStyleToGridId(pg.paperStyle);
-        if (styleGrid !== "none") {
-          ctx.beginPath();
-          ctx.rect(0, 0, pg.width, paperH);
-          ctx.clip();
-          this._drawPageGridFn(ctx, pg, cam, dpr, {
-            grid: styleGrid,
-            height: paperH,
-          });
-        }
-        ctx.restore();
-      }
-      const isCurrent = pg.id === this.currentPageId;
-      const skipDom = isCurrent && this.pageDocUI && !this.pageDocUI.wrap.hidden;
-      const blocks = this.store.pageDocumentBlocks(pg.id);
-      ctx.save();
-      ctx.translate(pg.x, pg.y);
-      if (skipDom) {
-        drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
-          drawingOnly: true,
-          skipInk: true,
-          paperHeight: paperH,
-        });
-      } else {
-        drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
-          paperHeight: paperH,
-        });
-      }
-      ctx.restore();
-      const shapes = this.store.shapesOnPage(pg.id);
-      if (!shapes.length) continue;
-      ctx.save();
-      ctx.translate(pg.x, pg.y);
-      for (const s of shapes.sort(
-        (a, b) =>
-          (a.type === "highlight" ? 0 : 1) - (b.type === "highlight" ? 0 : 1) ||
-          a.z - b.z ||
-          (a.id < b.id ? -1 : 1),
-      )) {
-        if (s.type === "draw" || s.type === "highlight") continue;
-        drawShape(ctx, s, {
-          theme: this.theme,
-          store: this.store,
-          zoom: cam.z,
-          ghost: false,
-          hideText:
-            hideEditing && this.editing?.id === s.id
-              ? this.editing.field
-              : undefined,
-          onAssetLoad: () => this.requestRender(),
-        });
-      }
-      ctx.restore();
-    }
   }
 
   renderScene(
@@ -3272,9 +2502,7 @@ export class Editor {
   ): void {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (background) {
-      ctx.fillStyle = this.documentMode
-        ? this.documentBackgroundColor()
-        : this.theme.background;
+      ctx.fillStyle = this.theme.background;
       ctx.fillRect(0, 0, w * dpr, h * dpr);
     } else {
       ctx.clearRect(0, 0, w * dpr, h * dpr);
@@ -3290,11 +2518,6 @@ export class Editor {
     const vp = { x: -cam.x, y: -cam.y, w: w / cam.z, h: h / cam.z };
     const pad = 64 / cam.z;
     const vis = boundsExpand(vp, pad);
-    if (this.documentMode) {
-      this._renderNotesScene(ctx, cam, w, dpr, vis, background, hideEditing);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      return;
-    }
     if (background) {
       for (const pg of this.store.pages()) {
         const pb = pageBoundsRect(pg);
@@ -3322,32 +2545,6 @@ export class Editor {
       }
     }
     for (const pg of this.store.pages()) {
-      const pb = pageBoundsRect(pg);
-      if (
-        pb.x + pb.w < vis.x ||
-        pb.x > vis.x + vis.w ||
-        pb.y + pb.h < vis.y ||
-        pb.y > vis.y + vis.h
-      )
-        continue;
-      const skipDom =
-        pg.id === this.currentPageId &&
-        this.pageDocUI &&
-        !this.pageDocUI.wrap.hidden;
-      const blocks = this.store.pageDocumentBlocks(pg.id);
-      ctx.save();
-      ctx.translate(pg.x, pg.y);
-      if (skipDom) {
-        drawPageDocumentBlocks(ctx, pg, blocks, this.theme, {
-          drawingOnly: true,
-          skipInk: true,
-        });
-      } else {
-        drawPageDocumentBlocks(ctx, pg, blocks, this.theme);
-      }
-      ctx.restore();
-    }
-    for (const pg of this.store.pages()) {
       const shapes = this.store.shapesOnPage(pg.id);
       if (!shapes.length) continue;
       const pb = pageBoundsRect(pg);
@@ -3366,12 +2563,6 @@ export class Editor {
           a.z - b.z ||
           (a.id < b.id ? -1 : 1),
       )) {
-        if (
-          this.documentMode &&
-          pg.id === this.currentPageId &&
-          (s.type === "draw" || s.type === "highlight")
-        )
-          continue;
         const sb = pageBounds(s);
         const wx = pg.x + sb.x;
         const wy = pg.y + sb.y;
@@ -3408,12 +2599,9 @@ export class Editor {
     page: PageRecord,
     cam: Camera,
     dpr: number,
-    opts?: { grid?: GridId; height?: number },
   ): void {
-    const grid = opts?.grid ?? this.grid;
-    const pageH = opts?.height ?? page.height;
-    if (grid === "none" || !(cam.z > 0)) return;
-    const isDotGrid = ["dots", "crosses"].includes(grid);
+    if (this.grid === "none" || !(cam.z > 0)) return;
+    const isDotGrid = ["dots", "crosses"].includes(this.grid);
     const g: any = (this.theme.grid as any)?.[isDotGrid ? "dot" : "line"];
     if (!g) return;
     let step = GRID_STEP;
@@ -3426,23 +2614,23 @@ export class Editor {
     const lw = 1 / scale;
     const isMajor = (i: number) => i % GRID_MAJOR === 0;
     const colCount = Math.ceil(page.width / step);
-    const rowCount = Math.ceil(pageH / step);
+    const rowCount = Math.ceil(page.height / step);
 
-    if (grid === "lines" || grid === "ruled") {
+    if (this.grid === "lines" || this.grid === "ruled") {
       ctx.lineWidth = lw;
       for (const major of [false, true]) {
         ctx.beginPath();
-        if (grid === "lines") {
+        if (this.grid === "lines") {
           for (let n = 0; n <= colCount; n++) {
             if (isMajor(n) !== major) continue;
             const x = Math.min(n * step, page.width);
             ctx.moveTo(x, 0);
-            ctx.lineTo(x, pageH);
+            ctx.lineTo(x, page.height);
           }
         }
         for (let m = 0; m <= rowCount; m++) {
           if (isMajor(m) !== major) continue;
-          const y = Math.min(m * step, pageH);
+          const y = Math.min(m * step, page.height);
           ctx.moveTo(0, y);
           ctx.lineTo(page.width, y);
         }
@@ -3450,7 +2638,7 @@ export class Editor {
         ctx.globalAlpha = fade;
         ctx.stroke();
       }
-    } else if (grid === "crosses") {
+    } else if (this.grid === "crosses") {
       for (const major of [false, true]) {
         const arm = (major ? 4.5 : 3) / scale;
         ctx.lineWidth = lw;
@@ -3461,7 +2649,7 @@ export class Editor {
             if (maj !== major) continue;
             const x = n * step;
             const y = m * step;
-            if (x > page.width || y > pageH) continue;
+            if (x > page.width || y > page.height) continue;
             ctx.moveTo(x - arm, y);
             ctx.lineTo(x + arm, y);
             ctx.moveTo(x, y - arm);
@@ -3472,14 +2660,14 @@ export class Editor {
         ctx.globalAlpha = fade;
         ctx.stroke();
       }
-    } else if (grid === "iso") {
+    } else if (this.grid === "iso") {
       const s = Math.tan(Math.PI / 6);
       ctx.lineWidth = lw;
       ctx.beginPath();
       for (const sign of [1, -1]) {
         const slope = sign * s;
         const k0 = 0;
-        const k1 = Math.ceil(pageH / step) + Math.ceil(page.width / step);
+        const k1 = Math.ceil(page.height / step) + Math.ceil(page.width / step);
         for (let k = k0; k <= k1; k++) {
           const b = k * step;
           ctx.moveTo(0, b);
@@ -3496,7 +2684,7 @@ export class Editor {
         for (let n = 0; n <= colCount; n++) {
           const x = n * step;
           const y = m * step;
-          if (x > page.width || y > pageH) continue;
+          if (x > page.width || y > page.height) continue;
           ctx.moveTo(x + r, y);
           ctx.arc(x, y, r, 0, Math.PI * 2);
         }
@@ -3616,6 +2804,7 @@ export class Editor {
 
   render(): void {
     if (this._destroyed) return;
+    const frameStartedAt = performance.now();
     if (this._pendingFit) {
       const { w: pw, h: ph } = this.viewSize();
       if (pw > 1 && ph > 1) {
@@ -3637,7 +2826,22 @@ export class Editor {
     this._renderOverlayFn(w, h, dpr);
     this._renderCaptureFn();
     if (this.editing) this._layoutTextEditor();
-    this.pageDocUI?.layout();
+    this._frameTimes.push(performance.now() - frameStartedAt);
+    if (this._frameTimes.length > 240) this._frameTimes.shift();
+  }
+
+  getPerformanceSnapshot(reset = false): CanvasPerformanceSnapshot {
+    const samples = [...this._frameTimes].sort((a, b) => a - b);
+    const average = samples.length ? samples.reduce((sum, value) => sum + value, 0) / samples.length : 0;
+    const snapshot = {
+      sampleCount: samples.length,
+      lastFrameMs: this._frameTimes.at(-1) ?? 0,
+      averageFrameMs: average,
+      p95FrameMs: samples.length ? samples[Math.min(samples.length - 1, Math.floor(samples.length * 0.95))] : 0,
+      totalShapes: this.store.shapes().length,
+    };
+    if (reset) this._frameTimes.length = 0;
+    return snapshot;
   }
 
   _renderOverlayFn(w: number, h: number, dpr: number): void {
@@ -3647,26 +2851,6 @@ export class Editor {
     ctx.scale(dpr, dpr);
     const cam = this.camera;
     const t = this.theme;
-
-    if (this.documentMode && this.pageDocUI && !this.pageDocUI.wrap.hidden) {
-      const pg = this.currentPage();
-      if (pg) {
-        const paperH = this._notesPaperHeight(pg);
-        const blocks = this.store.pageDocumentBlocks(pg.id);
-        ctx.save();
-        ctx.setTransform(
-          cam.z * dpr,
-          0,
-          0,
-          cam.z * dpr,
-          cam.x * cam.z * dpr,
-          cam.y * cam.z * dpr,
-        );
-        ctx.translate(pg.x, pg.y);
-        drawDocumentInkOverlay(ctx, blocks, this.theme);
-        ctx.restore();
-      }
-    }
 
     if (this.tool === "select" && this.selection.size && !this.editing) {
       const one =
@@ -3862,7 +3046,6 @@ export class Editor {
   destroy(): void {
     this._destroyed = true;
     this._commitText();
-    this.pageDocUI?.destroy();
     this._themeFade?.remove();
     this._themeFade = null;
     cancelAnimationFrame(this._raf);
@@ -3871,10 +3054,6 @@ export class Editor {
     cancelAnimationFrame(this._laserRaf || 0);
     this._unsubStore();
     this._unsubHistory();
-    this._unsubCamera?.();
-    if (typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", this._onVisibility);
-    }
     this._ro.disconnect();
     const c = this.container;
     c.removeEventListener("pointerdown", this._onDown);

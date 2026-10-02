@@ -2,7 +2,6 @@ import type { Snapshot } from '../types/operations.js'
 import type { NotebookRecord, PageRecord, ShapeRecord } from '../types/models.js'
 import { NOTEBOOK_ID } from '../pages.js'
 import { newId } from '../utils/id.js'
-import { emptyDocument } from '../rich-text/document.js'
 import { registerMigration } from './sequences.js'
 
 registerMigration({
@@ -34,7 +33,6 @@ registerMigration({
         width: 816,
         height: 1056,
         name: 'Page 1',
-        document: { blocks: emptyDocument() },
       }
       store[pageId] = page
       pages.push(page)
@@ -50,6 +48,19 @@ registerMigration({
       if (!shape.parentId) {
         store[shape.id] = { ...shape, parentId: firstPageId }
       }
+    }
+  },
+})
+
+registerMigration({
+  sequenceId: 'com.incantly.store',
+  version: 2,
+  up(snap: Snapshot): void {
+    const store = snap.document.store
+    for (const [id, record] of Object.entries(store)) {
+      if (!record || ((record as any).typeName !== 'page' && (record as any).typeName !== 'notebook')) continue
+      const { document: _legacyDocument, ...rest } = record as any
+      store[id] = rest
     }
   },
 })

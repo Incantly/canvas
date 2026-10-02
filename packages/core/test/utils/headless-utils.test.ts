@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { shouldAppendPoint, DEFAULT_INK_MIN_DIST } from '../../src/utils/ink/point-filter.js'
-import { documentBlocksFingerprint } from '../../src/utils/document/block-fingerprint.js'
 import { createLruCache } from '../../src/utils/cache/lru.js'
 import { createSubscriptionBag } from '../../src/utils/dispose/subscription-bag.js'
 import { snapshotFingerprint } from '../../src/utils/snapshot/fingerprint.js'
@@ -13,13 +12,6 @@ describe('shouldAppendPoint', () => {
       false,
     )
     expect(shouldAppendPoint({ x: 0, y: 0 }, { x: 2, y: 0, pressure: 0.5 }, DEFAULT_INK_MIN_DIST)).toBe(true)
-  })
-})
-
-describe('documentBlocksFingerprint', () => {
-  it('is stable for same blocks', () => {
-    const blocks = [{ type: 'paragraph' as const, content: [{ text: 'hi' }] }]
-    expect(documentBlocksFingerprint(blocks)).toBe(documentBlocksFingerprint(blocks))
   })
 })
 

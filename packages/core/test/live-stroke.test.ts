@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  appendDrawingStrokePoints,
   extendLivePath,
   extendLivePathMany,
   interpolateGapPoints,
-  truncateDrawingStroke,
 } from '../src/headless.js'
 
 describe('live-stroke helpers', () => {
@@ -44,15 +42,4 @@ describe('live-stroke helpers', () => {
     expect(extendLivePathMany('', [])).toBe('')
   })
 
-  it('appends and truncates stroke points for predicted tails', () => {
-    const block: any = {
-      type: 'drawing',
-      strokes: [{ pts: [0, 0, 0.5] }],
-      height: 0,
-    }
-    const grown = appendDrawingStrokePoints(block, 0, [4, 0, 0.5, 8, 0, 0.5])
-    expect(grown.strokes[0].pts).toEqual([0, 0, 0.5, 4, 0, 0.5, 8, 0, 0.5])
-    const cut = truncateDrawingStroke(grown, 0, 2)
-    expect(cut.strokes[0].pts).toEqual([0, 0, 0.5])
-  })
 })

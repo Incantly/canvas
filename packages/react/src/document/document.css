@@ -1,0 +1,273 @@
+.incantly-document-editor {
+  --incantly-document-background: #ffffff;
+  --incantly-document-surface: #ffffff;
+  --incantly-document-text: #202124;
+  --incantly-document-muted: #74787f;
+  --incantly-document-selection: rgb(69 128 255 / 24%);
+  --incantly-document-focus: #4f7cff;
+  --incantly-document-border: #dfe2e7;
+  --incantly-document-content-width: 48rem;
+  --incantly-document-block-gap: 0.75rem;
+  --incantly-document-padding-inline: clamp(1rem, 4vw, 3rem);
+  --incantly-document-padding-block: clamp(1.5rem, 5vw, 4rem);
+
+  box-sizing: border-box;
+  position: relative;
+  min-width: 0;
+  color: var(--incantly-document-text);
+  background: var(--incantly-document-background);
+  color-scheme: light;
+}
+
+.incantly-document-editor[data-theme='dark'] {
+  --incantly-document-background: #17181b;
+  --incantly-document-surface: #1d1f23;
+  --incantly-document-text: #eceef2;
+  --incantly-document-muted: #9ba1aa;
+  --incantly-document-selection: rgb(110 155 255 / 32%);
+  --incantly-document-focus: #87a8ff;
+  --incantly-document-border: #363940;
+
+  color-scheme: dark;
+}
+
+.incantly-document-editor,
+.incantly-document-editor *,
+.incantly-document-editor *::before,
+.incantly-document-editor *::after {
+  box-sizing: border-box;
+}
+
+.incantly-document-editor__content {
+  min-width: 0;
+  background: var(--incantly-document-surface);
+}
+
+.incantly-document-editor .ProseMirror {
+  width: min(100%, var(--incantly-document-content-width));
+  min-height: clamp(24rem, 70vh, 60rem);
+  margin-inline: auto;
+  padding: var(--incantly-document-padding-block) var(--incantly-document-padding-inline);
+  color: var(--incantly-document-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  caret-color: var(--incantly-document-focus);
+  outline: none;
+}
+
+.incantly-document-editor .ProseMirror:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--incantly-document-focus);
+}
+
+.incantly-document-editor .ProseMirror > * {
+  margin-block: 0 var(--incantly-document-block-gap);
+}
+
+.incantly-document-editor .ProseMirror > *:last-child {
+  margin-block-end: 0;
+}
+
+.incantly-document-editor .ProseMirror ::selection {
+  background: var(--incantly-document-selection);
+}
+
+.incantly-document-editor .ProseMirror blockquote {
+  padding-inline-start: 1rem;
+  border-inline-start: 0.22rem solid var(--incantly-document-border);
+  color: var(--incantly-document-muted);
+}
+
+.incantly-document-editor .ProseMirror pre {
+  overflow: auto;
+  padding: 0.9rem 1rem;
+  border-radius: 0.5rem;
+  color: var(--incantly-document-text);
+  background: color-mix(in srgb, var(--incantly-document-border) 38%, transparent);
+}
+
+.incantly-document-editor .ProseMirror code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.incantly-document-editor .ProseMirror mark {
+  color: inherit;
+}
+
+.incantly-document-editor .ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.incantly-document-editor .ProseMirror th,
+.incantly-document-editor .ProseMirror td {
+  min-width: 6rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--incantly-document-border);
+  vertical-align: top;
+}
+
+.incantly-document-editor .ProseMirror th {
+  text-align: start;
+  background: color-mix(in srgb, var(--incantly-document-border) 38%, transparent);
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='mathBlock'],
+.incantly-document-editor .ProseMirror [data-incantly-node='image'],
+.incantly-document-editor .ProseMirror [data-incantly-node='fileAttachment'],
+.incantly-document-editor .ProseMirror [data-incantly-node='audio'],
+.incantly-document-editor .ProseMirror [data-incantly-node='videoEmbed'],
+.incantly-document-editor .ProseMirror [data-incantly-node='pdfEmbed'],
+.incantly-document-editor .ProseMirror [data-incantly-node='canvasEmbed'] {
+  display: block;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--incantly-document-border);
+  border-radius: 0.5rem;
+  color: var(--incantly-document-muted);
+  background: color-mix(in srgb, var(--incantly-document-border) 22%, transparent);
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='mathBlock']::before {
+  content: 'Math block · ' attr(latex);
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='image']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='fileAttachment']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='audio']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='videoEmbed']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='pdfEmbed']::before,
+.incantly-document-editor .ProseMirror [data-incantly-node='canvasEmbed']::before {
+  content: attr(data-card-label) ' attachment';
+  font-weight: 600;
+}
+
+.incantly-document-editor .ProseMirror [data-incantly-node='pageBreak'] {
+  height: 1px;
+  margin-block: 2rem;
+  border: 0;
+  background: repeating-linear-gradient(90deg, var(--incantly-document-border) 0 0.4rem, transparent 0.4rem 0.8rem);
+}
+
+.incantly-document-editor .ProseMirror p.is-empty::before,
+.incantly-document-editor .ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  height: 0;
+  color: var(--incantly-document-muted);
+  pointer-events: none;
+  float: left;
+}
+
+.incantly-document-editor[data-readonly='true'] .ProseMirror {
+  caret-color: transparent;
+}
+
+.incantly-document-toolbar,
+.incantly-document-bubble-toolbar {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0.5rem;
+  color: var(--incantly-document-text);
+  background: var(--incantly-document-surface);
+}
+
+.incantly-document-toolbar {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--incantly-document-border);
+}
+
+.incantly-document-bubble-toolbar {
+  border: 1px solid var(--incantly-document-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 18%);
+}
+
+.incantly-format-button,
+.incantly-document-slash-menu button {
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.incantly-format-button:hover:not(:disabled),
+.incantly-format-button:focus-visible,
+.incantly-format-button[aria-pressed='true'] {
+  border-color: var(--incantly-document-border);
+  background: var(--incantly-document-selection);
+  outline: none;
+}
+
+.incantly-format-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.incantly-toolbar-separator {
+  width: 1px;
+  height: 1.5rem;
+  margin-inline: 0.15rem;
+  background: var(--incantly-document-border);
+}
+
+.incantly-document-slash-menu {
+  position: absolute;
+  z-index: 3;
+  width: min(20rem, calc(100% - 2rem));
+  max-height: 20rem;
+  overflow: auto;
+  padding: 0.4rem;
+  border: 1px solid var(--incantly-document-border);
+  border-radius: 0.5rem;
+  color: var(--incantly-document-text);
+  background: var(--incantly-document-surface);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 18%);
+}
+
+.incantly-document-slash-menu button {
+  display: grid;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  text-align: start;
+}
+
+.incantly-document-slash-menu button:hover,
+.incantly-document-slash-menu button:focus-visible,
+.incantly-document-slash-menu button[aria-current='true'] {
+  background: var(--incantly-document-selection);
+  outline: none;
+}
+
+.incantly-document-slash-menu button span {
+  color: var(--incantly-document-muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 40rem) {
+  .incantly-document-editor {
+    --incantly-document-padding-inline: 1rem;
+    --incantly-document-padding-block: 1.5rem;
+  }
+
+  .incantly-document-editor .ProseMirror {
+    min-height: 70vh;
+  }
+}
+
+@media (forced-colors: active) {
+  .incantly-document-editor .ProseMirror:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+}

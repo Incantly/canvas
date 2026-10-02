@@ -15,18 +15,6 @@ describe('encodeDispatch', () => {
     expect(JSON.parse(json).text).toBe('a\u2028b\u2029c')
   })
 
-  it('encodes document-mode bridge messages', () => {
-    expect(encodeDispatch({ type: 'focusPageDocument' })).toBe(
-      'window.__icDispatch({"type":"focusPageDocument"}); true;',
-    )
-    expect(encodeDispatch({ type: 'refreshPageDocument' })).toBe(
-      'window.__icDispatch({"type":"refreshPageDocument"}); true;',
-    )
-    expect(encodeDispatch({ type: 'setDocumentBackground', color: '#fff8e7' })).toBe(
-      'window.__icDispatch({"type":"setDocumentBackground","color":"#fff8e7"}); true;',
-    )
-  })
-
   it('encodes version-history bridge messages', () => {
     expect(encodeDispatch({ type: 'listVersions' })).toBe(
       'window.__icDispatch({"type":"listVersions"}); true;',

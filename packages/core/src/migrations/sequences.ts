@@ -9,8 +9,6 @@ export interface MigrationStep {
 export const SEQUENCE_ORDER: readonly string[] = [
   'com.incantly.store',
   'com.incantly.shape.text',
-  'com.incantly.page.document',
-  'com.incantly.notebook.document',
 ]
 
 const _steps: MigrationStep[] = []
