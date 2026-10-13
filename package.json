@@ -6,6 +6,7 @@
   "type": "module",
   "workspaces": [
     "packages/*",
+    "examples/document-web-demo",
     "examples/react-demo",
     "apps/*"
   ],
@@ -15,6 +16,8 @@
     "build": "npm run build:packages",
     "build:packages": "npm run build --workspace=@incantly/canvas && npm run build --workspace=@incantly/canvas-react && npm run build --workspace=@incantly/canvas-react-native",
     "dev": "npm run dev --workspace=incantly-react-demo",
+    "dev:document": "npm run dev --workspace=incantly-document-web-demo",
+    "build:document-demo": "npm run build --workspace=incantly-document-web-demo",
     "dev:playground": "npm run dev --workspace=incantly-playground",
     "dev:mobile": "npm run build:packages && npm --prefix examples/native-rn-demo start",
     "typecheck": "npm run typecheck --workspaces --if-present",

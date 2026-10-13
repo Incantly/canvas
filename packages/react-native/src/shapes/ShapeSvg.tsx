@@ -15,6 +15,7 @@ import {
   geoSvgPath,
   lineSvgPath,
   localBounds,
+  sanitizeInkWidth,
   shapeRenderable,
   strokeDashArray,
   svgPathFromPackedPts,
@@ -36,8 +37,9 @@ function fillOpacity(fill: FillId | undefined): number {
   return 1
 }
 
-function widthOf(size: SizeId | undefined): number {
-  return SIZES[size ?? 'm'] ?? SIZES.m
+function widthOf(size: SizeId | undefined, width?: unknown): number {
+  const base = SIZES[size ?? 'm'] ?? SIZES.m
+  return sanitizeInkWidth(width, base)
 }
 
 function ShapePath({
@@ -74,14 +76,17 @@ export const ShapeSvg = memo(function ShapeSvg({
   shape,
   selected,
   resizeHandles,
+  pixelPieces,
 }: {
   shape: ShapeRecord
   selected?: boolean
   resizeHandles?: boolean
+  /** Pixel-erase preview pieces (local coords). Present-but-empty hides. */
+  pixelPieces?: number[][]
 }) {
   if (!shapeRenderable(shape)) return null
   const rot = shape.rot || 0
-  const inner = <ShapeInner shape={shape} />
+  const inner = <ShapeInner shape={shape} pixelPieces={pixelPieces} />
   return (
     <G transform={`translate(${shape.x} ${shape.y}) rotate(${(rot * 180) / Math.PI})`}>
       {inner}
@@ -129,7 +134,7 @@ function SelectionBox({ shape, handles }: { shape: ShapeRecord; handles: boolean
   )
 }
 
-function ShapeInner({ shape }: { shape: ShapeRecord }) {
+function ShapeInner({ shape, pixelPieces }: { shape: ShapeRecord; pixelPieces?: number[][] }) {
   const p = shape.props as unknown as Record<string, unknown>
   const color = (p.color as ColorId) ?? 'black'
   const size = (p.size as SizeId) ?? 'm'
@@ -183,19 +188,44 @@ function ShapeInner({ shape }: { shape: ShapeRecord }) {
 
   if (shape.type === 'draw' || shape.type === 'highlight') {
     const pts = (p.pts as number[]) ?? []
+    const base = widthOf(size, p.width)
+    const sw = shape.type === 'highlight' ? base * HIGHLIGHT_SCALE : base * 0.75
+    const stroke = strokeColor(color)
+    const opacity = shape.type === 'highlight' ? HIGHLIGHT_ALPHA : 1
+    if (pixelPieces) {
+      if (pixelPieces.length === 0) return null
+      return (
+        <>
+          {pixelPieces.map((piece, i) => {
+            const d = svgPathFromPackedPts(piece)
+            if (!d) return null
+            return (
+              <Path
+                key={i}
+                d={d}
+                fill="none"
+                stroke={stroke}
+                strokeWidth={sw}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeOpacity={opacity}
+              />
+            )
+          })}
+        </>
+      )
+    }
     const d = svgPathFromPackedPts(pts)
     if (!d) return null
-    const sw =
-      shape.type === 'highlight' ? widthOf(size) * HIGHLIGHT_SCALE : widthOf(size) * 0.75
     return (
       <Path
         d={d}
         fill="none"
-        stroke={strokeColor(color)}
+        stroke={stroke}
         strokeWidth={sw}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={shape.type === 'highlight' ? HIGHLIGHT_ALPHA : 1}
+        strokeOpacity={opacity}
       />
     )
   }

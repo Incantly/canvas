@@ -11,18 +11,33 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./canvas": {
+      "types": "./dist/canvas/index.d.ts",
+      "default": "./dist/canvas/index.js"
+    },
+    "./document": {
+      "types": "./dist/document/index.d.ts",
+      "default": "./dist/document/index.js"
+    },
+    "./document.css": "./src/document/document.css",
+    "./canvas.css": "./src/canvas.css",
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node -e \"const fs=require('node:fs');fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('tsconfig.tsbuildinfo',{force:true})\" && tsc -p tsconfig.json",
     "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "files": [
     "dist",
+    "src/canvas.css",
+    "src/document/document.css",
     "README.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/canvas.css",
+    "./src/document/document.css"
+  ],
   "keywords": [
     "react",
     "whiteboard",
@@ -34,10 +49,19 @@
     "excalidraw-alternative"
   ],
   "dependencies": {
-    "@incantly/canvas": "0.2.0"
+    "@incantly/canvas": "0.2.0",
+    "@tiptap/core": "3.31.3",
+    "@tiptap/extension-bubble-menu": "3.31.3",
+    "@tiptap/extension-floating-menu": "3.31.3",
+    "@tiptap/extension-placeholder": "3.31.3",
+    "@tiptap/extension-underline": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3"
   },
   "peerDependencies": {
-    "react": ">=17"
+    "react": ">=17",
+    "react-dom": ">=17"
   },
   "license": "MIT",
   "homepage": "https://github.com/Incantly/canvas",

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "document:all-nodes",
+  "type": "document",
+  "metadata": {
+    "title": "All nodes",
+    "language": "en-GB",
+    "authors": [{ "id": "author:ada", "name": "Ada Lovelace", "email": "ada@example.com", "orcid": "0000-0000-0000-0000", "affiliations": ["Incantly Research"] }],
+    "tags": ["fixture", "research"],
+    "pageSetup": {
+      "mode": "paginated",
+      "size": "letter",
+      "orientation": "portrait",
+      "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+      "columns": 1
+    },
+    "research": {
+      "title": "A complete document",
+      "authors": [{ "name": "Ada Lovelace" }],
+      "abstract": [{ "id": "node:abstract", "type": "paragraph", "content": [{ "type": "text", "text": "Abstract" }] }],
+      "keywords": ["documents", "canvas"],
+      "language": "en",
+      "citationStyle": "ieee"
+    }
+  },
+  "content": [
+    { "id": "node:paragraph", "type": "paragraph", "attrs": { "alignment": "justify", "lineHeight": 1.5 }, "content": [{ "type": "text", "text": "Paragraph" }] },
+    { "id": "node:heading", "type": "heading", "attrs": { "level": 2, "alignment": "left" }, "content": [{ "type": "text", "text": "Heading" }] },
+    { "id": "node:blockquote", "type": "blockquote", "content": [{ "id": "node:quote-p", "type": "paragraph", "content": [{ "type": "text", "text": "Quote" }] }] },
+    { "id": "node:bullet", "type": "bulletList", "content": [{ "id": "node:bullet-item", "type": "listItem", "content": [{ "id": "node:bullet-p", "type": "paragraph", "content": [{ "type": "text", "text": "Bullet" }] }] }] },
+    { "id": "node:ordered", "type": "orderedList", "attrs": { "start": 3 }, "content": [{ "id": "node:ordered-item", "type": "listItem", "content": [{ "id": "node:ordered-p", "type": "paragraph", "content": [{ "type": "text", "text": "Ordered" }] }] }] },
+    { "id": "node:checklist", "type": "checklist", "content": [{ "id": "node:check-item", "type": "checklistItem", "attrs": { "checked": true }, "content": [{ "id": "node:check-p", "type": "paragraph", "content": [{ "type": "text", "text": "Done" }] }] }] },
+    { "id": "node:rule", "type": "horizontalRule" },
+    { "id": "node:code", "type": "codeBlock", "attrs": { "language": "typescript" }, "text": "const answer = 42" },
+    { "id": "node:math", "type": "mathBlock", "attrs": { "latex": "E = mc^2", "numbered": true, "label": "energy" } },
+    { "id": "node:table", "type": "table", "attrs": { "caption": "Results" }, "content": [{ "id": "node:row", "type": "tableRow", "content": [{ "id": "node:header", "type": "tableHeaderCell", "attrs": { "alignment": "center" }, "content": [{ "id": "node:header-p", "type": "paragraph", "content": [{ "type": "text", "text": "Name" }] }] }, { "id": "node:cell", "type": "tableCell", "attrs": { "colspan": 2, "rowspan": 1 }, "content": [{ "id": "node:cell-p", "type": "paragraph", "content": [{ "type": "text", "text": "Value" }] }] }] }] },
+    { "id": "node:image", "type": "image", "attrs": { "assetId": "asset:image", "alt": "Diagram", "caption": "Figure 1", "width": 640, "height": 480, "display": "figure" } },
+    { "id": "node:file", "type": "fileAttachment", "attrs": { "assetId": "asset:docx", "filename": "paper.docx", "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "display": "card" } },
+    { "id": "node:audio", "type": "audio", "attrs": { "assetId": "asset:audio", "title": "Interview", "caption": "Field notes" } },
+    { "id": "node:video", "type": "videoEmbed", "attrs": { "provider": "youtube", "videoId": "abc_123-XYZ", "title": "Lecture", "caption": "Week one" } },
+    { "id": "node:pdf", "type": "pdfEmbed", "attrs": { "assetId": "asset:pdf", "page": 2, "display": "reader", "extractedDocumentId": "document:pdf-text" } },
+    { "id": "node:canvas", "type": "canvasEmbed", "attrs": { "canvasId": "canvas:map", "previewAssetId": "asset:canvas-preview", "caption": "Concept map", "display": "preview" } },
+    { "id": "node:page-break", "type": "pageBreak" }
+  ],
+  "createdAt": "2026-09-20T10:00:00.000Z",
+  "updatedAt": "2026-09-20T11:00:00.000Z"
+}

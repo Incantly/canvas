@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { createRef } from 'react'
+import { createRef, StrictMode } from 'react'
 import { render, act, cleanup } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 import { Canvas, useCanvasStore, Store, newId } from '../src/index.js'
 
 const rect = (id) => ({
@@ -136,6 +137,38 @@ describe('<Canvas />', () => {
     expect(store1).toBe(store2)
     expect(store1.shapes().length).toBe(1)
     expect(store1.pages().length).toBe(1)
+  })
+
+  it('exposes safe snapshot methods and keeps initialization-only props stable', () => {
+    const ref = createRef()
+    const { rerender } = render(<Canvas ref={ref} initialCamera={{ x: 1, y: 2, z: 1 }} />)
+    expect(ref.current.getSnapshot()).toBeTruthy()
+    const editor = ref.current.editor
+    rerender(<Canvas ref={ref} initialCamera={{ x: 9, y: 9, z: 2 }} />)
+    expect(ref.current.editor).toBe(editor)
+    expect(ref.current.editor.camera).toEqual({ x: 1, y: 2, z: 1 })
+  })
+
+  it('survives the Strict Mode mount-cleanup-mount lifecycle', () => {
+    const onMount = vi.fn()
+    const { container } = render(<StrictMode><Canvas onMount={onMount} /></StrictMode>)
+    expect(onMount).toHaveBeenCalledTimes(2)
+    expect(container.querySelectorAll('canvas')).toHaveLength(2)
+    expect(container.querySelectorAll('.ic-ui')).toHaveLength(1)
+  })
+
+  it('renders an inert host during SSR without touching the DOM', () => {
+    expect(() => renderToString(<Canvas className="server-canvas" />)).not.toThrow()
+    expect(renderToString(<Canvas className="server-canvas" />)).toContain('server-canvas')
+  })
+
+  it('gives stock toolbar controls accessible names and states', () => {
+    const { container } = render(<Canvas />)
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>('.ic-ui button')]
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons.every((button) => Boolean(button.getAttribute('aria-label') || button.textContent?.trim()))).toBe(true)
+    const tool = container.querySelector<HTMLButtonElement>('.ic-dock button[data-name="draw"]')
+    expect(tool?.getAttribute('aria-pressed')).toBe('true')
   })
 
   afterEach(cleanup)

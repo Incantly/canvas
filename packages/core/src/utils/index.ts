@@ -13,8 +13,21 @@ export {
   type Point2,
   type Point3,
 } from "./ink/point-filter.js";
-export { strokeBoundsHeight } from "./ink/stroke-bounds.js";
-export { hitDocumentStroke, removeDocumentStroke } from "./ink/hit-stroke.js";
+export {
+  splitStrokeByEraser,
+  strokePointsBounds,
+  eraseCirclesHitBounds,
+  strokeEraseLength,
+  isErasureFragment,
+  hitEraseStroke,
+  erasedPointRanges,
+  mergeEraseRanges,
+  keptPointRuns,
+  slicePackedRuns,
+  ERASE_FRAGMENT_DIAMETER_RATIO,
+  type EraseCircle,
+  type StrokeBounds,
+} from "./ink/erase.js";
 export {
   flattenStrokeXy,
   simplifyPackedStrokePts,
@@ -42,16 +55,26 @@ export {
   inkBaseWidthPaper,
   inkWidthAtPressure,
   inkStrokeOpacity,
+  sanitizeInkWidth,
+  widthSliderToPaper,
+  paperToWidthSlider,
+  inkOutlineWidthPaper,
+  sanitizeEraserMode,
+  sanitizeEraserRadius,
+  INK_WIDTH_MIN_PAPER,
+  INK_WIDTH_MAX_PAPER,
+  INK_WIDTH_SLIDER_MIN,
+  INK_WIDTH_SLIDER_MAX,
+  INK_WIDTH_HARD_MIN,
+  INK_WIDTH_HARD_MAX,
+  DEFAULT_ERASER_RADIUS_PAPER,
+  ERASER_RADIUS_MIN_PAPER,
+  ERASER_RADIUS_MAX_PAPER,
   type InkPenDefinition,
   type InkPenStyle,
   type InkStrokeCap,
+  type EraserMode,
 } from "./ink/ink-pen.js";
-export { documentBlocksFingerprint } from "./document/block-fingerprint.js";
-export {
-  findLastDrawingBlockIndex,
-  replaceBlockAt,
-  insertBlockAfter,
-} from "./document/block-index.js";
 export { createLruCache, type LruCache } from "./cache/lru.js";
 export {
   createSubscriptionBag,

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "document:nested",
+  "type": "document",
+  "metadata": {
+    "title": "Nested structures",
+    "language": "en",
+    "authors": [],
+    "tags": [],
+    "pageSetup": {
+      "mode": "continuous",
+      "size": "custom",
+      "width": 612,
+      "height": 792,
+      "orientation": "portrait",
+      "margins": { "top": 48, "right": 48, "bottom": 48, "left": 48 },
+      "columns": 2
+    }
+  },
+  "content": [
+    {
+      "id": "node:outer-list",
+      "type": "bulletList",
+      "content": [
+        {
+          "id": "node:outer-item",
+          "type": "listItem",
+          "content": [
+            { "id": "node:intro", "type": "paragraph", "content": [{ "type": "text", "text": "Nested" }] },
+            {
+              "id": "node:inner-list",
+              "type": "orderedList",
+              "content": [
+                { "id": "node:inner-item", "type": "listItem", "content": [{ "id": "node:inner-p", "type": "paragraph", "content": [{ "type": "text", "text": "Item" }] }] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-09-20T10:00:00.000Z",
+  "updatedAt": "2026-09-20T10:00:00.000Z"
+}

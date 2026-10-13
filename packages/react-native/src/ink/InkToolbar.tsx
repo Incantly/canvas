@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native'
-import type { ColorId, FillId, GeoId, InkPenDefinition, SizeId } from '@incantly/canvas/headless'
+import type { ColorId, EraserMode, FillId, GeoId, InkPenDefinition, SizeId } from '@incantly/canvas/headless'
 import {
   COLOR_IDS,
   FILL_IDS,
@@ -29,6 +29,12 @@ export interface InkToolbarProps {
   tool: string
   color: ColorId
   size: SizeId
+  /** Continuous pen width in paper units (slider). Absent = legacy `size` rendering. */
+  penWidth?: number
+  /** Eraser footprint radius in paper units. Absent = default radius. */
+  eraserRadius?: number
+  /** Eraser behavior. Absent = whole-stroke erase. */
+  eraserMode?: EraserMode
   pens: readonly InkPenDefinition[]
   inkBar?: InkBarConfig
   mode?: InkBarMode
@@ -39,6 +45,9 @@ export interface InkToolbarProps {
   onTool: (tool: string) => void
   onColor: (color: ColorId) => void
   onSize: (size: SizeId) => void
+  onPenWidth?: (width: number) => void
+  onEraserRadius?: (radius: number) => void
+  onEraserMode?: (mode: EraserMode) => void
   onGeoKind?: (geo: GeoId) => void
   onFill?: (fill: FillId) => void
   /** Host chrome container style (placement, borders, radius, shadows). */

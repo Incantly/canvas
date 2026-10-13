@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "document:all-marks",
+  "type": "document",
+  "metadata": {
+    "title": "All marks",
+    "language": "en",
+    "authors": [],
+    "tags": ["fixture"],
+    "pageSetup": {
+      "mode": "continuous",
+      "size": "a4",
+      "orientation": "portrait",
+      "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+      "columns": 1
+    }
+  },
+  "content": [
+    {
+      "id": "node:all-marks",
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "bold", "marks": [{ "type": "bold" }] },
+        { "type": "text", "text": "italic", "marks": [{ "type": "italic" }] },
+        { "type": "text", "text": "underline", "marks": [{ "type": "underline" }] },
+        { "type": "text", "text": "strike", "marks": [{ "type": "strike" }] },
+        { "type": "text", "text": "code", "marks": [{ "type": "code" }] },
+        { "type": "text", "text": "link", "marks": [{ "type": "link", "href": "https://incantly.com/", "title": "Incantly" }] },
+        { "type": "text", "text": "color", "marks": [{ "type": "textColor", "color": "#123456" }] },
+        { "type": "text", "text": "highlight", "marks": [{ "type": "highlight", "color": "yellow" }] },
+        { "type": "text", "text": "citation", "marks": [{ "type": "citation", "citationId": "citation:ada" }] },
+        { "type": "text", "text": "math", "marks": [{ "type": "inlineMath", "latex": "x^2" }] },
+        { "type": "hardBreak" },
+        { "type": "text", "text": "combined", "marks": [{ "type": "bold" }, { "type": "italic" }, { "type": "link", "href": "/documents/one" }] }
+      ]
+    }
+  ],
+  "createdAt": "2026-09-20T10:00:00.000Z",
+  "updatedAt": "2026-09-20T10:00:00.000Z"
+}

@@ -1,0 +1,87 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: #eef0f4;
+}
+
+body {
+  min-width: 20rem;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.demo-shell {
+  min-height: 100vh;
+  color: #202124;
+  background: #eef0f4;
+}
+
+.demo-shell[data-theme='dark'] {
+  color: #eceef2;
+  background: #111215;
+}
+
+.demo-controls {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgb(128 128 128 / 30%);
+  background: inherit;
+}
+
+.demo-controls div,
+.demo-controls label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.demo-controls div {
+  margin-right: auto;
+}
+
+.demo-controls span,
+.demo-controls label {
+  font-size: 0.75rem;
+}
+
+.demo-controls input,
+.demo-controls button {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgb(128 128 128 / 45%);
+  border-radius: 0.4rem;
+  color: inherit;
+  background: transparent;
+}
+
+.demo-json {
+  max-width: 64rem;
+  margin: 1rem auto;
+  padding: 1rem;
+}
+
+.demo-json pre {
+  max-height: 24rem;
+  overflow: auto;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 48rem) {
+  .demo-controls {
+    position: static;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .demo-controls div {
+    flex-basis: 100%;
+  }
+}
