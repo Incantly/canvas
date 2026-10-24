@@ -8,7 +8,7 @@ import {
   DocumentEditor,
   documentRichCommands,
   type DocumentEditorRef,
-} from '../src/document/index.js'
+} from '../src/editor/index.js'
 
 const documentFixture = (id: string, text: string) => createDocument({
   id,

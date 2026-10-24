@@ -6,14 +6,22 @@ import {
   incantlyDocumentExtensions,
   incantlyDocumentToProseMirror,
   proseMirrorToIncantlyDocument,
-} from '../src/document/index.js'
+} from '../src/editor/index.js'
 
 const fixture = (name: string): IncantlyDocument => JSON.parse(readFileSync(
-  new URL(`../../core/test/fixtures/documents/${name}`, import.meta.url),
+  new URL(`../../../packages/core/test/fixtures/documents/${name}`, import.meta.url),
   'utf8',
 )) as IncantlyDocument
 
 const FIXTURES = ['v1-all-nodes.json', 'v1-all-marks.json', 'v1-nested.json']
+
+// Normalization fills page-setup fields the v1 fixtures predate with defaults.
+const withoutPageSetupDefaults = (metadata: IncantlyDocument['metadata']): void => {
+  const page = metadata.pageSetup
+  if (page.headerDistance === 36) delete page.headerDistance
+  if (page.footerDistance === 36) delete page.footerDistance
+  if (page.startingPageNumber === 1) delete page.startingPageNumber
+}
 
 const semanticDocument = (document: IncantlyDocument): unknown => {
   const clone = structuredClone(document) as IncantlyDocument
@@ -31,6 +39,7 @@ const semanticDocument = (document: IncantlyDocument): unknown => {
     }
   }
   visit(clone.content)
+  withoutPageSetupDefaults(clone.metadata)
   return clone
 }
 
@@ -67,7 +76,12 @@ describe('Incantly and ProseMirror conversion', () => {
     const canonical = proseMirrorToIncantlyDocument(first)
     const second = incantlyDocumentToProseMirror(canonical.value).value
 
-    expect(schema.nodeFromJSON(second).toJSON()).toEqual(schema.nodeFromJSON(first).toJSON())
+    const canonicalJson = (content: JSONContent): JSONContent => {
+      const json = schema.nodeFromJSON(content).toJSON() as JSONContent
+      withoutPageSetupDefaults(json.attrs?.metadata as IncantlyDocument['metadata'])
+      return json
+    }
+    expect(canonicalJson(second)).toEqual(canonicalJson(first))
   })
 
   it('reports unsupported content and never copies raw HTML into the canonical model', () => {

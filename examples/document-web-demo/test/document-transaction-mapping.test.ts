@@ -9,7 +9,7 @@ import {
   incantlyDocumentToProseMirror,
   mapProseMirrorTransaction,
   setIncantlyTransactionMeta,
-} from '../src/document/index.js'
+} from '../src/editor/index.js'
 
 const NOW = '2026-09-20T10:00:00.000Z'
 const LATER = '2026-09-20T10:00:01.000Z'

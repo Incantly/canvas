@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   findDocumentNodeIdRepairs,
   incantlyDocumentExtensions,
-} from '../src/document/index.js'
+} from '../src/editor/index.js'
 
 const NODE_NAMES = [
   'doc', 'text', 'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList',
