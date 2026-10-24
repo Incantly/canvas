@@ -2,9 +2,20 @@
 
 The `@incantly/*` packages are published privately to
 [GitHub Packages](https://docs.github.com/packages/working-with-a-github-packages-registry/working-with-the-npm-registry)
-(`npm.pkg.github.com`), not to npmjs.org. They take their visibility from the
-private `Incantly/canvas` repository: anyone who can read the repo can install
-them, and nobody else can.
+(`npm.pkg.github.com`), not to npmjs.org. A package is private when it is
+first published, whatever the repository's visibility, and only accounts with
+access to the package can install it.
+
+The `Incantly/canvas` repository itself is public, so its source is readable
+by anyone. Packages also inherit access from the repository they link to.
+After each package's first publish, open it under the Incantly org's
+**Packages** tab and check that:
+
+- **Visibility** is Private. Never change it to Public: GitHub can't make a
+  public package private again.
+- **Manage access** lists the people and teams who should install it. If you
+  don't want access to follow the public repository, turn off **Inherit access
+  from source repository** there, or in the org's default package settings.
 
 | Package | For |
 | --- | --- |
@@ -82,7 +93,7 @@ Fine-grained tokens don't work with it.
 3. If the Incantly org uses SAML single sign-on, click **Configure SSO** next to
    the token and authorize it for the org.
 
-The account that owns the token needs read access to `Incantly/canvas`. For CI
+The account that owns the token needs access to the packages (see above). For CI
 and deploys, a token from a bot or machine account with read-only access is
 better than a personal one.
 
