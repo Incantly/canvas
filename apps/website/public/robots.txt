@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://github.com/Incantly/canvas/sitemap-index.xml
-Sitemap: https://github.com/Incantly/canvas/docs/sitemap.xml

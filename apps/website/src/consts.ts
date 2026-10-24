@@ -1,5 +1,0 @@
-export const SITE_URL = 'https://github.com/Incantly/canvas'
-export const APP_URL = 'https://github.com/Incantly/canvas'
-export const GITHUB_URL = 'https://github.com/Incantly/canvas'
-export const SITE_NAME = 'Incantly Canvas'
-export const SITE_TAGLINE = 'The MIT-licensed infinite-canvas whiteboard SDK'

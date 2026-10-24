@@ -5,7 +5,7 @@
 
 **MIT-licensed infinite-canvas whiteboard SDK** for React, React Native, and plain JavaScript.
 
-**[GitHub](https://github.com/Incantly/canvas)** · **[Playground](apps/playground)** · [Roadmap](roadmap/README.md) · [Contributing](CONTRIBUTING.md)
+**[GitHub](https://github.com/Incantly/canvas)** · **[Document demo](examples/document-web-demo)** · [Roadmap](roadmap/README.md) · [Contributing](CONTRIBUTING.md)
 
 ## Packages
 
@@ -49,7 +49,7 @@ createCanvas({ container: document.getElementById('board') })
 npm install
 npm test
 npm run build:packages
-npm run dev:playground   # SDK feature playground
+npm run dev:document     # document editor demo
 ```
 
 ## License
