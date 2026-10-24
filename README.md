@@ -15,6 +15,10 @@
 | [`@incantly/canvas-react`](packages/react) | `<Canvas />` component + hooks |
 | [`@incantly/canvas-react-native`](packages/react-native) | WebView component + typed bridge |
 
+The packages are published privately to GitHub Packages. Before running the
+install commands below, set up your project as described in
+[docs/installing.md](docs/installing.md).
+
 ## Quick start — React
 
 ```bash

@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "build": "npm run build:packages",
     "build:packages": "npm run build --workspace=@incantly/core && npm run build --workspace=@incantly/canvas-react && npm run build --workspace=@incantly/canvas-react-native",
+    "release": "node scripts/release-packages.mjs",
     "dev": "npm run dev --workspace=incantly-react-demo",
     "dev:document": "npm run dev --workspace=incantly-document-web-demo",
     "build:document-demo": "npm run build --workspace=incantly-document-web-demo",

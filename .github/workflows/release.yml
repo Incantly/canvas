@@ -1,36 +1,44 @@
 name: Release
 
-# Publishes all three packages to npm when a version tag is pushed.
-# Requires an npm automation token in the NPM_TOKEN repo secret
-# (npmjs.com → Access Tokens → Generate → Automation).
+# Publishes the @incantly packages to GitHub Packages (npm.pkg.github.com)
+# when a v* tag is pushed. Run it by hand from the Actions tab by choosing the
+# tag as the ref. The built-in GITHUB_TOKEN is enough to publish; no secrets
+# need to be set up. See docs/installing.md.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write # npm provenance
+  packages: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          registry-url: https://registry.npmjs.org
+          registry-url: https://npm.pkg.github.com
+          scope: "@incantly"
       - run: npm ci
+      - name: Check the tag matches every package version
+        run: |
+          node -e '
+            const fs = require("node:fs")
+            const tag = process.env.GITHUB_REF_NAME
+            const bad = fs.readdirSync("packages")
+              .map((d) => JSON.parse(fs.readFileSync(`packages/${d}/package.json`, "utf8")))
+              .filter((p) => !p.private && `v${p.version}` !== tag)
+            for (const p of bad) console.error(`${p.name} is ${p.version}, tag is ${tag}`)
+            process.exit(bad.length ? 1 : 0)
+          '
       - run: npm run build
       - run: npm test
       - run: npm run typecheck
-      # Skipped (not failed) when the NPM_TOKEN secret isn't configured yet.
-      - if: env.NODE_AUTH_TOKEN != ''
-        run: npm publish --workspace=@incantly/core --provenance --access public
-      - if: env.NODE_AUTH_TOKEN != ''
-        run: npm publish --workspace=@incantly/canvas-react --provenance --access public
-      - if: env.NODE_AUTH_TOKEN != ''
-        run: npm publish --workspace=@incantly/canvas-react-native --provenance --access public
+      - run: npm run release -- --publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
