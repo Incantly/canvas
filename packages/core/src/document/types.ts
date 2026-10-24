@@ -82,11 +82,15 @@ export interface CodeMark { type: 'code' }
 export interface LinkMark { type: 'link'; href: string; title?: string }
 export interface TextColorMark { type: 'textColor'; color: string }
 export interface HighlightMark { type: 'highlight'; color: string }
+export type FontFamilyKey = 'sans' | 'times' | 'mono'
+export interface FontFamilyMark { type: 'fontFamily'; family: FontFamilyKey }
+/** Inline font size in points (Word-style presets). */
+export interface FontSizeMark { type: 'fontSize'; size: number }
 export interface CitationMark { type: 'citation'; citationId: CitationId }
 export interface InlineMathMark { type: 'inlineMath'; latex: string }
 export type TextMark =
   | BoldMark | ItalicMark | UnderlineMark | StrikeMark | CodeMark | LinkMark
-  | TextColorMark | HighlightMark | CitationMark | InlineMathMark
+  | TextColorMark | HighlightMark | FontFamilyMark | FontSizeMark | CitationMark | InlineMathMark
 export type TextMarkType = TextMark['type']
 
 export interface DocumentTextNode { type: 'text'; text: string; marks?: TextMark[] }
@@ -133,7 +137,7 @@ export interface TableCellNode { id: DocumentNodeId; type: 'tableCell'; attrs?: 
 export interface ImageNode {
   id: DocumentNodeId
   type: 'image'
-  attrs: { assetId: AssetId; alt?: string; caption?: string; width?: number; height?: number; display?: 'inline' | 'block' | 'figure' }
+  attrs: { assetId: AssetId; alt?: string; caption?: string; width?: number; height?: number; display?: 'inline' | 'block' | 'figure'; alignment?: TextAlignment }
 }
 export interface FileAttachmentNode {
   id: DocumentNodeId

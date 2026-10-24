@@ -139,7 +139,9 @@ export {
 
 export {
   ALLOWED_LINK_PROTOCOLS,
+  FONT_FAMILY_STACKS,
   TEXT_MARK_ORDER,
+  isFontFamilyKey,
   canCombineTextMarks,
   inlineContentToPlainText,
   normalizeInlineContent,

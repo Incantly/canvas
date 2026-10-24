@@ -1,3 +1,4 @@
+import { FONT_FAMILY_STACKS } from './inline.js'
 import type { DocumentNode, IncantlyDocument, InlineNode, TextAlignment, TextMark } from './types.js'
 
 export interface HtmlExportOptions { title?: string; className?: string; assetUrls?: Readonly<Record<string, string>>; maxAssetUrlLength?: number }
@@ -18,6 +19,8 @@ function renderMark(mark: TextMark, inner: string): string {
     case 'link': return `<a href="${escapeAttr(mark.href)}"${mark.title ? ` title="${escapeAttr(mark.title)}"` : ''}>${inner}</a>`
     case 'textColor': return `<span style="color:${escapeAttr(mark.color)}">${inner}</span>`
     case 'highlight': return `<mark style="background-color:${escapeAttr(mark.color)}">${inner}</mark>`
+    case 'fontFamily': return `<span style="font-family:${escapeAttr(FONT_FAMILY_STACKS[mark.family])}">${inner}</span>`
+    case 'fontSize': return `<span style="font-size:${escapeAttr(String(mark.size))}pt">${inner}</span>`
     case 'citation': return `<cite data-citation-id="${escapeAttr(mark.citationId)}">${inner}</cite>`
     case 'inlineMath': return `<code class="math-inline" data-latex="${escapeAttr(mark.latex)}">${inner}</code>`
     default: return inner
@@ -104,7 +107,8 @@ function renderBlock(node: DocumentNode, options: HtmlExportOptions): string {
       const usable = src.length <= (options.maxAssetUrlLength ?? 2_000_000) ? src : ''
       const dims = `${typeof node.attrs.width === 'number' ? ` width="${Math.round(node.attrs.width)}"` : ''}${typeof node.attrs.height === 'number' ? ` height="${Math.round(node.attrs.height)}"` : ''}`
       const img = `<img src="${escapeAttr(usable)}" alt="${escapeAttr(node.attrs.alt ?? '')}"${dims}>`
-      return node.attrs.display === 'inline' ? img : `<figure>${img}${node.attrs.caption ? `<figcaption>${escape(node.attrs.caption)}</figcaption>` : ''}</figure>`
+      const align = node.attrs.alignment ? ` data-align="${escapeAttr(node.attrs.alignment)}"` : ''
+      return node.attrs.display === 'inline' ? img : `<figure${align}>${img}${node.attrs.caption ? `<figcaption>${escape(node.attrs.caption)}</figcaption>` : ''}</figure>`
     }
     case 'fileAttachment':
       return card(node.attrs.filename ?? 'Attachment', [node.attrs.mimeType, `id:${node.attrs.assetId}`].filter(Boolean).join(' · '))

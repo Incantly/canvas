@@ -2,7 +2,7 @@ import { CURRENT_DOCUMENT_SCHEMA_VERSION, DEFAULT_DOCUMENT_LANGUAGE, DEFAULT_PAG
 import { createParagraph } from './create.js'
 import { assetId, citationId, documentId, documentNodeId } from './ids.js'
 import { DOCUMENT_LIMITS } from './limits.js'
-import { normalizeLinkHref, normalizeTextMarks } from './inline.js'
+import { isFontFamilyKey, normalizeLinkHref, normalizeTextMarks } from './inline.js'
 import { normalizeDocumentNode, VIDEO_EMBED_PROVIDERS } from './nodes.js'
 import type {
   DocumentAuthor, DocumentMetadata, DocumentNode, IncantlyDocument, InlineNode,
@@ -84,6 +84,8 @@ function normalizeMarks(value: unknown): TextMark[] {
   return marks.filter((mark) => {
     if (mark.type === 'link') return mark.href.length <= DOCUMENT_LIMITS.maxUrlLength && normalizeLinkHref(mark.href) !== null
     if (mark.type === 'textColor' || mark.type === 'highlight') return COLOR_RE.test(mark.color)
+    if (mark.type === 'fontFamily') return isFontFamilyKey(mark.family)
+    if (mark.type === 'fontSize') return mark.size >= 1 && mark.size <= 200
     if (mark.type === 'inlineMath') return mark.latex.length <= DOCUMENT_LIMITS.maxAttributeStringLength
     if (mark.type === 'citation') return String(mark.citationId).length <= DOCUMENT_LIMITS.maxAttributeStringLength
     return true
@@ -228,7 +230,7 @@ function recoverNode(value: unknown, path: string, state: RecoveryState, depth: 
     }
     case 'image': {
       const width = finite(attrs.width); const height = finite(attrs.height)
-      return { id, type: 'image', attrs: { assetId: assetId(safeString(attrs.assetId) || 'asset:missing'), ...(safeString(attrs.alt) ? { alt: safeString(attrs.alt) } : {}), ...(safeString(attrs.caption) ? { caption: safeString(attrs.caption) } : {}), ...(width && width > 0 && width <= 100_000 ? { width } : {}), ...(height && height > 0 && height <= 100_000 ? { height } : {}), ...(['inline', 'block', 'figure'].includes(String(attrs.display)) ? { display: attrs.display as 'inline' | 'block' | 'figure' } : {}) } }
+      return { id, type: 'image', attrs: { assetId: assetId(safeString(attrs.assetId) || 'asset:missing'), ...(safeString(attrs.alt) ? { alt: safeString(attrs.alt) } : {}), ...(safeString(attrs.caption) ? { caption: safeString(attrs.caption) } : {}), ...(width && width > 0 && width <= 100_000 ? { width } : {}), ...(height && height > 0 && height <= 100_000 ? { height } : {}), ...(['inline', 'block', 'figure'].includes(String(attrs.display)) ? { display: attrs.display as 'inline' | 'block' | 'figure' } : {}), ...(alignment ? { alignment } : {}) } }
     }
     case 'fileAttachment': {
       const filename = safeString(attrs.filename, DOCUMENT_LIMITS.maxFilenameLength)
