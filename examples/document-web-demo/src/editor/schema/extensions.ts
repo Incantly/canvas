@@ -8,6 +8,7 @@ import { IncantlyNodeIds } from './nodeIds.js'
 import { IncantlyTableSchemaRoles, incantlyDocumentNodes } from './nodes.js'
 import { WebPagination, type WebPaginationOptions } from '../paginationExtension.js'
 import { DocumentClipboard, type DocumentClipboardOptions } from '../clipboardExtension.js'
+import { IncantlySlashCommand, type IncantlySlashCommandOptions } from '../slashCommand.js'
 
 const restrictedStarterKit = StarterKit.configure({
   document: false,
@@ -57,6 +58,7 @@ export interface IncantlyDocumentExtensionOptions {
   placeholder?: string | (() => string)
   pagination?: false | WebPaginationOptions
   clipboard?: false | DocumentClipboardOptions
+  slashMenu?: false | IncantlySlashCommandOptions
 }
 
 export function createIncantlyDocumentExtensions(
@@ -77,6 +79,7 @@ export function createIncantlyDocumentExtensions(
     ...incantlyDocumentMarks,
     IncantlyNodeIds,
     FormattingShortcuts,
+    ...(options.slashMenu === false ? [] : [IncantlySlashCommand.configure(options.slashMenu ?? {})]),
     ...(options.pagination === false ? [] : [WebPagination.configure(options.pagination ?? {})]),
     ...(options.clipboard === false ? [] : [DocumentClipboard.configure(options.clipboard ?? {})]),
   ]

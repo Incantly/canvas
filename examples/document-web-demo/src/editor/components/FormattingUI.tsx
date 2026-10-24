@@ -108,24 +108,15 @@ export function DocumentBubbleToolbar({ editor: suppliedEditor, className, ...pr
   )
 }
 
-export interface SlashMenuItem {
-  id: string
-  label: string
-  description?: string
-  keywords?: readonly string[]
-  command: Command
-}
-
-export const defaultSlashMenuItems: readonly SlashMenuItem[] = [
-  { id: 'paragraph', label: 'Paragraph', keywords: ['text'], command: setParagraph },
-  { id: 'heading-1', label: 'Heading 1', keywords: ['title'], command: setHeading(1) },
-  { id: 'heading-2', label: 'Heading 2', keywords: ['subtitle'], command: setHeading(2) },
-  { id: 'bullet-list', label: 'Bullet list', keywords: ['unordered'], command: toggleBulletList },
-  { id: 'numbered-list', label: 'Numbered list', keywords: ['ordered'], command: toggleOrderedList },
-  { id: 'blockquote', label: 'Blockquote', keywords: ['quote'], command: toggleBlockquote },
-  { id: 'code-block', label: 'Code block', keywords: ['code'], command: (editor) => editor.chain().focus().setNode('codeBlock').run() },
-  { id: 'divider', label: 'Divider', keywords: ['rule', 'line'], command: (editor) => editor.chain().focus().insertContent({ type: 'horizontalRule' }).run() },
-]
+export type { SlashMenuItem } from '../slashCommand.js'
+export { defaultSlashMenuItems } from '../slashCommand.js'
+import {
+  commitSlashMenuItem,
+  readSlashMenuSnapshot,
+  writeSlashMenuUi,
+  type IncantlySlashMenuSnapshot,
+  type SlashMenuItem,
+} from '../slashCommand.js'
 
 export interface DocumentSlashMenuProps extends HTMLAttributes<HTMLDivElement> {
   editor?: Editor | null
@@ -134,44 +125,45 @@ export interface DocumentSlashMenuProps extends HTMLAttributes<HTMLDivElement> {
   onOpenChange?: (open: boolean) => void
 }
 
-export function DocumentSlashMenu({ editor: suppliedEditor, items = defaultSlashMenuItems, renderItem,
+const closedSlashSnapshot: IncantlySlashMenuSnapshot = { open: false, query: '', range: null, items: [], selectedIndex: 0 }
+
+export function DocumentSlashMenu({ editor: suppliedEditor, items, renderItem,
   onOpenChange, className, ...props }: DocumentSlashMenuProps) {
   const contextualEditor = useDocumentEditor()
   const editor = suppliedEditor ?? contextualEditor
   const menuId = useId()
   const menuRef = useRef<HTMLDivElement>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [position, setPosition] = useState<CSSProperties | null>(null)
-  const match = useEditorState({
-    editor,
-    selector: ({ editor: current }) => {
-      if (!current || !current.isEditable || !current.state.selection.empty) return null
-      const { $from } = current.state.selection
-      const text = $from.parent.textBetween(0, $from.parentOffset, undefined, '\ufffc')
-      const found = text.match(/(?:^|\s)\/([^\s/]*)$/)
-      if (!found) return null
-      return { query: found[1].toLowerCase(), from: $from.pos - found[0].trimStart().length, to: $from.pos }
-    },
-  })
-  const filtered = match ? items.filter((item) => {
-    const haystack = [item.label, ...(item.keywords ?? [])].join(' ').toLowerCase()
-    return haystack.includes(match.query)
-  }) : []
-  const open = Boolean(match && filtered.length)
-  useEffect(() => { onOpenChange?.(open) }, [onOpenChange, open])
-  useEffect(() => { setActiveIndex(0) }, [match?.query])
+  const [snapshot, setSnapshot] = useState<IncantlySlashMenuSnapshot>(closedSlashSnapshot)
+
+  // Detection, keyboard commit, and the default item registry live in the
+  // IncantlySlashCommand extension; this component renders its state and
+  // forwards host overrides (items) plus presentation (renderItem, className).
   useEffect(() => {
-    if (!editor || !open || !match) { setPosition(null); return }
+    if (!editor) return
+    writeSlashMenuUi(editor, {
+      listener: (next) => setSnapshot(next),
+      itemsOverride: items ?? null,
+    })
+    const initial = readSlashMenuSnapshot(editor)
+    if (initial) setSnapshot(initial)
+    return () => { writeSlashMenuUi(editor, { listener: null, itemsOverride: null }) }
+  }, [editor, items])
+
+  const { open, range, selectedIndex } = snapshot
+  const filtered = snapshot.items
+  const [position, setPosition] = useState<CSSProperties | null>(null)
+  useEffect(() => { onOpenChange?.(open) }, [onOpenChange, open])
+  useEffect(() => {
+    if (!editor || !open || !range) { return }
     const updatePosition = () => {
       const host = editor.view.dom.closest<HTMLElement>('[data-incantly-document-editor]')
       if (!host) return
       let caret: { top: number; bottom: number; left: number }
       try {
-        caret = editor.view.coordsAtPos(match.to)
+        caret = editor.view.coordsAtPos(range.to)
       } catch {
         // Layout-less hosts (SSR test runners) have no caret rectangles. The
         // browser will calculate the anchored position on its next layout pass.
-        setPosition({ top: 8, left: 8 })
         return
       }
       const hostRect = host.getBoundingClientRect()
@@ -184,47 +176,19 @@ export function DocumentSlashMenu({ editor: suppliedEditor, items = defaultSlash
     updatePosition()
     window.addEventListener('resize', updatePosition)
     return () => window.removeEventListener('resize', updatePosition)
-  }, [editor, match?.to, open])
-  useEffect(() => {
-    if (!editor || !open || !match) return
-    // Capture phase: this must run before ProseMirror's own Enter/Arrow
-    // handling on the same element, otherwise the paragraph splits (or the
-    // cursor moves) before the menu can commit the chosen block.
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        event.preventDefault()
-        setActiveIndex((index) => {
-          const direction = event.key === 'ArrowDown' ? 1 : -1
-          return (index + direction + filtered.length) % filtered.length
-        })
-      } else if (event.key === 'Enter') {
-        event.preventDefault()
-        const item = filtered[activeIndex]
-        if (!item) return
-        editor.chain().focus().deleteRange({ from: match.from, to: match.to }).run()
-        item.command(editor)
-      } else if (event.key === 'Escape') {
-        event.preventDefault()
-        editor.commands.deleteRange({ from: match.from, to: match.to })
-      }
-    }
-    const element = editor.view.dom
-    element.addEventListener('keydown', handleKeyDown, true)
-    return () => element.removeEventListener('keydown', handleKeyDown, true)
-  }, [activeIndex, editor, filtered, match, open])
-  if (!editor || !match || !filtered.length) return null
+  }, [editor, range?.to, open])
+  if (!editor || !open || !range || !filtered.length) return null
   const choose = (item: SlashMenuItem) => (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
-    editor.chain().focus().deleteRange({ from: match.from, to: match.to }).run()
-    item.command(editor)
+    commitSlashMenuItem(editor, range, item)
   }
   return (
     <div {...props} ref={menuRef} id={menuId} style={{ ...props.style, ...position }}
       className={['incantly-document-slash-menu', className].filter(Boolean).join(' ')}
       role="menu" aria-label={props['aria-label'] ?? 'Insert block'}>
       {filtered.map((item, index) => (
-        <button key={item.id} type="button" role="menuitem" aria-current={index === activeIndex ? 'true' : undefined}
-          onMouseEnter={() => setActiveIndex(index)} onMouseDown={choose(item)}>
+        <button key={item.id} type="button" role="menuitem" aria-current={index === selectedIndex ? 'true' : undefined}
+          onMouseEnter={() => setSnapshot((current) => ({ ...current, selectedIndex: index }))} onMouseDown={choose(item)}>
           {renderItem ? renderItem(item) : <><strong>{item.label}</strong>{item.description ? <span>{item.description}</span> : null}</>}
         </button>
       ))}
