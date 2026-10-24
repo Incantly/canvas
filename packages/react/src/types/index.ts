@@ -11,7 +11,7 @@ import type {
   Styles,
   ThemeId,
   ToolId,
-} from '@incantly/canvas'
+} from '@incantly/core'
 
 export interface CanvasRef {
   readonly editor: Editor | null

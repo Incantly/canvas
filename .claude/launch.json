@@ -2,50 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "react-demo",
+      "name": "document-demo",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
         "dev",
-        "--workspace=incantly-react-demo"
+        "--workspace=incantly-document-web-demo"
       ],
-      "port": 5199,
+      "port": 5173,
       "autoPort": true
-    },
-    {
-      "name": "website",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev",
-        "--workspace=incantly-website"
-      ],
-      "port": 4399,
-      "autoPort": true
-    },
-    {
-      "name": "app",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev",
-        "--workspace=incantly-app",
-        "--",
-        "--port",
-        "5299",
-        "--strictPort"
-      ],
-      "port": 5299
-    },
-    {
-      "name": "docs",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev",
-        "--workspace=incantly-docs"
-      ],
-      "port": 4499
     }
   ]
 }

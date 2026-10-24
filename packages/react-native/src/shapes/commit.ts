@@ -1,10 +1,10 @@
-import type { ColorId, DashId, DrawingStroke, ShapeRecord, SizeId, Store, TextBlock } from '@incantly/canvas/headless'
+import type { ColorId, DashId, DrawingStroke, ShapeRecord, SizeId, Store, TextBlock } from '@incantly/core/headless'
 import {
   canPutShape,
   createDrawShape,
   newId,
   simplifyPackedStrokePts,
-} from '@incantly/canvas/headless'
+} from '@incantly/core/headless'
 import type { PixelShapeEraseEdit } from '../ink/types.js'
 
 function pageIds(store: Store): Set<string> {

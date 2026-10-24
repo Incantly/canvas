@@ -1,5 +1,5 @@
 {
-  "name": "@incantly/canvas",
+  "name": "@incantly/core",
   "version": "0.2.0",
   "description": "Framework-free infinite-canvas whiteboard engine — the heart of Incantly Canvas, the MIT-licensed drawing SDK.",
   "type": "module",

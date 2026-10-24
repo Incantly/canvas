@@ -5,15 +5,19 @@
 
 **MIT-licensed infinite-canvas whiteboard SDK** for React, React Native, and plain JavaScript.
 
-**[GitHub](https://github.com/Incantly/canvas)** · **[Playground](apps/playground)** · [Roadmap](roadmap/README.md) · [Contributing](CONTRIBUTING.md)
+**[GitHub](https://github.com/Incantly/canvas)** · **[Document demo](examples/document-web-demo)** · [Roadmap](roadmap/README.md) · [Contributing](CONTRIBUTING.md)
 
 ## Packages
 
 | Package | For |
 | --- | --- |
-| [`@incantly/canvas`](packages/core) | Framework-free engine + toolbar |
+| [`@incantly/core`](packages/core) | Framework-free engine + toolbar |
 | [`@incantly/canvas-react`](packages/react) | `<Canvas />` component + hooks |
 | [`@incantly/canvas-react-native`](packages/react-native) | WebView component + typed bridge |
+
+The packages are published privately to GitHub Packages. Before running the
+install commands below, set up your project as described in
+[docs/installing.md](docs/installing.md).
 
 ## Quick start — React
 
@@ -23,7 +27,7 @@ npm install @incantly/canvas-react
 
 ```tsx
 import { Canvas } from '@incantly/canvas-react'
-import '@incantly/canvas/canvas.css'
+import '@incantly/core/canvas.css'
 
 export default function App() {
   return <Canvas theme="light" grid="lines" />
@@ -33,8 +37,8 @@ export default function App() {
 ## Quick start — vanilla
 
 ```js
-import { createCanvas } from '@incantly/canvas'
-import '@incantly/canvas/canvas.css'
+import { createCanvas } from '@incantly/core'
+import '@incantly/core/canvas.css'
 
 createCanvas({ container: document.getElementById('board') })
 ```
@@ -45,7 +49,7 @@ createCanvas({ container: document.getElementById('board') })
 npm install
 npm test
 npm run build:packages
-npm run dev:playground   # SDK feature playground
+npm run dev:document     # document editor demo
 ```
 
 ## License

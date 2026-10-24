@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Store, createVersionManager } from '@incantly/canvas/headless'
-import type { DocumentVersion } from '@incantly/canvas/headless'
+import { Store, createVersionManager } from '@incantly/core/headless'
+import type { DocumentVersion } from '@incantly/core/headless'
 import type { SqliteDriver } from '../src/storage/sqlite-driver.js'
 import { createSqliteVersionStorage } from '../src/storage/sqlite-version-storage.js'
 

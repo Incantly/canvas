@@ -1,7 +1,7 @@
 name: Star history
 
 # Keeps docs/star-history.{json,svg} current. The README embeds the SVGs and
-# the website reads the JSON, so both refresh without a code change.
+# the JSON stays available to other consumers, so both refresh without a code change.
 #
 # The stargazers API rejects anonymous reads, which is why this runs here with
 # the Actions token rather than in the browser.
@@ -15,7 +15,7 @@ on:
     paths:
       - 'scripts/star-history.mjs'
       - 'scripts/lib/starSvg.mjs'
-      - 'apps/website/src/lib/starChart.js'
+      - 'scripts/lib/starChart.mjs'
       - '.github/workflows/star-history.yml'
 
 permissions:

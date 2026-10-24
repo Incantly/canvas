@@ -1,6 +1,6 @@
 import { CURRENT_DOCUMENT_SCHEMA_VERSION } from './constants.js'
 import { DOCUMENT_LIMITS } from './limits.js'
-import { ALLOWED_LINK_PROTOCOLS, canCombineTextMarks, normalizeLinkHref } from './inline.js'
+import { ALLOWED_LINK_PROTOCOLS, canCombineTextMarks, isFontFamilyKey, normalizeLinkHref } from './inline.js'
 import { VIDEO_EMBED_PROVIDERS } from './nodes.js'
 import type { DocumentNode, IncantlyDocument, TextMark } from './types.js'
 
@@ -31,13 +31,13 @@ type ChildContext = 'root' | 'blocks' | 'listItems' | 'checklistItems' | 'tableR
 
 const NODE_TYPES = new Set([
   'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'checklist',
-  'listItem', 'checklistItem', 'horizontalRule', 'codeBlock', 'mathBlock', 'table',
+  'listItem', 'checklistItem', 'horizontalRule', 'details', 'codeBlock', 'mathBlock', 'table',
   'tableRow', 'tableHeaderCell', 'tableCell', 'image', 'fileAttachment', 'audio',
   'videoEmbed', 'pdfEmbed', 'canvasEmbed', 'pageBreak',
 ])
 const BLOCK_TYPES = new Set([
   'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'checklist',
-  'horizontalRule', 'codeBlock', 'mathBlock', 'table', 'image', 'fileAttachment',
+  'horizontalRule', 'details', 'codeBlock', 'mathBlock', 'table', 'image', 'fileAttachment',
   'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed', 'pageBreak',
 ])
 const ALIGNMENTS = new Set(['left', 'center', 'right', 'justify'])
@@ -132,6 +132,15 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
     const itemPath = `${path}[${index}]`
     if (!isRecord(candidate)) { issue(issues, 'invalid_type', itemPath, 'Inline node must be an object'); return }
     if (candidate.type === 'hardBreak') return
+    if (candidate.type === 'inlineMath') {
+      if (typeof candidate.latex !== 'string' || !candidate.latex) { issue(issues, 'invalid_type', `${itemPath}.latex`, 'LaTeX must be a non-empty string'); return }
+      state.totalText += candidate.latex.length
+      if (candidate.latex.length > DOCUMENT_LIMITS.maxTextNodeLength)
+        issue(issues, 'limit_text', `${itemPath}.latex`, 'LaTeX is too long')
+      if (state.totalText > DOCUMENT_LIMITS.maxTotalTextLength)
+        issue(issues, 'limit_text', `${itemPath}.latex`, 'Document text limit exceeded')
+      return
+    }
     if (candidate.type !== 'text') { issue(issues, 'unknown_node', `${itemPath}.type`, 'Unknown inline node'); return }
     if (typeof candidate.text !== 'string') { issue(issues, 'invalid_type', `${itemPath}.text`, 'Text must be a string'); return }
     state.totalText += candidate.text.length
@@ -161,6 +170,11 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
       } else if (mark.type === 'textColor' || mark.type === 'highlight') {
         const color = requiredString(mark, 'color', markPath, issues, 80)
         if (color && !COLOR_RE.test(color)) issue(issues, 'invalid_color', `${markPath}.color`, 'Color is invalid')
+      } else if (mark.type === 'fontFamily') {
+        const family = requiredString(mark, 'family', markPath, issues, 32)
+        if (family && !isFontFamilyKey(family)) issue(issues, 'invalid_value', `${markPath}.family`, 'Font family is not allowed')
+      } else if (mark.type === 'fontSize') {
+        validateNumber(mark, 'size', markPath, issues, { min: 1, max: 200 })
       } else if (mark.type === 'citation') requiredString(mark, 'citationId', markPath, issues)
       else if (mark.type === 'inlineMath') requiredString(mark, 'latex', markPath, issues)
       else issue(issues, 'unknown_mark', `${markPath}.type`, `Unknown mark "${mark.type}"`)
@@ -215,7 +229,7 @@ function validateNode(value: unknown, path: string, issues: DocumentValidationIs
     state.nodeIds.add(id)
   }
   const attrs = validateAttrsObject(value, path, issues,
-    ['heading', 'checklistItem', 'mathBlock', 'image', 'fileAttachment', 'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed'].includes(value.type))
+    ['heading', 'checklistItem', 'details', 'mathBlock', 'image', 'fileAttachment', 'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed'].includes(value.type))
   switch (value.type) {
     case 'paragraph': case 'heading': {
       validateInline(value.content, `${path}.content`, issues, state)
@@ -231,6 +245,12 @@ function validateNode(value: unknown, path: string, issues: DocumentValidationIs
     case 'checklist': validateChildren(value, path, issues, state, depth, 'checklistItems'); return
     case 'checklistItem':
       if (attrs && typeof attrs.checked !== 'boolean') issue(issues, 'invalid_type', `${path}.attrs.checked`, 'checked must be boolean')
+      validateChildren(value, path, issues, state, depth, 'blocks'); return
+    case 'details':
+      if (attrs) {
+        if (typeof attrs.summary !== 'string') issue(issues, 'invalid_type', `${path}.attrs.summary`, 'summary must be a string')
+        if (attrs.open !== undefined && typeof attrs.open !== 'boolean') issue(issues, 'invalid_type', `${path}.attrs.open`, 'open must be boolean')
+      }
       validateChildren(value, path, issues, state, depth, 'blocks'); return
     case 'codeBlock':
       if (typeof value.text !== 'string') issue(issues, 'invalid_type', `${path}.text`, 'Code text must be a string')
@@ -252,7 +272,7 @@ function validateNode(value: unknown, path: string, issues: DocumentValidationIs
       if (attrs) { validateNumber(attrs, 'colspan', `${path}.attrs`, issues, { integer: true, min: 1, max: DOCUMENT_LIMITS.maxTableColumns }); validateNumber(attrs, 'rowspan', `${path}.attrs`, issues, { integer: true, min: 1, max: DOCUMENT_LIMITS.maxTableRows }); if (attrs.alignment !== undefined && !ALIGNMENTS.has(String(attrs.alignment))) issue(issues, 'invalid_value', `${path}.attrs.alignment`, 'Invalid alignment') }
       validateChildren(value, path, issues, state, depth, 'blocks'); return
     case 'image':
-      if (attrs) { requiredString(attrs, 'assetId', `${path}.attrs`, issues); optionalString(attrs, 'alt', `${path}.attrs`, issues); optionalString(attrs, 'caption', `${path}.attrs`, issues); validateNumber(attrs, 'width', `${path}.attrs`, issues, { min: 1, max: 100_000 }); validateNumber(attrs, 'height', `${path}.attrs`, issues, { min: 1, max: 100_000 }) }
+      if (attrs) { requiredString(attrs, 'assetId', `${path}.attrs`, issues); optionalString(attrs, 'alt', `${path}.attrs`, issues); optionalString(attrs, 'caption', `${path}.attrs`, issues); validateNumber(attrs, 'width', `${path}.attrs`, issues, { min: 1, max: 100_000 }); validateNumber(attrs, 'height', `${path}.attrs`, issues, { min: 1, max: 100_000 }); if (attrs.alignment !== undefined && !ALIGNMENTS.has(String(attrs.alignment))) issue(issues, 'invalid_value', `${path}.attrs.alignment`, 'Invalid alignment') }
       break
     case 'fileAttachment':
       if (attrs) { requiredString(attrs, 'assetId', `${path}.attrs`, issues); const filename = optionalString(attrs, 'filename', `${path}.attrs`, issues, DOCUMENT_LIMITS.maxFilenameLength); if (filename && (!filename.trim() || /[\x00-\x1f/\\]/.test(filename))) issue(issues, 'invalid_filename', `${path}.attrs.filename`, 'Filename is invalid'); const mime = optionalString(attrs, 'mimeType', `${path}.attrs`, issues, 255); if (mime && !MIME_RE.test(mime)) issue(issues, 'invalid_mime_type', `${path}.attrs.mimeType`, 'MIME type is invalid') }
@@ -298,8 +318,19 @@ function validateMetadata(value: unknown, path: string, issues: DocumentValidati
     if (!['portrait', 'landscape'].includes(String(page.orientation))) issue(issues, 'invalid_value', `${path}.pageSetup.orientation`, 'Invalid page orientation')
     if (![1, 2].includes(Number(page.columns))) issue(issues, 'invalid_value', `${path}.pageSetup.columns`, 'Columns must be 1 or 2')
     if (page.size === 'custom') { validateNumber(page, 'width', `${path}.pageSetup`, issues, { min: 1, max: 100_000 }); validateNumber(page, 'height', `${path}.pageSetup`, issues, { min: 1, max: 100_000 }) }
+    validateNumber(page, 'headerDistance', `${path}.pageSetup`, issues, { min: 0, max: 10_000 })
+    validateNumber(page, 'footerDistance', `${path}.pageSetup`, issues, { min: 0, max: 10_000 })
+    validateNumber(page, 'startingPageNumber', `${path}.pageSetup`, issues, { integer: true, min: 1, max: 1_000_000 })
+    if (page.mirroredMargins !== undefined && typeof page.mirroredMargins !== 'boolean') issue(issues, 'invalid_type', `${path}.pageSetup.mirroredMargins`, 'mirroredMargins must be boolean')
     if (!isRecord(page.margins)) issue(issues, 'invalid_type', `${path}.pageSetup.margins`, 'Margins must be an object')
     else for (const side of ['top', 'right', 'bottom', 'left']) validateNumber(page.margins, side, `${path}.pageSetup.margins`, issues, { min: 0, max: 10_000 })
+  }
+  if (own(value, 'layout')) {
+    if (!isRecord(value.layout)) issue(issues, 'invalid_type', `${path}.layout`, 'layout must be an object')
+    else {
+      if (value.layout.version !== 1) issue(issues, 'invalid_value', `${path}.layout.version`, 'Unsupported layout version')
+      if (!Array.isArray(value.layout.sections) || value.layout.sections.length > 1_000) issue(issues, 'limit_attribute', `${path}.layout.sections`, 'Layout sections must be an array with at most 1000 entries')
+    }
   }
   if (own(value, 'research') && !isRecord(value.research)) issue(issues, 'invalid_type', `${path}.research`, 'research must be an object')
   else if (isRecord(value.research)) {

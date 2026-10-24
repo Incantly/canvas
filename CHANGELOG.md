@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the `@incantly/canvas*` packages are documented here.
+All notable changes to the `@incantly/core*` packages are documented here.
 The project follows [semver](https://semver.org); the three packages are
 versioned in lockstep.
 
@@ -26,7 +26,7 @@ versioned in lockstep.
 
 First public release.
 
-- `@incantly/canvas` — the framework-free engine: pressure-sensitive
+- `@incantly/core` — the framework-free engine: pressure-sensitive
   freehand ink, highlighter, shapes with hand-drawn wobble, arrows with
   draggable bend, text, sticky notes, images, laser pointer, selection with
   move/resize/rotate, infinite canvas with pan/zoom/pinch, palm rejection,

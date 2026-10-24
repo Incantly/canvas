@@ -21,7 +21,7 @@ export interface DocumentNodeRule {
 const inline = ['text', 'hardBreak'] as const
 const blocks = [
   'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'checklist',
-  'horizontalRule', 'codeBlock', 'mathBlock', 'table', 'image', 'fileAttachment',
+  'horizontalRule', 'details', 'codeBlock', 'mathBlock', 'table', 'image', 'fileAttachment',
   'audio', 'videoEmbed', 'pdfEmbed', 'canvasEmbed', 'pageBreak',
 ] as const
 
@@ -40,6 +40,7 @@ export const DOCUMENT_NODE_RULES: Readonly<Record<DocumentNodeType, DocumentNode
   listItem: rule('blocks', blocks, 8, 'normalize block children and insert a paragraph when empty', 'paragraph'),
   checklistItem: rule('blocks', blocks, 8, 'normalize checked state and block children', 'paragraph'),
   horizontalRule: rule('none', [], 32, 'discard unexpected child content', 'omit'),
+  details: rule('blocks', blocks, 8, 'trim summary, normalize open state and block children, insert a paragraph when empty', 'paragraph'),
   codeBlock: rule('plainText', [], 32, 'preserve text and trim optional language', 'paragraph'),
   mathBlock: rule('none', [], 32, 'trim LaTeX and optional label', 'paragraph'),
   table: rule('tableRows', ['tableRow'], 32, 'normalize table rows', 'paragraph'),
@@ -85,6 +86,10 @@ export function normalizeDocumentNode(node: DocumentNode, depth = 0): DocumentNo
     case 'listItem': return { ...node, content: normalizeBlocks(node.content, depth) }
     case 'checklistItem': return { ...node, attrs: { checked: node.attrs.checked === true }, content: normalizeBlocks(node.content, depth) }
     case 'codeBlock': { const language = node.attrs?.language?.trim(); return { ...node, attrs: language ? { language } : {} } }
+    case 'details': {
+      const summary = node.attrs.summary.trim()
+      return { ...node, attrs: { summary, ...(node.attrs.open === true ? { open: true as const } : {}) }, content: normalizeBlocks(node.content, depth) }
+    }
     case 'mathBlock': { const label = node.attrs.label?.trim(); return { ...node, attrs: { latex: node.attrs.latex.trim(), ...(node.attrs.numbered ? { numbered: true } : {}), ...(label ? { label } : {}) } } }
     case 'table': return { ...node, content: node.content.map((row) => normalizeDocumentNode(row, depth + 1) as typeof row) }
     case 'tableRow': return { ...node, content: node.content.map((cell) => normalizeDocumentNode(cell, depth + 1) as typeof cell) }
@@ -106,6 +111,7 @@ export function documentNodeToPlainText(node: DocumentNode): string {
   switch (node.type) {
     case 'paragraph': case 'heading': return inlineContentToPlainText(node.content)
     case 'blockquote': case 'listItem': case 'checklistItem': case 'tableHeaderCell': case 'tableCell': return documentNodesToPlainText(node.content)
+    case 'details': return [node.attrs.summary, documentNodesToPlainText(node.content)].filter(Boolean).join('\n')
     case 'bulletList': case 'orderedList': case 'checklist': case 'table': case 'tableRow': return node.content.map(documentNodeToPlainText).filter(Boolean).join('\n')
     case 'codeBlock': return node.text
     case 'mathBlock': return node.attrs.latex

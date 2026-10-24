@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { debounce, type DebouncedFn } from '@incantly/canvas/headless'
+import { debounce, type DebouncedFn } from '@incantly/core/headless'
 
 export function useDebouncedCallback<T extends (...args: any[]) => void>(
   fn: T,

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Store } from '@incantly/canvas'
+import { Store } from '@incantly/core'
 
 export function useCanvasStore(snapshot?: Parameters<Store['loadSnapshot']>[0]): Store {
   const ref = useRef<Store | null>(null)

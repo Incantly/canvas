@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { InkPenDefinition } from '@incantly/canvas/headless'
+import type { InkPenDefinition } from '@incantly/core/headless'
 
 /** Type, eraser, or a host/built-in pen id (`draw`, `highlight`, `pencil`, …). */
 export type InkBarItemId = string

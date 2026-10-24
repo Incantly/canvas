@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the latest published version of each `@incantly/canvas*` package receives
+Only the latest published version of each `@incantly/core*` package receives
 security fixes.
 
 ## Reporting a vulnerability

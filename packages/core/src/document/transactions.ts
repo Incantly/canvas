@@ -144,6 +144,7 @@ function sliceInline(content: readonly InlineNode[], from: number, to: number): 
     const end = Math.min(length, to - offset)
     if (start < end) {
       if (node.type === 'hardBreak') output.push({ type: 'hardBreak' })
+      else if (node.type === 'inlineMath') output.push({ ...node })
       else {
         const text = node.text.slice(start, end)
         if (text) output.push({ type: 'text', text, ...(node.marks?.length ? { marks: node.marks.map((mark) => ({ ...mark })) } : {}) })

@@ -89,6 +89,7 @@ describe('document block nodes', () => {
     { id: id('list-item'), type: 'listItem', content: [paragraph] },
     { id: id('checklist-item'), type: 'checklistItem', attrs: { checked: false }, content: [paragraph] },
     { id: id('rule'), type: 'horizontalRule' },
+    { id: id('details'), type: 'details', attrs: { summary: 'Details', open: true }, content: [paragraph] },
     { id: id('code'), type: 'codeBlock', attrs: { language: 'ts' }, text: 'const x = 1' },
     { id: id('math'), type: 'mathBlock', attrs: { latex: 'E = mc^2', numbered: true, label: 'energy' } },
     { id: id('table'), type: 'table', attrs: { caption: 'Results' }, content: [{ id: id('row'), type: 'tableRow', content: [{ id: id('header-cell'), type: 'tableHeaderCell', content: [paragraph] }, { id: id('cell'), type: 'tableCell', content: [paragraph] }] }] },
@@ -107,7 +108,7 @@ describe('document block nodes', () => {
   it('defines attributes and a rule contract for every initial node type', () => {
     const expected: DocumentNodeType[] = [
       'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'checklist',
-      'listItem', 'checklistItem', 'horizontalRule', 'codeBlock', 'mathBlock', 'table',
+      'listItem', 'checklistItem', 'horizontalRule', 'details', 'codeBlock', 'mathBlock', 'table',
       'tableRow', 'tableHeaderCell', 'tableCell', 'image', 'fileAttachment', 'audio',
       'videoEmbed', 'pdfEmbed', 'canvasEmbed', 'pageBreak',
     ]

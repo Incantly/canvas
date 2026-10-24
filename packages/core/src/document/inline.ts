@@ -1,11 +1,24 @@
 import { citationId } from './ids.js'
-import type { InlineNode, TextMark, TextMarkType } from './types.js'
+import type { FontFamilyKey, InlineNode, TextMark, TextMarkType } from './types.js'
 
 export const TEXT_MARK_ORDER: readonly TextMarkType[] = [
   'bold', 'italic', 'underline', 'strike', 'code', 'link', 'textColor',
-  'highlight', 'citation', 'inlineMath',
+  'highlight', 'fontFamily', 'fontSize', 'citation', 'inlineMath',
 ]
 export const ALLOWED_LINK_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:'] as const
+
+/**
+ * Canonical font families. Storage holds only the short key (economical);
+ * the full system stacks live here as the single source for rendering.
+ */
+export const FONT_FAMILY_STACKS: Record<FontFamilyKey, string> = {
+  sans: "system-ui, -apple-system, 'Segoe UI', Arial, Helvetica, sans-serif",
+  times: "'Times New Roman', Times, Georgia, serif",
+  mono: "ui-monospace, 'Courier New', Courier, monospace",
+}
+
+export const isFontFamilyKey = (value: unknown): value is FontFamilyKey =>
+  value === 'sans' || value === 'times' || value === 'mono'
 
 const markOrder = new Map(TEXT_MARK_ORDER.map((type, index) => [type, index]))
 const exclusiveMarks = new Set<TextMarkType>(['code', 'inlineMath'])
@@ -44,6 +57,14 @@ function normalizeMark(value: unknown): TextMark | null {
     case 'textColor': case 'highlight': {
       const color = typeof record.color === 'string' ? record.color.trim() : ''
       return color ? { type: record.type, color } : null
+    }
+    case 'fontFamily': {
+      const family = typeof record.family === 'string' ? record.family.trim().toLowerCase() : ''
+      return isFontFamilyKey(family) ? { type: 'fontFamily', family } : null
+    }
+    case 'fontSize': {
+      const size = typeof record.size === 'number' && Number.isFinite(record.size) ? record.size : NaN
+      return Number.isFinite(size) ? { type: 'fontSize', size } : null
     }
     case 'citation': {
       const id = typeof record.citationId === 'string' ? record.citationId.trim() : ''
@@ -88,6 +109,11 @@ export function normalizeInlineContent(value: unknown): InlineNode[] {
       output.push({ type: 'hardBreak' })
       continue
     }
+    if (record.type === 'inlineMath') {
+      const latex = typeof record.latex === 'string' ? record.latex : ''
+      if (latex) output.push({ type: 'inlineMath', latex })
+      continue
+    }
     if (record.type !== 'text' || typeof record.text !== 'string' || !record.text) continue
     const marks = normalizeTextMarks(record.marks)
     const next = { type: 'text' as const, text: record.text, ...(marks.length ? { marks } : {}) }
@@ -99,4 +125,4 @@ export function normalizeInlineContent(value: unknown): InlineNode[] {
 }
 
 export const inlineContentToPlainText = (content: readonly InlineNode[]): string =>
-  content.map((node) => node.type === 'hardBreak' ? '\n' : node.text).join('')
+  content.map((node) => node.type === 'hardBreak' ? '\n' : node.type === 'inlineMath' ? `$${node.latex}$` : node.text).join('')

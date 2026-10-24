@@ -1,5 +1,5 @@
-import type { Camera } from '@incantly/canvas/headless'
-import { screenToPage } from '@incantly/canvas/headless'
+import type { Camera } from '@incantly/core/headless'
+import { screenToPage } from '@incantly/core/headless'
 import { clampToPaper, screenToPaper } from '../ink/coords.js'
 
 export type ShapeSpace = 'paper' | 'world'

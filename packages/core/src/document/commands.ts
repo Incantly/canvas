@@ -145,7 +145,7 @@ function transformMarks(content: readonly InlineNode[], from: number, to: number
   const output: InlineNode[] = []
   for (const node of content) {
     const length = node.type === 'text' ? node.text.length : 1
-    if (node.type === 'hardBreak' || to <= offset || from >= offset + length) output.push(node.type === 'text' ? { ...node, ...(node.marks ? { marks: node.marks.map((mark) => ({ ...mark })) } : {}) } : { type: 'hardBreak' })
+    if (node.type === 'hardBreak' || node.type === 'inlineMath' || to <= offset || from >= offset + length) output.push(node.type === 'text' ? { ...node, ...(node.marks ? { marks: node.marks.map((mark) => ({ ...mark })) } : {}) } : node.type === 'hardBreak' ? { type: 'hardBreak' } : { ...node })
     else {
       const localFrom = Math.max(0, from - offset)
       const localTo = Math.min(length, to - offset)

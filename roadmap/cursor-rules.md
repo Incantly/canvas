@@ -108,9 +108,9 @@ CI runs `npm run build` on a **fresh checkout** with no prebuilt `dist/` folders
 
 Packages must compile in dependency order:
 
-1. `@incantly/canvas` (`packages/core`) — emits `dist/index.js`
+1. `@incantly/core` (`packages/core`) — emits `dist/index.js`
 2. `@incantly/canvas-react` — depends on core types/dist
-3. `@incantly/canvas-react-native` — `build-html.mjs` esbuild aliases `@incantly/canvas` → `packages/core/dist/index.js`
+3. `@incantly/canvas-react-native` — `build-html.mjs` esbuild aliases `@incantly/core` → `packages/core/dist/index.js`
 
 ## Root scripts
 
@@ -127,7 +127,7 @@ npm run build
 After core API changes, rebuild core before react-native:
 
 ```bash
-npm run build --workspace=@incantly/canvas
+npm run build --workspace=@incantly/core
 npm run build --workspace=@incantly/canvas-react-native
 ```
 ```

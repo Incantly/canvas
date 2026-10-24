@@ -16,7 +16,7 @@
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { buildStarChart } from '../apps/website/src/lib/starChart.js'
+import { buildStarChart } from './lib/starChart.mjs'
 import { renderStarSvg, THEMES, VIEW } from './lib/starSvg.mjs'
 
 const REPO = process.env.STAR_HISTORY_REPO ?? 'Incantly/canvas'

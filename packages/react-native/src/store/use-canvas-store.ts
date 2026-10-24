@@ -8,7 +8,7 @@ import {
   type Snapshot,
   type VersionManager,
   type VersionStorage,
-} from '@incantly/canvas/headless'
+} from '@incantly/core/headless'
 
 export interface UseCanvasStoreOptions {
   onChange?: (diff: Diff, source: DiffSource) => void

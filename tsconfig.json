@@ -19,10 +19,7 @@
   "references": [
     { "path": "packages/core" },
     { "path": "packages/react" },
-    { "path": "packages/react-native" },
-    { "path": "apps/app" },
-    { "path": "apps/docs" },
-    { "path": "apps/website" }
+    { "path": "packages/react-native" }
   ],
   "files": []
 }

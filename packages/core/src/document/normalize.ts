@@ -2,7 +2,7 @@ import { CURRENT_DOCUMENT_SCHEMA_VERSION, DEFAULT_DOCUMENT_LANGUAGE, DEFAULT_PAG
 import { createParagraph } from './create.js'
 import { assetId, citationId, documentId, documentNodeId } from './ids.js'
 import { DOCUMENT_LIMITS } from './limits.js'
-import { normalizeLinkHref, normalizeTextMarks } from './inline.js'
+import { isFontFamilyKey, normalizeLinkHref, normalizeTextMarks } from './inline.js'
 import { normalizeDocumentNode, VIDEO_EMBED_PROVIDERS } from './nodes.js'
 import type {
   DocumentAuthor, DocumentMetadata, DocumentNode, IncantlyDocument, InlineNode,
@@ -84,6 +84,8 @@ function normalizeMarks(value: unknown): TextMark[] {
   return marks.filter((mark) => {
     if (mark.type === 'link') return mark.href.length <= DOCUMENT_LIMITS.maxUrlLength && normalizeLinkHref(mark.href) !== null
     if (mark.type === 'textColor' || mark.type === 'highlight') return COLOR_RE.test(mark.color)
+    if (mark.type === 'fontFamily') return isFontFamilyKey(mark.family)
+    if (mark.type === 'fontSize') return mark.size >= 1 && mark.size <= 200
     if (mark.type === 'inlineMath') return mark.latex.length <= DOCUMENT_LIMITS.maxAttributeStringLength
     if (mark.type === 'citation') return String(mark.citationId).length <= DOCUMENT_LIMITS.maxAttributeStringLength
     return true
@@ -97,6 +99,15 @@ function recoverInline(value: unknown, path: string, state: RecoveryState): Inli
     const candidate = value[index]
     if (!isRecord(candidate)) continue
     if (candidate.type === 'hardBreak') { output.push({ type: 'hardBreak' }); continue }
+    if (candidate.type === 'inlineMath') {
+      const remaining = DOCUMENT_LIMITS.maxTotalTextLength - state.text
+      if (remaining <= 0) { warning(state, 'limit_text', `${path}[${index}].latex`, 'LaTeX beyond the document limit was omitted'); break }
+      const latex = typeof candidate.latex === 'string' ? candidate.latex.slice(0, Math.min(DOCUMENT_LIMITS.maxTextNodeLength, remaining)) : ''
+      if (!latex) continue
+      state.text += latex.length
+      output.push({ type: 'inlineMath', latex })
+      continue
+    }
     if (candidate.type !== 'text' || typeof candidate.text !== 'string') continue
     const remaining = DOCUMENT_LIMITS.maxTotalTextLength - state.text
     if (remaining <= 0) { warning(state, 'limit_text', `${path}[${index}].text`, 'Text beyond the document limit was omitted'); break }
@@ -188,6 +199,12 @@ function recoverNode(value: unknown, path: string, state: RecoveryState, depth: 
     case 'listItem': return { id, type: 'listItem', content: blocks(value.content) }
     case 'checklistItem': return { id, type: 'checklistItem', attrs: { checked: attrs.checked === true }, content: blocks(value.content) }
     case 'horizontalRule': return { id, type: 'horizontalRule' }
+    case 'details': return {
+      id,
+      type: 'details',
+      attrs: { summary: safeString(attrs.summary) ?? '', ...(attrs.open === true ? { open: true as const } : {}) },
+      content: blocks(value.content),
+    }
     case 'codeBlock': {
       const remaining = Math.max(0, DOCUMENT_LIMITS.maxTotalTextLength - state.text)
       const text = safeString(value.text, Math.min(DOCUMENT_LIMITS.maxTextNodeLength, remaining)) ?? ''
@@ -213,7 +230,7 @@ function recoverNode(value: unknown, path: string, state: RecoveryState, depth: 
     }
     case 'image': {
       const width = finite(attrs.width); const height = finite(attrs.height)
-      return { id, type: 'image', attrs: { assetId: assetId(safeString(attrs.assetId) || 'asset:missing'), ...(safeString(attrs.alt) ? { alt: safeString(attrs.alt) } : {}), ...(safeString(attrs.caption) ? { caption: safeString(attrs.caption) } : {}), ...(width && width > 0 && width <= 100_000 ? { width } : {}), ...(height && height > 0 && height <= 100_000 ? { height } : {}), ...(['inline', 'block', 'figure'].includes(String(attrs.display)) ? { display: attrs.display as 'inline' | 'block' | 'figure' } : {}) } }
+      return { id, type: 'image', attrs: { assetId: assetId(safeString(attrs.assetId) || 'asset:missing'), ...(safeString(attrs.alt) ? { alt: safeString(attrs.alt) } : {}), ...(safeString(attrs.caption) ? { caption: safeString(attrs.caption) } : {}), ...(width && width > 0 && width <= 100_000 ? { width } : {}), ...(height && height > 0 && height <= 100_000 ? { height } : {}), ...(['inline', 'block', 'figure'].includes(String(attrs.display)) ? { display: attrs.display as 'inline' | 'block' | 'figure' } : {}), ...(alignment ? { alignment } : {}) } }
     }
     case 'fileAttachment': {
       const filename = safeString(attrs.filename, DOCUMENT_LIMITS.maxFilenameLength)
@@ -251,6 +268,10 @@ function recoverMetadata(value: unknown, state: RecoveryState): DocumentMetadata
     ...(size === 'custom' ? { width: numberOr(page.width, 612, 1), height: numberOr(page.height, 792, 1) } : {}),
     orientation: ['portrait', 'landscape'].includes(String(page.orientation)) ? page.orientation as PageSetup['orientation'] : DEFAULT_PAGE_SETUP.orientation,
     margins: { top: numberOr(margins.top, DEFAULT_PAGE_SETUP.margins.top, 0, 10_000), right: numberOr(margins.right, DEFAULT_PAGE_SETUP.margins.right, 0, 10_000), bottom: numberOr(margins.bottom, DEFAULT_PAGE_SETUP.margins.bottom, 0, 10_000), left: numberOr(margins.left, DEFAULT_PAGE_SETUP.margins.left, 0, 10_000) },
+    headerDistance: numberOr(page.headerDistance, 36, 0, 10_000),
+    footerDistance: numberOr(page.footerDistance, 36, 0, 10_000),
+    ...(page.mirroredMargins === true ? { mirroredMargins: true } : {}),
+    startingPageNumber: Math.floor(numberOr(page.startingPageNumber, 1, 1, 1_000_000)),
     columns: page.columns === 2 ? 2 : 1,
   }
   const authors: DocumentAuthor[] = Array.isArray(metadata.authors)

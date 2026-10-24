@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { screenToPaper, clampToPaper } from '../src/ink/coords.js'
 import { inkStrokeWidthPaper } from '../src/ink/stroke-style.js'
-import { HIGHLIGHT_SCALE, SIZES } from '@incantly/canvas/headless'
+import { HIGHLIGHT_SCALE, SIZES } from '@incantly/core/headless'
 
 describe('screenToPaper', () => {
   it('divides overlay-local px by zoom', () => {
