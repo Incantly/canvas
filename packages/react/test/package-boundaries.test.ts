@@ -42,7 +42,7 @@ describe('React package entry points', () => {
       platform: 'browser',
       target: 'es2022',
       external: ['react', 'react/jsx-runtime'],
-      alias: { '@incantly/core': './packages/core/src/index.ts' },
+      alias: { '@incantly/canvas-core': './packages/core/src/index.ts' },
     })
     const inputPaths = Object.keys(result.metafile.inputs).join('\n').toLowerCase()
     const output = result.outputFiles.map((file) => file.text).join('\n').toLowerCase()

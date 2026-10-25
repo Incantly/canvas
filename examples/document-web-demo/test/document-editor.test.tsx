@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { createRef, type CSSProperties } from 'react'
 import { renderToString } from 'react-dom/server'
-import { createDocument, createParagraph, type IncantlyDocument } from '@incantly/core/document'
+import { createDocument, createParagraph, type IncantlyDocument } from '@incantly/canvas-core/document'
 import {
   DocumentEditor,
   documentRichCommands,

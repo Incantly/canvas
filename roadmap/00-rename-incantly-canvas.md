@@ -14,7 +14,7 @@ The fork is still branded and published as `@quickdrawjs/*`. Incantly owns this 
 
 | Current | Target |
 |---------|--------|
-| `@quickdrawjs/core` | `@incantly/core` |
+| `@quickdrawjs/core` | `@incantly/canvas-core` |
 | `@quickdrawjs/react` | `@incantly/canvas-react` |
 | `@quickdrawjs/react-native` | `@incantly/canvas-react-native` |
 

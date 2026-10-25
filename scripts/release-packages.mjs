@@ -66,9 +66,9 @@ const [version] = versions
 
 // ---------------------------------------------------------------------------
 // Code generation. The React Native package embeds a bundled WebView page
-// (src/board-html.generated.js), built from @incantly/core's tsc output.
+// (src/board-html.generated.js), built from @incantly/canvas-core's tsc output.
 
-run('npm', ['run', 'build', '--workspace=@incantly/core'])
+run('npm', ['run', 'build', '--workspace=@incantly/canvas-core'])
 run('node', ['packages/react-native/scripts/build-html.mjs'])
 
 // ---------------------------------------------------------------------------

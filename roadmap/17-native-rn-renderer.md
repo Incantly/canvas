@@ -99,7 +99,7 @@ flowchart TB
 
 | Pillar                | Package / module                 | Role                                                                                                                                                                         |
 | --------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Headless export**   | `@incantly/core/headless`      | Store, migrations, version history, geometry, validation, shared utils — zero DOM imports                                                                                    |
+| **Headless export**   | `@incantly/canvas-core/headless`      | Store, migrations, version history, geometry, validation, shared utils — zero DOM imports                                                                                    |
 | **Enriched Markdown** | `react-native-enriched-markdown` | One `EnrichedMarkdownTextInput` **per page document** (not per `TextBlock`) so selection can span Enter-separated paragraphs; fallback is one multiline `TextInput` per page |
 | **SVG ink (W4)**      | `react-native-svg`               | Full-sheet pen / highlighter / eraser overlay; commit strokes on pointer up only. Not clipped to the typing box                                                              |
 | **SVG shapes (W5)**   | `react-native-svg`               | Line / arrow / geo on paper notes + open-canvas board. **Skia rejected** (same peer as ink).                                                                                  |
@@ -124,7 +124,7 @@ flowchart TB
 
 | #   | Workstream                       | Owner             | Deliverable                                                             |
 | --- | -------------------------------- | ----------------- | ----------------------------------------------------------------------- |
-| W1  | Headless export + shared utils   | Implementer-A     | `@incantly/core/headless`, `packages/core/src/utils/*`                |
+| W1  | Headless export + shared utils   | Implementer-A     | `@incantly/canvas-core/headless`, `packages/core/src/utils/*`                |
 | W2  | Markdown serialize + block sync  | Implementer-A     | `markdown-serialize.ts`, round-trip tests                               |
 | W3  | Document UI (Enriched)           | Implementer-B     | `DocumentScrollView`, text block editors, debounced sync                |
 | W4  | Ink overlay (SVG)                | Implementer-C     | `InkOverlay`, stroke session, eraser                                    |
@@ -148,7 +148,7 @@ flowchart TB
 
 | File                                                                                                                       | Change                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `packages/core/package.json`                                                                                               | Add `@incantly/core/headless` subpath export                             |
+| `packages/core/package.json`                                                                                               | Add `@incantly/canvas-core/headless` subpath export                             |
 | `packages/core/src/utils/*`                                                                                                | Shared utils: mutex, serial-queue, debounce, fingerprint, ink helpers, LRU |
 | `packages/core/src/rich-text/markdown-serialize.ts`                                                                        | TextBlock ↔ Markdown converter                                             |
 | `packages/core/src/index.ts`                                                                                               | Export headless barrel                                                     |
@@ -170,7 +170,7 @@ flowchart TB
 
 ## Acceptance criteria
 
-- [x] `@incantly/core/headless` export has zero DOM/canvas/window imports
+- [x] `@incantly/canvas-core/headless` export has zero DOM/canvas/window imports
 - [x] Native `<Canvas>` renders document mode with editable markdown text blocks (TextInput POC; Enriched deferred to RN ≥0.83)
 - [x] Ink draw/highlighter/eraser commits on pointer up; coordinates match web format
 - [x] Line, arrow, geo shapes create/select/undo on native SVG layer
@@ -206,7 +206,7 @@ flowchart TB
 | `@react-native-async-storage/async-storage` | missing     | Current-notebook snapshot KV (not version blobs)                       |
 | `expo-sqlite`                               | implemented | RN `VersionStorage` — transactions, indexed list, host-injected driver |
 
-All other logic hand-implemented in `@incantly/core/headless` and `packages/react-native`.
+All other logic hand-implemented in `@incantly/canvas-core/headless` and `packages/react-native`.
 
 | Prefer hand-rolled                                         | Avoid                          |
 | ---------------------------------------------------------- | ------------------------------ |
@@ -240,7 +240,7 @@ Branch: feat/native-rn-renderer
 Read: roadmap/17-native-rn-renderer.md
 Read: roadmap/QA_CHECKLIST.md
 Constraints:
-  - Hand-implement in @incantly/core/headless + packages/react-native unless doc lists approved package exception
+  - Hand-implement in @incantly/canvas-core/headless + packages/react-native unless doc lists approved package exception
   - No WebView — native only RN renderer
   - All store mutations via transact; remote/revert uses source: 'remote'
   - Debounced text sync; ink commits on pointer up only
@@ -285,7 +285,7 @@ Constraints:
 
 | Check                                                                          | Status      |
 | ------------------------------------------------------------------------------ | ----------- |
-| `@incantly/core/headless` export has zero DOM/canvas/window imports          | implemented |
+| `@incantly/canvas-core/headless` export has zero DOM/canvas/window imports          | implemented |
 | `utils/async/mutex` + `utils/async/serial-queue` unit tested                   | implemented |
 | `utils/snapshot/fingerprint` dedupes version autosave                          | implemented |
 | `utils/snapshot/parse-json` returns error codes; never throws on corrupt input | implemented |

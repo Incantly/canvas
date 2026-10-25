@@ -1,8 +1,19 @@
 # Changelog
 
-All notable changes to the `@incantly/core*` packages are documented here.
+All notable changes to the `@incantly/canvas-*` packages are documented here.
 The project follows [semver](https://semver.org); the three packages are
 versioned in lockstep.
+
+## 0.2.0 — 2026-10-25
+
+- The core package is now `@incantly/canvas-core` (it was `@incantly/canvas`,
+  then briefly `@incantly/core`). Update imports such as
+  `@incantly/canvas-core/headless` and `@incantly/canvas-core/canvas.css`.
+- The packages are published privately to GitHub Packages instead of npmjs.org.
+  See [docs/installing.md](docs/installing.md).
+- Document engine: pagination, layout and export contracts, a styleable page
+  view, HTML export, details and inline math nodes, font family and size
+  marks, and image alignment.
 
 ## 0.1.3 — 2026-08-01
 

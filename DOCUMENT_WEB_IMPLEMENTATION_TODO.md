@@ -153,7 +153,7 @@ The final filenames can change during implementation when the code demonstrates 
 - [x] Record the current test, typecheck, and build baseline before dependency changes.
 - [x] Confirm supported TypeScript, React, Node.js, and browser versions.
 - [x] Confirm whether React 17 remains the intended minimum peer version for the React SDK.
-- [x] Record the current package sizes for `@incantly/core` and `@incantly/canvas-react`.
+- [x] Record the current package sizes for `@incantly/canvas-core` and `@incantly/canvas-react`.
 - [x] Add document-specific test fixture directories without changing existing canvas fixtures.
 - [x] Ensure existing canvas, page-document, notebook, migration, and React tests stay green.
 - [x] Document any pre-existing failure separately; do not hide it by weakening tests.
@@ -279,8 +279,8 @@ For every node:
 
 ## 9. Milestone 5 — package exports and dependency boundaries
 
-- [x] Export the document model through `@incantly/core/document`.
-- [x] Export the portable subset through `@incantly/core/headless` where appropriate.
+- [x] Export the document model through `@incantly/canvas-core/document`.
+- [x] Export the portable subset through `@incantly/canvas-core/headless` where appropriate.
 - [x] Preserve current root exports for compatibility.
 - [x] Add `@incantly/canvas-react/canvas` as the explicit canvas-only React entry point.
 - [x] Add `@incantly/canvas-react/document` as the isolated document entry point reserved for the Milestone 6 Tiptap adapter.

@@ -12,15 +12,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "npm run build:packages",
-    "build:packages": "npm run build --workspace=@incantly/core && npm run build --workspace=@incantly/canvas-react && npm run build --workspace=@incantly/canvas-react-native",
+    "build:packages": "npm run build --workspace=@incantly/canvas-core && npm run build --workspace=@incantly/canvas-react && npm run build --workspace=@incantly/canvas-react-native",
     "release": "node scripts/release-packages.mjs",
     "dev": "npm run dev --workspace=incantly-document-web-demo",
     "dev:document": "npm run dev --workspace=incantly-document-web-demo",
     "build:document-demo": "npm run build --workspace=incantly-document-web-demo",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "typecheck:packages": "npm run typecheck --workspace=@incantly/core && npm run typecheck --workspace=@incantly/canvas-react && npm run typecheck --workspace=@incantly/canvas-react-native",
+    "typecheck:packages": "npm run typecheck --workspace=@incantly/canvas-core && npm run typecheck --workspace=@incantly/canvas-react && npm run typecheck --workspace=@incantly/canvas-react-native",
     "star-history": "node scripts/star-history.mjs",
-    "publish:all": "npm publish --workspace=@incantly/core --access public && npm publish --workspace=@incantly/canvas-react --access public && npm publish --workspace=@incantly/canvas-react-native --access public"
+    "publish:all": "npm publish --workspace=@incantly/canvas-core --access public && npm publish --workspace=@incantly/canvas-react --access public && npm publish --workspace=@incantly/canvas-react-native --access public"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",

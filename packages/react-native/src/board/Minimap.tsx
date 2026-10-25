@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import Svg, { Rect } from 'react-native-svg'
-import type { Bounds, ShapeRecord } from '@incantly/core/headless'
+import type { Bounds, ShapeRecord } from '@incantly/canvas-core/headless'
 import {
   fitMinimap,
   miniToWorld,
@@ -9,7 +9,7 @@ import {
   pageBounds,
   shapeRenderable,
   worldToMini,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 
 const MINI_W = 120
 const MINI_H = 90

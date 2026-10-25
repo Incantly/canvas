@@ -14,7 +14,7 @@ import type {
   ThemeId,
   ToolId,
   VersionKind,
-} from '@incantly/core'
+} from '@incantly/canvas-core'
 
 export interface VersionSummary {
   id: string

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AssetRecord, AssetRepository } from '@incantly/core/document'
+import type { AssetRecord, AssetRepository } from '@incantly/canvas-core/document'
 
 export interface AssetUploadState { id: string; file: File; previewUrl?: string; status: 'pending' | 'uploading' | 'ready' | 'error'; record?: AssetRecord; error?: unknown }
 export function useAssetUploads(repository: AssetRepository) {

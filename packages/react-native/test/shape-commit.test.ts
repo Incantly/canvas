@@ -6,7 +6,7 @@ import {
   createLineishShape,
   createTextShape,
   newId,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 import {
   commitBoardInkStroke,
   commitShape,
@@ -17,7 +17,7 @@ import {
   updateTextShapeBlocks,
 } from '../src/shapes/commit.js'
 import { eventToShapePoint } from '../src/shapes/coords.js'
-import { textToBlocks } from '@incantly/core/headless'
+import { textToBlocks } from '@incantly/canvas-core/headless'
 
 function pageId(store: Store): string {
   store.normalizePages('remote')

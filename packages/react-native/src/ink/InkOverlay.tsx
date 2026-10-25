@@ -16,7 +16,7 @@ import type {
   InkPenDefinition,
   ShapeRecord,
   SizeId,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 import {
   DEFAULT_ERASER_RADIUS_PAPER,
   DEFAULT_INK_MIN_DIST,
@@ -45,7 +45,7 @@ import {
   svgPathFromPackedPts,
   svgRibbonFromPackedPts,
   themeOf,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 import { clampToPaper, screenToPaper } from './coords.js'
 import type { InkHit, PixelEraseEdit, PixelShapeEraseEdit } from './types.js'
 

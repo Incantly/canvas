@@ -1,6 +1,6 @@
-import type { CanvasInstance, DocumentVersion, VersionManager } from '@incantly/core'
-import { createCanvas, createVersionManager, MemoryVersionStorage } from '@incantly/core'
-import '@incantly/core/canvas.css'
+import type { CanvasInstance, DocumentVersion, VersionManager } from '@incantly/canvas-core'
+import { createCanvas, createVersionManager, MemoryVersionStorage } from '@incantly/canvas-core'
+import '@incantly/canvas-core/canvas.css'
 
 declare global {
   interface Window {

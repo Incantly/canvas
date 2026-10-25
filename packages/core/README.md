@@ -1,4 +1,4 @@
-# @incantly/core
+# @incantly/canvas-core
 
 The framework-free heart of Incantly Canvas — an MIT-licensed
 infinite-canvas whiteboard engine. Zero dependencies, zero build step: plain ESM
@@ -11,14 +11,14 @@ instead — they wrap this engine.
 ## Install
 
 ```bash
-npm install @incantly/core
+npm install @incantly/canvas-core
 ```
 
 ## Quick start
 
 ```js
-import { createCanvas } from '@incantly/core'
-import '@incantly/core/canvas.css'
+import { createCanvas } from '@incantly/canvas-core'
+import '@incantly/canvas-core/canvas.css'
 
 const board = createCanvas({
   container: document.getElementById('board'),
@@ -74,8 +74,8 @@ step, majors every fifth) and travels into PNG exports that keep the paper.
 editor bare and bring your own chrome:
 
 ```js
-import { Editor } from '@incantly/core'
-import '@incantly/core/canvas.css'
+import { Editor } from '@incantly/canvas-core'
+import '@incantly/canvas-core/canvas.css'
 
 const editor = new Editor({ container, theme: 'dark', grid: 'dots' })
 editor.setTool('draw')

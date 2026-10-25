@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native'
-import type { ColorId, EraserMode, FillId, GeoId, InkPenDefinition, SizeId } from '@incantly/core/headless'
+import type { ColorId, EraserMode, FillId, GeoId, InkPenDefinition, SizeId } from '@incantly/canvas-core/headless'
 import {
   COLOR_IDS,
   FILL_IDS,
@@ -8,7 +8,7 @@ import {
   isInkPenTool,
   isShapeCreateTool,
   themeOf,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 import { resolveInkBarItems, type InkBarConfig, type InkBarMode } from './ink-bar-config.js'
 
 const SWATCH: Record<ColorId, string> = Object.fromEntries(

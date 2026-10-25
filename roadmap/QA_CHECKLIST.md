@@ -16,7 +16,7 @@ Nothing advances to the next feature branch while any required row for that feat
 
 ### Hand-implement by default
 
-**Do not add npm dependencies** for features we can own in `@incantly/core` core unless the roadmap doc explicitly marks an exception with justification.
+**Do not add npm dependencies** for features we can own in `@incantly/canvas-core` core unless the roadmap doc explicitly marks an exception with justification.
 
 | Prefer hand-rolled | Avoid default dependency |
 |--------------------|--------------------------|
