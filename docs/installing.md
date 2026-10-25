@@ -19,7 +19,7 @@ After each package's first publish, open it under the Incantly org's
 
 | Package | For |
 | --- | --- |
-| `@incantly/core` | Framework-free engine + toolbar |
+| `@incantly/canvas-core` | Framework-free engine + toolbar |
 | `@incantly/canvas-react` | `<Canvas />` component + hooks |
 | `@incantly/canvas-react-native` | WebView component + typed bridge |
 
@@ -28,7 +28,7 @@ After each package's first publish, open it under the Incantly org's
 All packages share one version.
 
 1. Set the same `version` in every `packages/*/package.json`, and update the
-   internal `@incantly/core` dependency in the other packages to match.
+   internal `@incantly/canvas-core` dependency in the other packages to match.
 2. Update the lockfile so `npm ci` in CI agrees with the new versions:
 
    ```bash
@@ -50,7 +50,7 @@ tag must point at a commit that contains the workflow file. You can also re-run
 it from the Actions tab (**Run workflow**, choosing the tag as the ref).
 
 Versions with a prerelease suffix (`0.3.0-beta.1`) are published under the
-`next` dist-tag; install them with `npm install @incantly/core@next`.
+`next` dist-tag; install them with `npm install @incantly/canvas-core@next`.
 
 To check a release locally without publishing:
 

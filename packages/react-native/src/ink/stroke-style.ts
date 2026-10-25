@@ -1,5 +1,5 @@
-import type { SizeId } from '@incantly/core/headless'
-import { inkBaseWidthPaper, type InkPenStyle } from '@incantly/core/headless'
+import type { SizeId } from '@incantly/canvas-core/headless'
+import { inkBaseWidthPaper, type InkPenStyle } from '@incantly/canvas-core/headless'
 
 /** Paper-space stroke width — matches web document ink unless the host pen overrides `widthScale`. */
 export function inkStrokeWidthPaper(

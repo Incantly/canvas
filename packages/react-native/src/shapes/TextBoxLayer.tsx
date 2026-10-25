@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 import { StyleSheet, TextInput, View } from 'react-native'
-import type { Camera, ShapeRecord, TextBlock } from '@incantly/core/headless'
+import type { Camera, ShapeRecord, TextBlock } from '@incantly/canvas-core/headless'
 import {
   blocksToPlainText,
   clampTextPlain,
   localBounds,
   pageToScreen,
   textToBlocks,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 
 const FONT: Record<string, number> = { s: 18, m: 22, l: 28, xl: 36 }
 

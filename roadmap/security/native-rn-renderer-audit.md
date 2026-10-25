@@ -8,7 +8,7 @@
 
 - `packages/core/src/utils/*` — headless shared utils (parse, fingerprint, mutex)
 - `packages/core/src/rich-text/markdown-serialize.ts` — Markdown ↔ TextBlock conversion
-- `@incantly/core/headless` export — store, migrations, version history
+- `@incantly/canvas-core/headless` export — store, migrations, version history
 - `packages/react-native/src/storage/*` — AsyncStorage notebook persistence + SQLite `VersionStorage`
 - `packages/react-native/src/store/*` — StoreBridge, useCanvasStore
 - `packages/react-native/src/document/*` — native document text sync

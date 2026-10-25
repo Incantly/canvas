@@ -6,7 +6,7 @@ import type {
   GeoId,
   ShapeRecord,
   SizeId,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 import {
   HIGHLIGHT_ALPHA,
   HIGHLIGHT_SCALE,
@@ -20,7 +20,7 @@ import {
   strokeDashArray,
   svgPathFromPackedPts,
   themeOf,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 
 function strokeColor(color: ColorId | undefined): string {
   return themeOf('light').colors[color ?? 'black']?.stroke ?? '#1d1d1d'

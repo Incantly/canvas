@@ -13,7 +13,7 @@ import type {
   GeoId,
   ShapeRecord,
   SizeId,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 import {
   geoFromDrag,
   hitResizeCorner,
@@ -26,7 +26,7 @@ import {
   resizeBox,
   shapeRenderable,
   type ResizeCorner,
-} from '@incantly/core/headless'
+} from '@incantly/canvas-core/headless'
 import { DraftSvg, ShapeSvg } from './ShapeSvg.js'
 import { eventToShapePoint, type ShapeSpace } from './coords.js'
 

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { getSchema, type JSONContent } from '@tiptap/core'
 import { describe, expect, it } from 'vitest'
-import type { IncantlyDocument } from '@incantly/core/document'
+import type { IncantlyDocument } from '@incantly/canvas-core/document'
 import {
   incantlyDocumentExtensions,
   incantlyDocumentToProseMirror,

@@ -6,7 +6,7 @@
 
 ## Problem
 
-Incantly needs a **product web app** — not just the SDK playground or hosted Quickdraw demo. This is the Next.js shell that imports `@incantly/core` directly.
+Incantly needs a **product web app** — not just the SDK playground or hosted Quickdraw demo. This is the Next.js shell that imports `@incantly/canvas-core` directly.
 
 ## Scope
 

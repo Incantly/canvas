@@ -20,8 +20,8 @@ const result = await build({
   outdir: 'out',
   loader: { '.css': 'css', '.ts': 'ts' },
   alias: {
-    '@incantly/core': join(pkg, '../core/dist/index.js'),
-    '@incantly/core/canvas.css': join(pkg, '../core/src/canvas.css'),
+    '@incantly/canvas-core': join(pkg, '../core/dist/index.js'),
+    '@incantly/canvas-core/canvas.css': join(pkg, '../core/src/canvas.css'),
   },
 })
 

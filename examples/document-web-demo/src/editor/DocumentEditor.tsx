@@ -17,7 +17,7 @@ import {
   validateDocument,
   type DocumentValidationIssue,
   type IncantlyDocument,
-} from '@incantly/core/document'
+} from '@incantly/canvas-core/document'
 import { incantlyDocumentToProseMirror, type DocumentAdapterIssue } from './conversion.js'
 import { createIncantlyDocumentExtensions } from './schema/index.js'
 import { DocumentEditorProvider } from './DocumentEditorContext.js'
