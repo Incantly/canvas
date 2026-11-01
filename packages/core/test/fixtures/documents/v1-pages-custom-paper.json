@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "id": "document:pages-custom-paper",
+  "type": "document",
+  "metadata": {
+    "title": "Field notebook, 6 x 9 in",
+    "language": "en",
+    "authors": [],
+    "tags": [],
+    "pageSetup": {
+      "mode": "paginated",
+      "size": "custom",
+      "width": 432,
+      "height": 648,
+      "orientation": "portrait",
+      "margins": { "top": 54, "right": 45, "bottom": 54, "left": 72 },
+      "headerDistance": 27,
+      "footerDistance": 27,
+      "mirroredMargins": true,
+      "startingPageNumber": 5,
+      "columns": 1
+    },
+    "layout": {
+      "version": 1,
+      "defaultSection": {
+        "id": "section-1",
+        "pageSetup": {
+          "mode": "paginated",
+          "size": "custom",
+          "width": 432,
+          "height": 648,
+          "orientation": "portrait",
+          "margins": { "top": 54, "right": 45, "bottom": 54, "left": 72 },
+          "headerDistance": 27,
+          "footerDistance": 27,
+          "mirroredMargins": true,
+          "startingPageNumber": 5,
+          "columns": 1
+        },
+        "headers": {
+          "default": [
+            { "id": "node:cp-header", "type": "paragraph", "attrs": { "alignment": "right" }, "content": [{ "type": "text", "text": "Field notebook", "marks": [{ "type": "italic" }] }] }
+          ]
+        },
+        "footers": {
+          "default": [
+            { "id": "node:cp-footer", "type": "paragraph", "attrs": { "alignment": "center" }, "content": [{ "type": "text", "text": "Page " }] },
+            { "type": "field", "field": "pageNumber", "format": "lower-roman" }
+          ]
+        }
+      },
+      "sections": [
+        {
+          "id": "section-1",
+          "pageSetup": {
+            "mode": "paginated",
+            "size": "custom",
+            "width": 432,
+            "height": 648,
+            "orientation": "portrait",
+            "margins": { "top": 54, "right": 45, "bottom": 54, "left": 72 },
+            "headerDistance": 27,
+            "footerDistance": 27,
+            "mirroredMargins": true,
+            "startingPageNumber": 5,
+            "columns": 1
+          },
+          "headers": {
+            "default": [
+              { "id": "node:cp-header", "type": "paragraph", "attrs": { "alignment": "right" }, "content": [{ "type": "text", "text": "Field notebook", "marks": [{ "type": "italic" }] }] }
+            ]
+          },
+          "footers": {
+            "default": [
+              { "id": "node:cp-footer", "type": "paragraph", "attrs": { "alignment": "center" }, "content": [{ "type": "text", "text": "Page " }] },
+              { "type": "field", "field": "pageNumber", "format": "lower-roman" }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "content": [
+    { "id": "node:cp-title", "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "Site visit 1" }] },
+    { "id": "node:cp-body", "type": "paragraph", "content": [{ "type": "text", "text": "Soil samples from the north bank." }] },
+    { "id": "node:cp-break", "type": "pageBreak" },
+    { "id": "node:cp-title-2", "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "Site visit 2" }] }
+  ],
+  "createdAt": "2026-11-01T09:00:00.000Z",
+  "updatedAt": "2026-11-01T09:00:00.000Z"
+}

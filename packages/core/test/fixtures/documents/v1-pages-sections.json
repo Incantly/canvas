@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "id": "document:pages-sections",
+  "type": "document",
+  "metadata": {
+    "title": "Survey report",
+    "language": "en",
+    "authors": [],
+    "tags": [],
+    "pageSetup": {
+      "mode": "paginated",
+      "size": "letter",
+      "orientation": "portrait",
+      "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+      "headerDistance": 36,
+      "footerDistance": 36,
+      "startingPageNumber": 1,
+      "columns": 1
+    },
+    "layout": {
+      "version": 1,
+      "defaultSection": {
+        "id": "section-portrait",
+        "pageSetup": {
+          "mode": "paginated",
+          "size": "letter",
+          "orientation": "portrait",
+          "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+          "headerDistance": 36,
+          "footerDistance": 36,
+          "startingPageNumber": 1,
+          "columns": 1
+        },
+        "footers": {
+          "default": [
+            { "id": "node:sec-f1", "type": "paragraph", "attrs": { "alignment": "center" }, "content": [{ "type": "text", "text": "Page " }] },
+            { "type": "field", "field": "pageNumber" }
+          ]
+        }
+      },
+      "sections": [
+        {
+          "id": "section-portrait",
+          "pageSetup": {
+            "mode": "paginated",
+            "size": "letter",
+            "orientation": "portrait",
+            "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+            "headerDistance": 36,
+            "footerDistance": 36,
+            "startingPageNumber": 1,
+            "columns": 1
+          },
+          "footers": {
+            "default": [
+              { "id": "node:sec-f1", "type": "paragraph", "attrs": { "alignment": "center" }, "content": [{ "type": "text", "text": "Page " }] },
+              { "type": "field", "field": "pageNumber" }
+            ]
+          }
+        },
+        {
+          "id": "section-landscape",
+          "startNodeId": "node:sec-appendix",
+          "pageSetup": {
+            "mode": "paginated",
+            "size": "letter",
+            "orientation": "landscape",
+            "margins": { "top": 54, "right": 54, "bottom": 54, "left": 54 },
+            "headerDistance": 27,
+            "footerDistance": 27,
+            "startingPageNumber": 1,
+            "columns": 2
+          },
+          "headers": {
+            "default": [
+              { "id": "node:sec-h2", "type": "paragraph", "attrs": { "alignment": "left" }, "content": [{ "type": "text", "text": "Appendix tables" }] }
+            ]
+          },
+          "footers": {
+            "default": [
+              { "id": "node:sec-f2", "type": "paragraph", "attrs": { "alignment": "right" }, "content": [{ "type": "text", "text": "A-" }] },
+              { "type": "field", "field": "pageNumber", "format": "upper-roman" }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "content": [
+    { "id": "node:sec-title", "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "Survey report" }] },
+    { "id": "node:sec-body", "type": "paragraph", "content": [{ "type": "text", "text": "Portrait pages with one column." }] },
+    { "id": "node:sec-break", "type": "pageBreak" },
+    { "id": "node:sec-appendix", "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "Appendix" }] },
+    { "id": "node:sec-wide", "type": "paragraph", "content": [{ "type": "text", "text": "Landscape pages with two columns, numbered A-I, A-II." }] }
+  ],
+  "createdAt": "2026-11-01T09:00:00.000Z",
+  "updatedAt": "2026-11-01T09:00:00.000Z"
+}

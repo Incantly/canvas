@@ -54,7 +54,52 @@ export type {
 } from './pagination.js'
 export { paginate } from './pagination.js'
 export { createPaginationScheduler, type PaginationScheduler, type PaginationSchedulerOptions } from './pagination-scheduler.js'
-export { PAGE_PRESETS, contentRegion, createPageLayout, normalizePageSetup } from './layout.js'
+export {
+  PAGE_PRESETS,
+  PageLayoutError,
+  contentRegion,
+  createPageLayout,
+  ensurePageLayout,
+  normalizePageSetup,
+  numberPages,
+  resolvePageLayout,
+  setDifferentFirstPage,
+  setDifferentOddEven,
+  setHeaderFooter,
+  type PageLayoutErrorCode,
+  type PageNumbering,
+  type ResolvedPageLayout,
+  type ResolvedPageLayoutSection,
+} from './layout.js'
+export {
+  DEFAULT_HEADER_FOOTER_DATE_FORMAT,
+  HEADER_FOOTER_DATE_TOKENS,
+  HEADER_FOOTER_FIELD_TYPES,
+  HEADER_FOOTER_KINDS,
+  HEADER_FOOTER_VARIANTS,
+  MAX_HEADER_FOOTER_FORMAT_LENGTH,
+  MAX_HEADER_FOOTER_ITEMS,
+  PAGE_NUMBER_FORMATS,
+  formatHeaderFooterField,
+  formatPageNumber,
+  headerFooterDocumentTitle,
+  headerFooterFor,
+  headerFooterLines,
+  headerFooterOptions,
+  headerFooterPlainText,
+  normalizeHeaderFooterContent,
+  type HeaderFooterFieldContext,
+  type HeaderFooterKind,
+  type HeaderFooterLine,
+  type HeaderFooterOptions,
+  type HeaderFooterPage,
+  type HeaderFooterSelection,
+  type HeaderFooterTextResult,
+  type HeaderFooterVariant,
+  type PageLayoutWarning,
+  type PageLayoutWarningCode,
+  type PageNumberFormat,
+} from './header-footer.js'
 export { documentToHtml, type HtmlExportOptions } from './html.js'
 export { exportMarkdown, exportText, type AssetResolver, type ExportFormat, type ExportLoss, type ExportOptions, type ExportProgress, type ExportResult, type ExportWarning } from './export.js'
 export { createExportProjection, type ExportProjection, type ExportProjectionNode } from './projection.js'
@@ -173,6 +218,7 @@ export {
 export {
   DOCUMENT_ALLOWED_URL_PROTOCOLS,
   validateDocument,
+  validateHeaderFooterContent,
   type DocumentValidationIssue,
   type DocumentValidationIssueCode,
   type DocumentValidationResult,
