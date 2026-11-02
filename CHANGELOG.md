@@ -4,6 +4,25 @@ All notable changes to the `@incantly/canvas-*` packages are documented here.
 The project follows [semver](https://semver.org); the three packages are
 versioned in lockstep.
 
+## 0.3.0 — 2026-11-02
+
+- Page layout helpers for documents: `resolvePageLayout`, `numberPages`
+  (printed page numbers with starting numbers and section restarts),
+  `headerFooterFor` (first-page and odd/even variants by printed page number),
+  `headerFooterOptions`, and the non-mutating builders `setHeaderFooter`,
+  `setDifferentFirstPage` and `setDifferentOddEven`.
+- Header/footer fields (page number, page count, document title, date) now sit
+  inside paragraph text, like Word: `InlineFieldNode` in
+  `HeaderFooterParagraphNode`. The older form with top-level fields still loads
+  and is converted on normalization. A field in body text is invalid.
+- Field formatting: `formatHeaderFooterField`, `formatPageNumber` (decimal,
+  lower-roman, upper-roman), a small documented date-token set, and
+  `headerFooterLines` / `headerFooterPlainText`.
+- Validation and normalization keep `metadata.layout` (sections, headers,
+  footers) and clamp page setup (`startingPageNumber` at least 1, one or two
+  columns). New fixtures cover custom paper, mirrored margins, first/odd/even
+  headers and footers, explicit breaks and multiple sections.
+
 ## 0.2.0 — 2026-10-25
 
 - The core package is now `@incantly/canvas-core` (it was `@incantly/canvas`,

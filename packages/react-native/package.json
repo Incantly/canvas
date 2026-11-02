@@ -1,6 +1,6 @@
 {
   "name": "@incantly/canvas-react-native",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React Native component for Incantly Canvas — the MIT-licensed infinite-canvas whiteboard SDK (WebView-based).",
   "type": "module",
   "main": "./dist/index.js",
@@ -37,7 +37,7 @@
     "excalidraw-alternative"
   ],
   "dependencies": {
-    "@incantly/canvas-core": "0.2.0"
+    "@incantly/canvas-core": "0.3.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
