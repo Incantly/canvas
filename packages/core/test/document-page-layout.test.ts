@@ -23,6 +23,7 @@
  * 19. `defaultSection` and `sections[n]` with the same ID are separate copies after JSON storage: update both.
  * 20. Turning odd/even off must not lose the content written for odd pages.
  * 21. Fixtures must round-trip through validate, parse and serialize without losing the layout.
+ * 22. Builders given old top-level fields must store the current form (fields inside paragraph text).
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
@@ -280,7 +281,7 @@ describe('layout builders', () => {
     })) as PageLayout
     return deepFreeze(layout)
   }
-  const footer: HeaderFooterContent[] = [paragraph('node:f', 'Page '), { type: 'field', field: 'pageNumber' }]
+  const footer = [{ id: 'node:f', type: 'paragraph', attrs: { alignment: 'center' }, content: [{ type: 'text', text: 'Page ' }, { type: 'field', field: 'pageNumber' }] }] as HeaderFooterContent[]
 
   it('sets a variant without mutating, on both copies of the default section (cases 18, 19)', () => {
     const input = base()
@@ -292,6 +293,15 @@ describe('layout builders', () => {
     expect(next.sections[0]!.footers?.default).toEqual(footer)
     expect(next.sections[1]).toBe(input.sections[1])
     expect(next.defaultSection.footers?.default).not.toBe(footer)
+  })
+
+  it('stores old top-level fields in the current form, inside the paragraph text', () => {
+    const legacy = [paragraph('node:f', 'Page '), { type: 'field', field: 'pageNumber' }] as HeaderFooterContent[]
+    const next = setHeaderFooter(base(), 'main', 'footer', 'default', legacy)
+
+    expect(next.sections[0]!.footers?.default).toEqual([
+      { id: 'node:f', type: 'paragraph', content: [{ type: 'text', text: 'Page ' }, { type: 'field', field: 'pageNumber' }] },
+    ])
   })
 
   it('removes a variant and an emptied variant set', () => {

@@ -100,6 +100,7 @@ function recoverInline(value: unknown, path: string, state: RecoveryState): Inli
     const candidate = value[index]
     if (!isRecord(candidate)) continue
     if (candidate.type === 'hardBreak') { output.push({ type: 'hardBreak' }); continue }
+    if (candidate.type === 'field') { warning(state, 'unsupported_content', `${path}[${index}]`, 'A header/footer field in body text was removed'); continue }
     if (candidate.type === 'inlineMath') {
       const remaining = DOCUMENT_LIMITS.maxTotalTextLength - state.text
       if (remaining <= 0) { warning(state, 'limit_text', `${path}[${index}].latex`, 'LaTeX beyond the document limit was omitted'); break }

@@ -1,6 +1,6 @@
 import { DEFAULT_PAGE_SETUP } from './constants.js'
 import {
-  HEADER_FOOTER_KINDS, HEADER_FOOTER_VARIANTS,
+  HEADER_FOOTER_KINDS, HEADER_FOOTER_VARIANTS, normalizeHeaderFooterContent,
   type HeaderFooterKind, type HeaderFooterVariant, type PageLayoutWarning,
 } from './header-footer.js'
 import type { DocumentNodeId } from './ids.js'
@@ -260,6 +260,7 @@ function assertKindAndVariant(kind: HeaderFooterKind, variant?: HeaderFooterVari
  * Returns a new layout with one header/footer variant of a section replaced by a copy of
  * `content`, or removed when `content` is undefined. Content must pass
  * `validateHeaderFooterContent`; run untrusted content through `normalizeHeaderFooterContent` first.
+ * Older top-level fields are accepted and stored in the current form (inside paragraph text).
  */
 export function setHeaderFooter(layout: PageLayout, sectionId: string, kind: HeaderFooterKind,
   variant: HeaderFooterVariant, content: readonly HeaderFooterContent[] | undefined): PageLayout {
@@ -269,7 +270,7 @@ export function setHeaderFooter(layout: PageLayout, sectionId: string, kind: Hea
     if (issues.length) throw new PageLayoutError('invalid_header_footer_content', 'Header/footer content allows only paragraphs and fields', issues)
   }
   return updateSection(layout, sectionId, (section) =>
-    withVariants(section, kind, (variants) => ({ ...variants, [variant]: content === undefined ? undefined : copyContent(content) })))
+    withVariants(section, kind, (variants) => ({ ...variants, [variant]: content === undefined ? undefined : normalizeHeaderFooterContent(content).content })))
 }
 
 /**

@@ -133,6 +133,14 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
     const itemPath = `${path}[${index}]`
     if (!isRecord(candidate)) { issue(issues, 'invalid_type', itemPath, 'Inline node must be an object'); return }
     if (candidate.type === 'hardBreak') return
+    if (candidate.type === 'field') {
+      if (state.headerFooterFields === undefined) {
+        issue(issues, 'invalid_child', `${itemPath}.type`, 'Fields are only allowed in header and footer paragraphs'); return
+      }
+      state.headerFooterFields++
+      validateField(candidate, itemPath, issues)
+      return
+    }
     if (candidate.type === 'inlineMath') {
       if (typeof candidate.latex !== 'string' || !candidate.latex) { issue(issues, 'invalid_type', `${itemPath}.latex`, 'LaTeX must be a non-empty string'); return }
       state.totalText += candidate.latex.length
@@ -183,7 +191,19 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
   })
 }
 
-interface ValidationState { nodeIds: Set<string>; objectNodes: Set<object>; nodeCount: number; totalText: number }
+interface ValidationState {
+  nodeIds: Set<string>
+  objectNodes: Set<object>
+  nodeCount: number
+  totalText: number
+  /** Inline fields seen so far; undefined in body content, where fields are not allowed. */
+  headerFooterFields?: number
+}
+
+function validateField(field: JsonRecord, path: string, issues: DocumentValidationIssue[]): void {
+  if (!HEADER_FOOTER_FIELD_TYPES.includes(field.field as HeaderFooterFieldType)) issue(issues, 'invalid_value', `${path}.field`, 'Unknown header/footer field')
+  optionalString(field, 'format', path, issues, MAX_HEADER_FOOTER_FORMAT_LENGTH)
+}
 
 function allowedInContext(type: string, context: ChildContext): boolean {
   if (context === 'root' || context === 'blocks') return BLOCK_TYPES.has(type)
@@ -312,27 +332,26 @@ function validatePageSetup(page: unknown, path: string, issues: DocumentValidati
 
 function validateHeaderFooterInto(value: unknown, path: string, issues: DocumentValidationIssue[]): void {
   if (!Array.isArray(value)) { issue(issues, 'invalid_type', path, 'Header/footer content must be an array'); return }
-  if (value.length > MAX_HEADER_FOOTER_ITEMS) issue(issues, 'limit_attribute', path, `Header/footer content allows at most ${MAX_HEADER_FOOTER_ITEMS} items`)
   // Paragraph IDs only need to be unique inside one variant: odd/even often start as copies of default.
-  const state: ValidationState = { nodeIds: new Set(), objectNodes: new Set(), nodeCount: 0, totalText: 0 }
+  const state: ValidationState = { nodeIds: new Set(), objectNodes: new Set(), nodeCount: 0, totalText: 0, headerFooterFields: 0 }
   value.forEach((item, index) => {
     const itemPath = `${path}[${index}]`
     if (!isRecord(item)) { issue(issues, 'invalid_type', itemPath, 'Header/footer item must be an object'); return }
-    if (item.type === 'field') {
-      if (!HEADER_FOOTER_FIELD_TYPES.includes(item.field as HeaderFooterFieldType)) issue(issues, 'invalid_value', `${itemPath}.field`, 'Unknown header/footer field')
-      optionalString(item, 'format', itemPath, issues, MAX_HEADER_FOOTER_FORMAT_LENGTH)
-      return
-    }
+    // A top-level field is the older form; it still validates and normalization moves it inline.
+    if (item.type === 'field') { validateField(item, itemPath, issues); return }
     if (item.type !== 'paragraph') {
       issue(issues, 'unsupported_content', `${itemPath}.type`, 'Headers and footers allow only paragraphs and fields'); return
     }
     validateNode(item, itemPath, issues, state, 1, 'root')
   })
+  if (value.length + (state.headerFooterFields ?? 0) > MAX_HEADER_FOOTER_ITEMS)
+    issue(issues, 'limit_attribute', path, `Header/footer content allows at most ${MAX_HEADER_FOOTER_ITEMS} paragraphs and fields`)
 }
 
 /**
- * Strictly validates header/footer content: only paragraphs (text with marks, hard breaks,
- * inline math) and known fields. Returns no issues when the content is valid.
+ * Strictly validates header/footer content: paragraphs whose text holds text with marks, hard
+ * breaks, inline math and known inline fields. Older top-level fields are accepted too.
+ * Paragraphs plus fields may number at most `MAX_HEADER_FOOTER_ITEMS`. Returns no issues when valid.
  */
 export function validateHeaderFooterContent(value: unknown, path = '$'): DocumentValidationIssue[] {
   const issues: DocumentValidationIssue[] = []

@@ -5,13 +5,24 @@
   "metadata": {
     "title": "Thesis chapter 3",
     "language": "en",
-    "authors": [{ "name": "A. Researcher" }],
-    "tags": ["thesis"],
+    "authors": [
+      {
+        "name": "A. Researcher"
+      }
+    ],
+    "tags": [
+      "thesis"
+    ],
     "pageSetup": {
       "mode": "paginated",
       "size": "a4",
       "orientation": "portrait",
-      "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+      "margins": {
+        "top": 72,
+        "right": 72,
+        "bottom": 72,
+        "left": 72
+      },
       "headerDistance": 36,
       "footerDistance": 36,
       "startingPageNumber": 2,
@@ -25,7 +36,12 @@
           "mode": "paginated",
           "size": "a4",
           "orientation": "portrait",
-          "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+          "margins": {
+            "top": 72,
+            "right": 72,
+            "bottom": 72,
+            "left": 72
+          },
           "headerDistance": 36,
           "footerDistance": 36,
           "startingPageNumber": 2,
@@ -33,36 +49,143 @@
         },
         "headers": {
           "default": [
-            { "id": "node:hf-h-default", "type": "paragraph", "content": [{ "type": "text", "text": "Default header" }] }
+            {
+              "id": "node:hf-h-default",
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Default header"
+                }
+              ]
+            }
           ],
           "first": [],
           "odd": [
-            { "id": "node:hf-h-odd", "type": "paragraph", "attrs": { "alignment": "right" }, "content": [{ "type": "text", "text": "Chapter 3 — " }] },
-            { "type": "field", "field": "documentTitle" }
+            {
+              "id": "node:hf-h-odd",
+              "type": "paragraph",
+              "attrs": {
+                "alignment": "right"
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Chapter 3 — "
+                },
+                {
+                  "type": "field",
+                  "field": "documentTitle"
+                }
+              ]
+            }
           ],
           "even": [
-            { "type": "field", "field": "documentTitle" },
-            { "id": "node:hf-h-even", "type": "paragraph", "content": [{ "type": "text", "text": " — draft of " }] },
-            { "type": "field", "field": "currentDate", "format": "D MMMM YYYY" }
+            {
+              "id": "node:hf-h-even",
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "field",
+                  "field": "documentTitle"
+                },
+                {
+                  "type": "text",
+                  "text": " — draft of "
+                },
+                {
+                  "type": "field",
+                  "field": "currentDate",
+                  "format": "D MMMM YYYY"
+                }
+              ]
+            }
           ]
         },
         "footers": {
           "default": [
-            { "type": "field", "field": "pageNumber" }
+            {
+              "id": "node:header-footer:1",
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "field",
+                  "field": "pageNumber"
+                }
+              ]
+            }
           ],
           "first": [
-            { "id": "node:hf-f-first", "type": "paragraph", "attrs": { "alignment": "center" }, "content": [{ "type": "text", "text": "Submitted ", "marks": [{ "type": "bold" }] }] },
-            { "type": "field", "field": "currentDate", "format": "YYYY-MM-DD" }
+            {
+              "id": "node:hf-f-first",
+              "type": "paragraph",
+              "attrs": {
+                "alignment": "center"
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Submitted ",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "field",
+                  "field": "currentDate",
+                  "format": "YYYY-MM-DD"
+                }
+              ]
+            }
           ],
           "odd": [
-            { "id": "node:hf-f-odd", "type": "paragraph", "attrs": { "alignment": "right" }, "content": [{ "type": "text", "text": "Page " }] },
-            { "type": "field", "field": "pageNumber" },
-            { "id": "node:hf-f-odd-of", "type": "paragraph", "content": [{ "type": "text", "text": " of " }] },
-            { "type": "field", "field": "pageCount" }
+            {
+              "id": "node:hf-f-odd",
+              "type": "paragraph",
+              "attrs": {
+                "alignment": "right"
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Page "
+                },
+                {
+                  "type": "field",
+                  "field": "pageNumber"
+                },
+                {
+                  "type": "text",
+                  "text": " of "
+                },
+                {
+                  "type": "field",
+                  "field": "pageCount"
+                }
+              ]
+            }
           ],
           "even": [
-            { "id": "node:hf-f-even", "type": "paragraph", "attrs": { "alignment": "left" }, "content": [{ "type": "text", "text": "Page " }] },
-            { "type": "field", "field": "pageNumber", "format": "upper-roman" }
+            {
+              "id": "node:hf-f-even",
+              "type": "paragraph",
+              "attrs": {
+                "alignment": "left"
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Page "
+                },
+                {
+                  "type": "field",
+                  "field": "pageNumber",
+                  "format": "upper-roman"
+                }
+              ]
+            }
           ]
         }
       },
@@ -73,7 +196,12 @@
             "mode": "paginated",
             "size": "a4",
             "orientation": "portrait",
-            "margins": { "top": 72, "right": 72, "bottom": 72, "left": 72 },
+            "margins": {
+              "top": 72,
+              "right": 72,
+              "bottom": 72,
+              "left": 72
+            },
             "headerDistance": 36,
             "footerDistance": 36,
             "startingPageNumber": 2,
@@ -81,36 +209,143 @@
           },
           "headers": {
             "default": [
-              { "id": "node:hf-h-default", "type": "paragraph", "content": [{ "type": "text", "text": "Default header" }] }
+              {
+                "id": "node:hf-h-default",
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Default header"
+                  }
+                ]
+              }
             ],
             "first": [],
             "odd": [
-              { "id": "node:hf-h-odd", "type": "paragraph", "attrs": { "alignment": "right" }, "content": [{ "type": "text", "text": "Chapter 3 — " }] },
-              { "type": "field", "field": "documentTitle" }
+              {
+                "id": "node:hf-h-odd",
+                "type": "paragraph",
+                "attrs": {
+                  "alignment": "right"
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Chapter 3 — "
+                  },
+                  {
+                    "type": "field",
+                    "field": "documentTitle"
+                  }
+                ]
+              }
             ],
             "even": [
-              { "type": "field", "field": "documentTitle" },
-              { "id": "node:hf-h-even", "type": "paragraph", "content": [{ "type": "text", "text": " — draft of " }] },
-              { "type": "field", "field": "currentDate", "format": "D MMMM YYYY" }
+              {
+                "id": "node:hf-h-even",
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "field",
+                    "field": "documentTitle"
+                  },
+                  {
+                    "type": "text",
+                    "text": " — draft of "
+                  },
+                  {
+                    "type": "field",
+                    "field": "currentDate",
+                    "format": "D MMMM YYYY"
+                  }
+                ]
+              }
             ]
           },
           "footers": {
             "default": [
-              { "type": "field", "field": "pageNumber" }
+              {
+                "id": "node:header-footer:1",
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "field",
+                    "field": "pageNumber"
+                  }
+                ]
+              }
             ],
             "first": [
-              { "id": "node:hf-f-first", "type": "paragraph", "attrs": { "alignment": "center" }, "content": [{ "type": "text", "text": "Submitted ", "marks": [{ "type": "bold" }] }] },
-              { "type": "field", "field": "currentDate", "format": "YYYY-MM-DD" }
+              {
+                "id": "node:hf-f-first",
+                "type": "paragraph",
+                "attrs": {
+                  "alignment": "center"
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Submitted ",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "currentDate",
+                    "format": "YYYY-MM-DD"
+                  }
+                ]
+              }
             ],
             "odd": [
-              { "id": "node:hf-f-odd", "type": "paragraph", "attrs": { "alignment": "right" }, "content": [{ "type": "text", "text": "Page " }] },
-              { "type": "field", "field": "pageNumber" },
-              { "id": "node:hf-f-odd-of", "type": "paragraph", "content": [{ "type": "text", "text": " of " }] },
-              { "type": "field", "field": "pageCount" }
+              {
+                "id": "node:hf-f-odd",
+                "type": "paragraph",
+                "attrs": {
+                  "alignment": "right"
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Page "
+                  },
+                  {
+                    "type": "field",
+                    "field": "pageNumber"
+                  },
+                  {
+                    "type": "text",
+                    "text": " of "
+                  },
+                  {
+                    "type": "field",
+                    "field": "pageCount"
+                  }
+                ]
+              }
             ],
             "even": [
-              { "id": "node:hf-f-even", "type": "paragraph", "attrs": { "alignment": "left" }, "content": [{ "type": "text", "text": "Page " }] },
-              { "type": "field", "field": "pageNumber", "format": "upper-roman" }
+              {
+                "id": "node:hf-f-even",
+                "type": "paragraph",
+                "attrs": {
+                  "alignment": "left"
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Page "
+                  },
+                  {
+                    "type": "field",
+                    "field": "pageNumber",
+                    "format": "upper-roman"
+                  }
+                ]
+              }
             ]
           }
         }
@@ -118,12 +353,57 @@
     }
   },
   "content": [
-    { "id": "node:hf-title", "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "Methods" }] },
-    { "id": "node:hf-p1", "type": "paragraph", "content": [{ "type": "text", "text": "We sampled 40 sites." }] },
-    { "id": "node:hf-break-1", "type": "pageBreak" },
-    { "id": "node:hf-p2", "type": "paragraph", "content": [{ "type": "text", "text": "Results follow." }] },
-    { "id": "node:hf-break-2", "type": "pageBreak" },
-    { "id": "node:hf-p3", "type": "paragraph", "content": [{ "type": "text", "text": "Discussion." }] }
+    {
+      "id": "node:hf-title",
+      "type": "heading",
+      "attrs": {
+        "level": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Methods"
+        }
+      ]
+    },
+    {
+      "id": "node:hf-p1",
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "We sampled 40 sites."
+        }
+      ]
+    },
+    {
+      "id": "node:hf-break-1",
+      "type": "pageBreak"
+    },
+    {
+      "id": "node:hf-p2",
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Results follow."
+        }
+      ]
+    },
+    {
+      "id": "node:hf-break-2",
+      "type": "pageBreak"
+    },
+    {
+      "id": "node:hf-p3",
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Discussion."
+        }
+      ]
+    }
   ],
   "createdAt": "2026-11-01T09:00:00.000Z",
   "updatedAt": "2026-11-01T09:00:00.000Z"

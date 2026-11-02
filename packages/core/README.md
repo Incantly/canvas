@@ -134,10 +134,13 @@ for (const page of pages) {
 // 4. Edit headers and footers. Builders return a new layout and never mutate.
 let next = ensurePageLayout(document)
 next = setHeaderFooter(next, next.defaultSection.id, 'footer', 'default', [
-  { id: 'node:footer', type: 'paragraph', attrs: { alignment: 'center' }, content: [{ type: 'text', text: 'Page ' }] },
-  { type: 'field', field: 'pageNumber' },
-  { id: 'node:footer-of', type: 'paragraph', content: [{ type: 'text', text: ' of ' }] },
-  { type: 'field', field: 'pageCount' },
+  {
+    id: 'node:footer', type: 'paragraph', attrs: { alignment: 'center' },
+    content: [
+      { type: 'text', text: 'Page ' }, { type: 'field', field: 'pageNumber' },
+      { type: 'text', text: ' of ' }, { type: 'field', field: 'pageCount' },
+    ],
+  },
 ])
 next = setDifferentFirstPage(next, next.defaultSection.id, true)   // blank first-page header and footer
 ```
@@ -153,18 +156,33 @@ next = setDifferentFirstPage(next, next.defaultSection.id, true)   // blank firs
 | `headerFooterOptions(section)` | Whether "different first page" and "different odd & even" are on. |
 | `validateHeaderFooterContent` / `normalizeHeaderFooterContent` | Strict check, or repair with warnings, of header/footer content. |
 
-**Header/footer content** is a flat list of paragraphs (text with marks, hard
-breaks, inline math) and fields. Fields cannot sit inside a paragraph, so a
-paragraph starts a new line unless it directly follows a field, and a field
-continues the current line. `[paragraph "Page ", pageNumber, paragraph " of ",
-pageCount]` reads "Page 3 of 10", aligned like its first paragraph.
+**Header/footer content** is a list of paragraphs, and each paragraph is one
+printed line with its own alignment. Paragraph text holds text with marks, hard
+breaks, inline math and inline fields:
+
+```ts
+// InlineFieldNode, allowed only in header/footer paragraphs (never in body text)
+{ type: 'field', field: 'pageNumber' | 'pageCount' | 'documentTitle' | 'currentDate', format?: string }
+```
+
+Older content kept fields as top-level items between paragraphs. It still
+validates, renders and loads, and `normalizeDocument` / `normalizeHeaderFooterContent`
+move those fields into the text:
+- a field joins the line of the paragraph before it;
+- a paragraph straight after a field joins that line too;
+- a field that comes first starts the line.
+
+A joined line keeps the ID and alignment of its first paragraph. A variant
+holds at most `MAX_HEADER_FOOTER_ITEMS` (100) paragraphs plus fields, and a
+`format` is at most 64 characters.
 
 **Date tokens** for `currentDate` (default `YYYY-MM-DD`): `YYYY` 2026, `YY` 26,
 `MMMM` November, `MMM` Nov, `MM` 03, `M` 3, `DD` 07, `D` 7. Text in square
 brackets is literal: `[Updated] D MMMM YYYY`. Month names are English.
 
-`validateDocument` rejects block content in headers and footers, unknown
-fields, `startingPageNumber` below 1 and `columns` other than 1 or 2.
+`validateDocument` rejects fields in body text, block content in headers and
+footers, unknown fields, `startingPageNumber` below 1 and `columns` other than
+1 or 2.
 `normalizeDocument` / `recoverDocument` keep the layout and repair those
 instead.
 

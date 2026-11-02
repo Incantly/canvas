@@ -96,7 +96,13 @@ When a phase is done, tick its boxes, set its row to **Done**, and pass on its h
 
 **Notes from implementation:**
 - `normalizeDocument` used to drop `metadata.layout`, so `serializeIncantlyDocument` lost headers and footers. It now keeps and repairs the layout.
-- Header/footer fields cannot sit inside a paragraph in the current model, so lines follow a documented rule: a paragraph starts a new line unless it directly follows a field. "Page X of Y" works; a second line straight after a field-ending line does not. Allowing an inline `field` node in header/footer paragraphs would remove the rule, but it changes the stored shape, so it is left as an open decision.
+- **Decision (2026-11-02): fields sit inside paragraph text, like Word.** The new inline node is `InlineFieldNode { type: 'field', field, format? }`.
+  - It is valid only in the `content` of header/footer paragraphs. In body text it is a validation error, and recovery removes it with a warning.
+  - At the type level it is not part of the body `InlineNode` union; header/footer paragraphs use `HeaderFooterInlineNode = InlineNode | InlineFieldNode`.
+  - Each header/footer paragraph is one line.
+  - Older content with top-level fields still validates and loads. Normalization moves those fields inline by the old line rule: a field joins the line of the paragraph before it, a paragraph straight after a field joins that line, and a field that comes first starts the line. A joined line keeps its first paragraph's ID and alignment.
+  - `MAX_HEADER_FOOTER_ITEMS` counts paragraphs plus fields, inline fields included.
+  - `v1-pages-legacy-fields.json` keeps the old form as a compatibility fixture.
 - Paragraph IDs in header/footer content only need to be unique inside one variant.
 
 **Hand-off:** "SDK-1 is done: tell the web agent FE-2 (header & footer editor) can use `headerFooterFor`, `formatHeaderFooterField` and the layout builders."
