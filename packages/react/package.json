@@ -1,6 +1,6 @@
 {
   "name": "@incantly/canvas-react",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React component for Incantly Canvas — the MIT-licensed infinite-canvas whiteboard SDK.",
   "type": "module",
   "main": "./dist/index.js",
@@ -42,7 +42,7 @@
     "excalidraw-alternative"
   ],
   "dependencies": {
-    "@incantly/canvas-core": "0.2.0"
+    "@incantly/canvas-core": "0.3.0"
   },
   "peerDependencies": {
     "react": ">=17",

@@ -2,11 +2,12 @@ import { CURRENT_DOCUMENT_SCHEMA_VERSION, DEFAULT_DOCUMENT_LANGUAGE, DEFAULT_PAG
 import { createParagraph } from './create.js'
 import { assetId, citationId, documentId, documentNodeId } from './ids.js'
 import { DOCUMENT_LIMITS } from './limits.js'
+import { HEADER_FOOTER_VARIANTS, normalizeHeaderFooterContent } from './header-footer.js'
 import { isFontFamilyKey, normalizeLinkHref, normalizeTextMarks } from './inline.js'
 import { normalizeDocumentNode, VIDEO_EMBED_PROVIDERS } from './nodes.js'
 import type {
   DocumentAuthor, DocumentMetadata, DocumentNode, IncantlyDocument, InlineNode,
-  PageSetup, TextAlignment, TextMark,
+  PageHeaderFooterVariants, PageLayout, PageLayoutSection, PageSetup, TextAlignment, TextMark,
 } from './types.js'
 import { validateDocument, type DocumentValidationIssue } from './validate.js'
 
@@ -99,6 +100,7 @@ function recoverInline(value: unknown, path: string, state: RecoveryState): Inli
     const candidate = value[index]
     if (!isRecord(candidate)) continue
     if (candidate.type === 'hardBreak') { output.push({ type: 'hardBreak' }); continue }
+    if (candidate.type === 'field') { warning(state, 'unsupported_content', `${path}[${index}]`, 'A header/footer field in body text was removed'); continue }
     if (candidate.type === 'inlineMath') {
       const remaining = DOCUMENT_LIMITS.maxTotalTextLength - state.text
       if (remaining <= 0) { warning(state, 'limit_text', `${path}[${index}].latex`, 'LaTeX beyond the document limit was omitted'); break }
@@ -253,16 +255,19 @@ function stringArray(value: unknown): string[] {
     .map((item) => item.slice(0, DOCUMENT_LIMITS.maxAttributeStringLength))
 }
 
-function recoverMetadata(value: unknown, state: RecoveryState): DocumentMetadata {
-  const metadata = isRecord(value) ? value : {}
-  const page = isRecord(metadata.pageSetup) ? metadata.pageSetup : {}
+function recoverPageSetup(value: unknown, defaultStartingPageNumber: boolean): PageSetup {
+  const page = isRecord(value) ? value : {}
   const margins = isRecord(page.margins) ? page.margins : {}
   const numberOr = (value: unknown, fallback: number, min = 0, max = 100_000): number => {
     const parsed = finite(value)
     return parsed === undefined || parsed < min || parsed > max ? fallback : parsed
   }
   const size = ['a4', 'letter', 'legal', 'custom'].includes(String(page.size)) ? page.size as PageSetup['size'] : DEFAULT_PAGE_SETUP.size
-  const pageSetup: PageSetup = {
+  // Later layout sections continue the page numbering unless they carry their own starting number.
+  const startingPageNumber = defaultStartingPageNumber || finite(page.startingPageNumber) !== undefined
+    ? Math.floor(numberOr(page.startingPageNumber, 1, 1, 1_000_000))
+    : undefined
+  return {
     mode: ['continuous', 'paginated'].includes(String(page.mode)) ? page.mode as PageSetup['mode'] : DEFAULT_PAGE_SETUP.mode,
     size,
     ...(size === 'custom' ? { width: numberOr(page.width, 612, 1), height: numberOr(page.height, 792, 1) } : {}),
@@ -271,9 +276,58 @@ function recoverMetadata(value: unknown, state: RecoveryState): DocumentMetadata
     headerDistance: numberOr(page.headerDistance, 36, 0, 10_000),
     footerDistance: numberOr(page.footerDistance, 36, 0, 10_000),
     ...(page.mirroredMargins === true ? { mirroredMargins: true } : {}),
-    startingPageNumber: Math.floor(numberOr(page.startingPageNumber, 1, 1, 1_000_000)),
+    ...(startingPageNumber !== undefined ? { startingPageNumber } : {}),
     columns: page.columns === 2 ? 2 : 1,
   }
+}
+
+function recoverHeaderFooterVariants(value: unknown, path: string, state: RecoveryState): PageHeaderFooterVariants | undefined {
+  if (!isRecord(value)) return undefined
+  const variants: PageHeaderFooterVariants = {}
+  for (const variant of HEADER_FOOTER_VARIANTS) {
+    if (!Array.isArray(value[variant])) continue
+    const result = normalizeHeaderFooterContent(value[variant], `${path}.${variant}`)
+    state.issues.push(...result.issues)
+    variants[variant] = result.content
+  }
+  return Object.keys(variants).length ? variants : undefined
+}
+
+function recoverLayoutSection(value: unknown, path: string, state: RecoveryState, fallbackId: string): PageLayoutSection | undefined {
+  if (!isRecord(value)) return undefined
+  const storedId = safeString(value.id)?.trim()
+  if (!storedId) warning(state, 'missing_field', `${path}.id`, `Section ID was repaired as "${fallbackId}"`)
+  const startNodeId = safeString(value.startNodeId)
+  const headers = recoverHeaderFooterVariants(value.headers, `${path}.headers`, state)
+  const footers = recoverHeaderFooterVariants(value.footers, `${path}.footers`, state)
+  return {
+    id: storedId || fallbackId,
+    ...(startNodeId ? { startNodeId: documentNodeId(startNodeId) } : {}),
+    pageSetup: recoverPageSetup(value.pageSetup, false),
+    ...(headers ? { headers } : {}),
+    ...(footers ? { footers } : {}),
+  }
+}
+
+function recoverLayout(value: unknown, pageSetup: PageSetup, state: RecoveryState): PageLayout | undefined {
+  const path = '$.metadata.layout'
+  if (value === undefined) return undefined
+  if (!isRecord(value)) { warning(state, 'invalid_type', path, 'An invalid page layout was removed'); return undefined }
+  if (value.version !== 1) { warning(state, 'invalid_value', `${path}.version`, 'A page layout with an unsupported version was removed'); return undefined }
+  const sections = (Array.isArray(value.sections) ? value.sections.slice(0, 1_000) : [])
+    .map((section, index) => recoverLayoutSection(section, `${path}.sections[${index}]`, state, `section-${index + 1}`))
+    .filter((section): section is PageLayoutSection => section !== undefined)
+  const defaultSection = recoverLayoutSection(value.defaultSection, `${path}.defaultSection`, state, 'section-1')
+    ?? sections[0]
+    ?? { id: 'section-1', pageSetup }
+  if (!isRecord(value.defaultSection)) warning(state, 'missing_field', `${path}.defaultSection`, `defaultSection was rebuilt as "${defaultSection.id}"`)
+  return { version: 1, defaultSection, sections: sections.length ? sections : [defaultSection] }
+}
+
+function recoverMetadata(value: unknown, state: RecoveryState): DocumentMetadata {
+  const metadata = isRecord(value) ? value : {}
+  const pageSetup = recoverPageSetup(metadata.pageSetup, true)
+  const layout = recoverLayout(metadata.layout, pageSetup, state)
   const authors: DocumentAuthor[] = Array.isArray(metadata.authors)
     ? metadata.authors.slice(0, DOCUMENT_LIMITS.maxMetadataItems).filter(isRecord).map((author) => ({ name: safeString(author.name) || 'Unknown author', ...(safeString(author.id) ? { id: safeString(author.id) } : {}), ...(safeString(author.email, 320) ? { email: safeString(author.email, 320) } : {}), ...(safeString(author.orcid, 64) ? { orcid: safeString(author.orcid, 64) } : {}), ...(Array.isArray(author.affiliations) ? { affiliations: stringArray(author.affiliations) } : {}) }))
     : []
@@ -292,6 +346,7 @@ function recoverMetadata(value: unknown, state: RecoveryState): DocumentMetadata
     authors,
     tags: stringArray(metadata.tags),
     pageSetup,
+    ...(layout ? { layout } : {}),
     ...(research ? { research: {
       ...(safeString(research.title) ? { title: safeString(research.title) } : {}),
       ...(researchAuthors ? { authors: researchAuthors } : {}),

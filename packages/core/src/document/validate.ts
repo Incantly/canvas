@@ -2,7 +2,8 @@ import { CURRENT_DOCUMENT_SCHEMA_VERSION } from './constants.js'
 import { DOCUMENT_LIMITS } from './limits.js'
 import { ALLOWED_LINK_PROTOCOLS, canCombineTextMarks, isFontFamilyKey, normalizeLinkHref } from './inline.js'
 import { VIDEO_EMBED_PROVIDERS } from './nodes.js'
-import type { DocumentNode, IncantlyDocument, TextMark } from './types.js'
+import { HEADER_FOOTER_FIELD_TYPES, HEADER_FOOTER_VARIANTS, MAX_HEADER_FOOTER_FORMAT_LENGTH, MAX_HEADER_FOOTER_ITEMS } from './header-footer.js'
+import type { DocumentNode, HeaderFooterFieldType, IncantlyDocument, TextMark } from './types.js'
 
 export type DocumentValidationIssueCode =
   | 'invalid_type' | 'invalid_value' | 'missing_field' | 'unknown_field'
@@ -132,6 +133,14 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
     const itemPath = `${path}[${index}]`
     if (!isRecord(candidate)) { issue(issues, 'invalid_type', itemPath, 'Inline node must be an object'); return }
     if (candidate.type === 'hardBreak') return
+    if (candidate.type === 'field') {
+      if (state.headerFooterFields === undefined) {
+        issue(issues, 'invalid_child', `${itemPath}.type`, 'Fields are only allowed in header and footer paragraphs'); return
+      }
+      state.headerFooterFields++
+      validateField(candidate, itemPath, issues)
+      return
+    }
     if (candidate.type === 'inlineMath') {
       if (typeof candidate.latex !== 'string' || !candidate.latex) { issue(issues, 'invalid_type', `${itemPath}.latex`, 'LaTeX must be a non-empty string'); return }
       state.totalText += candidate.latex.length
@@ -182,7 +191,19 @@ function validateInline(value: unknown, path: string, issues: DocumentValidation
   })
 }
 
-interface ValidationState { nodeIds: Set<string>; objectNodes: Set<object>; nodeCount: number; totalText: number }
+interface ValidationState {
+  nodeIds: Set<string>
+  objectNodes: Set<object>
+  nodeCount: number
+  totalText: number
+  /** Inline fields seen so far; undefined in body content, where fields are not allowed. */
+  headerFooterFields?: number
+}
+
+function validateField(field: JsonRecord, path: string, issues: DocumentValidationIssue[]): void {
+  if (!HEADER_FOOTER_FIELD_TYPES.includes(field.field as HeaderFooterFieldType)) issue(issues, 'invalid_value', `${path}.field`, 'Unknown header/footer field')
+  optionalString(field, 'format', path, issues, MAX_HEADER_FOOTER_FORMAT_LENGTH)
+}
 
 function allowedInContext(type: string, context: ChildContext): boolean {
   if (context === 'root' || context === 'blocks') return BLOCK_TYPES.has(type)
@@ -294,6 +315,78 @@ function validateStringArray(value: unknown, path: string, issues: DocumentValid
   value.forEach((item, index) => { if (typeof item !== 'string') issue(issues, 'invalid_type', `${path}[${index}]`, 'Expected a string'); else if (item.length > DOCUMENT_LIMITS.maxAttributeStringLength) issue(issues, 'limit_attribute', `${path}[${index}]`, 'Metadata value is too long') })
 }
 
+function validatePageSetup(page: unknown, path: string, issues: DocumentValidationIssue[]): void {
+  if (!isRecord(page)) { issue(issues, 'invalid_type', path, 'pageSetup must be an object'); return }
+  if (!['continuous', 'paginated'].includes(String(page.mode))) issue(issues, 'invalid_value', `${path}.mode`, 'Invalid page mode')
+  if (!['a4', 'letter', 'legal', 'custom'].includes(String(page.size))) issue(issues, 'invalid_value', `${path}.size`, 'Invalid page size')
+  if (!['portrait', 'landscape'].includes(String(page.orientation))) issue(issues, 'invalid_value', `${path}.orientation`, 'Invalid page orientation')
+  if (![1, 2].includes(Number(page.columns))) issue(issues, 'invalid_value', `${path}.columns`, 'Columns must be 1 or 2')
+  if (page.size === 'custom') { validateNumber(page, 'width', path, issues, { min: 1, max: 100_000 }); validateNumber(page, 'height', path, issues, { min: 1, max: 100_000 }) }
+  validateNumber(page, 'headerDistance', path, issues, { min: 0, max: 10_000 })
+  validateNumber(page, 'footerDistance', path, issues, { min: 0, max: 10_000 })
+  validateNumber(page, 'startingPageNumber', path, issues, { integer: true, min: 1, max: 1_000_000 })
+  if (page.mirroredMargins !== undefined && typeof page.mirroredMargins !== 'boolean') issue(issues, 'invalid_type', `${path}.mirroredMargins`, 'mirroredMargins must be boolean')
+  if (!isRecord(page.margins)) issue(issues, 'invalid_type', `${path}.margins`, 'Margins must be an object')
+  else for (const side of ['top', 'right', 'bottom', 'left']) validateNumber(page.margins, side, `${path}.margins`, issues, { min: 0, max: 10_000 })
+}
+
+function validateHeaderFooterInto(value: unknown, path: string, issues: DocumentValidationIssue[]): void {
+  if (!Array.isArray(value)) { issue(issues, 'invalid_type', path, 'Header/footer content must be an array'); return }
+  // Paragraph IDs only need to be unique inside one variant: odd/even often start as copies of default.
+  const state: ValidationState = { nodeIds: new Set(), objectNodes: new Set(), nodeCount: 0, totalText: 0, headerFooterFields: 0 }
+  value.forEach((item, index) => {
+    const itemPath = `${path}[${index}]`
+    if (!isRecord(item)) { issue(issues, 'invalid_type', itemPath, 'Header/footer item must be an object'); return }
+    // A top-level field is the older form; it still validates and normalization moves it inline.
+    if (item.type === 'field') { validateField(item, itemPath, issues); return }
+    if (item.type !== 'paragraph') {
+      issue(issues, 'unsupported_content', `${itemPath}.type`, 'Headers and footers allow only paragraphs and fields'); return
+    }
+    validateNode(item, itemPath, issues, state, 1, 'root')
+  })
+  if (value.length + (state.headerFooterFields ?? 0) > MAX_HEADER_FOOTER_ITEMS)
+    issue(issues, 'limit_attribute', path, `Header/footer content allows at most ${MAX_HEADER_FOOTER_ITEMS} paragraphs and fields`)
+}
+
+/**
+ * Strictly validates header/footer content: paragraphs whose text holds text with marks, hard
+ * breaks, inline math and known inline fields. Older top-level fields are accepted too.
+ * Paragraphs plus fields may number at most `MAX_HEADER_FOOTER_ITEMS`. Returns no issues when valid.
+ */
+export function validateHeaderFooterContent(value: unknown, path = '$'): DocumentValidationIssue[] {
+  const issues: DocumentValidationIssue[] = []
+  rejectUnsafeKeys(value, path, issues)
+  validateHeaderFooterInto(value, path, issues)
+  return issues
+}
+
+function validateLayoutSection(value: unknown, path: string, issues: DocumentValidationIssue[]): void {
+  if (!isRecord(value)) { issue(issues, 'invalid_type', path, 'Layout section must be an object'); return }
+  requiredString(value, 'id', path, issues)
+  optionalString(value, 'startNodeId', path, issues)
+  validatePageSetup(value.pageSetup, `${path}.pageSetup`, issues)
+  for (const kind of ['headers', 'footers'] as const) {
+    if (!own(value, kind)) continue
+    const variants = value[kind]
+    if (!isRecord(variants)) { issue(issues, 'invalid_type', `${path}.${kind}`, `${kind} must be an object`); continue }
+    for (const key of Object.keys(variants)) {
+      if (!(HEADER_FOOTER_VARIANTS as readonly string[]).includes(key)) issue(issues, 'unknown_field', `${path}.${kind}.${key}`, 'Header/footer variants are default, first, odd and even')
+      else validateHeaderFooterInto(variants[key], `${path}.${kind}.${key}`, issues)
+    }
+  }
+}
+
+function validatePageLayout(layout: unknown, path: string, issues: DocumentValidationIssue[]): void {
+  if (!isRecord(layout)) { issue(issues, 'invalid_type', path, 'layout must be an object'); return }
+  if (layout.version !== 1) issue(issues, 'invalid_value', `${path}.version`, 'Unsupported layout version')
+  if (!own(layout, 'defaultSection')) issue(issues, 'missing_field', `${path}.defaultSection`, 'defaultSection is required')
+  else validateLayoutSection(layout.defaultSection, `${path}.defaultSection`, issues)
+  if (!Array.isArray(layout.sections) || layout.sections.length > 1_000) {
+    issue(issues, 'limit_attribute', `${path}.sections`, 'Layout sections must be an array with at most 1000 entries'); return
+  }
+  layout.sections.forEach((section, index) => validateLayoutSection(section, `${path}.sections[${index}]`, issues))
+}
+
 function validateMetadata(value: unknown, path: string, issues: DocumentValidationIssue[], state: ValidationState): void {
   if (!isRecord(value)) { issue(issues, 'invalid_type', path, 'metadata must be an object'); return }
   requiredStringAllowEmpty(value, 'title', path, issues, DOCUMENT_LIMITS.maxAttributeStringLength)
@@ -310,28 +403,8 @@ function validateMetadata(value: unknown, path: string, issues: DocumentValidati
       if (own(author, 'affiliations')) validateStringArray(author.affiliations, `${authorPath}.affiliations`, issues)
     })
   }
-  if (!isRecord(value.pageSetup)) issue(issues, 'invalid_type', `${path}.pageSetup`, 'pageSetup must be an object')
-  else {
-    const page = value.pageSetup
-    if (!['continuous', 'paginated'].includes(String(page.mode))) issue(issues, 'invalid_value', `${path}.pageSetup.mode`, 'Invalid page mode')
-    if (!['a4', 'letter', 'legal', 'custom'].includes(String(page.size))) issue(issues, 'invalid_value', `${path}.pageSetup.size`, 'Invalid page size')
-    if (!['portrait', 'landscape'].includes(String(page.orientation))) issue(issues, 'invalid_value', `${path}.pageSetup.orientation`, 'Invalid page orientation')
-    if (![1, 2].includes(Number(page.columns))) issue(issues, 'invalid_value', `${path}.pageSetup.columns`, 'Columns must be 1 or 2')
-    if (page.size === 'custom') { validateNumber(page, 'width', `${path}.pageSetup`, issues, { min: 1, max: 100_000 }); validateNumber(page, 'height', `${path}.pageSetup`, issues, { min: 1, max: 100_000 }) }
-    validateNumber(page, 'headerDistance', `${path}.pageSetup`, issues, { min: 0, max: 10_000 })
-    validateNumber(page, 'footerDistance', `${path}.pageSetup`, issues, { min: 0, max: 10_000 })
-    validateNumber(page, 'startingPageNumber', `${path}.pageSetup`, issues, { integer: true, min: 1, max: 1_000_000 })
-    if (page.mirroredMargins !== undefined && typeof page.mirroredMargins !== 'boolean') issue(issues, 'invalid_type', `${path}.pageSetup.mirroredMargins`, 'mirroredMargins must be boolean')
-    if (!isRecord(page.margins)) issue(issues, 'invalid_type', `${path}.pageSetup.margins`, 'Margins must be an object')
-    else for (const side of ['top', 'right', 'bottom', 'left']) validateNumber(page.margins, side, `${path}.pageSetup.margins`, issues, { min: 0, max: 10_000 })
-  }
-  if (own(value, 'layout')) {
-    if (!isRecord(value.layout)) issue(issues, 'invalid_type', `${path}.layout`, 'layout must be an object')
-    else {
-      if (value.layout.version !== 1) issue(issues, 'invalid_value', `${path}.layout.version`, 'Unsupported layout version')
-      if (!Array.isArray(value.layout.sections) || value.layout.sections.length > 1_000) issue(issues, 'limit_attribute', `${path}.layout.sections`, 'Layout sections must be an array with at most 1000 entries')
-    }
-  }
+  validatePageSetup(value.pageSetup, `${path}.pageSetup`, issues)
+  if (own(value, 'layout')) validatePageLayout(value.layout, `${path}.layout`, issues)
   if (own(value, 'research') && !isRecord(value.research)) issue(issues, 'invalid_type', `${path}.research`, 'research must be an object')
   else if (isRecord(value.research)) {
     optionalString(value.research, 'title', `${path}.research`, issues)

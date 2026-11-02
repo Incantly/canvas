@@ -25,8 +25,27 @@ export interface PageSetup {
 }
 
 export type HeaderFooterFieldType = 'pageNumber' | 'pageCount' | 'documentTitle' | 'currentDate'
-export interface HeaderFooterField { type: 'field'; field: HeaderFooterFieldType; format?: string }
-export type HeaderFooterContent = DocumentNode | HeaderFooterField
+/**
+ * A live value (page number, page count, title, date) inside the text of a header/footer
+ * paragraph. It is not valid in body text, so it is not part of `InlineNode`.
+ */
+export interface InlineFieldNode { type: 'field'; field: HeaderFooterFieldType; format?: string }
+/** Inline content of a header/footer paragraph: body inline nodes plus fields. */
+export type HeaderFooterInlineNode = InlineNode | InlineFieldNode
+/** One line of a header or footer. */
+export interface HeaderFooterParagraphNode {
+  id: DocumentNodeId
+  type: 'paragraph'
+  attrs?: { alignment?: TextAlignment; lineHeight?: number }
+  content: HeaderFooterInlineNode[]
+}
+/**
+ * The older form of a field: a top-level item between paragraphs. It still validates and
+ * loads; normalization moves it into the paragraph text.
+ */
+export type HeaderFooterField = InlineFieldNode
+/** Header/footer content: paragraphs with inline fields (plus old top-level fields when reading). */
+export type HeaderFooterContent = HeaderFooterParagraphNode | HeaderFooterField
 
 export interface PageLayoutSection {
   id: string
